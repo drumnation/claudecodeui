@@ -25,6 +25,7 @@ import MainContent from './components/MainContent';
 import MobileNav from './components/MobileNav';
 import ToolsSettings from './components/ToolsSettings';
 import { useWebSocket } from './utils/websocket';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 // Main App component with routing
 function AppContent() {
@@ -479,12 +480,14 @@ function AppContent() {
 // Root App component with router
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<AppContent />} />
-        <Route path="/session/:sessionId" element={<AppContent />} />
-      </Routes>
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<AppContent />} />
+          <Route path="/session/:sessionId" element={<AppContent />} />
+        </Routes>
+      </Router>
+    </ThemeProvider>
   );
 }
 
