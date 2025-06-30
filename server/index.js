@@ -30,6 +30,7 @@ const os = require('os');
 const pty = require('node-pty');
 const { getProjects, getSessions, getSessionMessages, renameProject, deleteSession, deleteProject, addProjectManually } = require('./projects');
 const { spawnClaude, abortClaudeSession } = require('./claude-cli');
+const { getSlashCommands } = require('./slash-commands');
 
 // File system watcher for projects folder
 let projectsWatcher = null;
@@ -235,6 +236,17 @@ app.post('/api/projects/create', async (req, res) => {
     res.json({ success: true, project });
   } catch (error) {
     console.error('Error creating project:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get slash commands endpoint
+app.get('/api/slash-commands', async (req, res) => {
+  try {
+    const commands = await getSlashCommands();
+    res.json({ commands });
+  } catch (error) {
+    console.error('Error getting slash commands:', error);
     res.status(500).json({ error: error.message });
   }
 });

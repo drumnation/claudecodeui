@@ -19,6 +19,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import TodoList from './TodoList';
+import CommandMenu from './CommandMenu';
 
 // Memoized message component to prevent unnecessary re-renders
 const MessageComponent = memo(({ message, index, prevMessage, createDiff, onFileOpen }) => {
@@ -450,6 +451,11 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
   const [atSymbolPosition, setAtSymbolPosition] = useState(-1);
   const [canAbortSession, setCanAbortSession] = useState(false);
   const [isUserScrolledUp, setIsUserScrolledUp] = useState(false);
+  const [showCommandMenu, setShowCommandMenu] = useState(false);
+  const [slashCommands, setSlashCommands] = useState([]);
+  const [filteredCommands, setFilteredCommands] = useState([]);
+  const [selectedCommandIndex, setSelectedCommandIndex] = useState(-1);
+  const [slashPosition, setSlashPosition] = useState(-1);
 
   // Memoized diff calculation to prevent recalculating on every render
   const createDiff = useMemo(() => {
@@ -923,6 +929,11 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     }
   }, [selectedProject]);
 
+  // Load slash commands on mount
+  useEffect(() => {
+    fetchSlashCommands();
+  }, []);
+
   const fetchProjectFiles = async () => {
     try {
       const response = await fetch(`/api/projects/${selectedProject.name}/files`);
@@ -934,6 +945,18 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
       }
     } catch (error) {
       console.error('Error fetching files:', error);
+    }
+  };
+
+  const fetchSlashCommands = async () => {
+    try {
+      const response = await fetch('/api/slash-commands');
+      if (response.ok) {
+        const data = await response.json();
+        setSlashCommands(data.commands || []);
+      }
+    } catch (error) {
+      console.error('Error fetching slash commands:', error);
     }
   };
 
@@ -983,6 +1006,42 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
       setAtSymbolPosition(-1);
     }
   }, [input, cursorPosition, fileList]);
+
+  // Handle / symbol detection and command filtering
+  useEffect(() => {
+    const textBeforeCursor = input.slice(0, cursorPosition);
+    const lastSlashIndex = textBeforeCursor.lastIndexOf('/');
+    
+    // Only show command menu if / is at the beginning or after a space
+    if (lastSlashIndex !== -1) {
+      const charBeforeSlash = lastSlashIndex > 0 ? textBeforeCursor[lastSlashIndex - 1] : '';
+      if (lastSlashIndex === 0 || charBeforeSlash === ' ' || charBeforeSlash === '\n') {
+        const textAfterSlash = textBeforeCursor.slice(lastSlashIndex + 1);
+        // Check if there's a space after the / symbol (which would end the command)
+        if (!textAfterSlash.includes(' ')) {
+          setSlashPosition(lastSlashIndex);
+          setShowCommandMenu(true);
+          
+          // Filter commands based on the text after /
+          const filtered = slashCommands.filter(cmd => 
+            cmd.command.toLowerCase().includes('/' + textAfterSlash.toLowerCase())
+          ).slice(0, 20); // Show more commands
+          
+          setFilteredCommands(filtered);
+          setSelectedCommandIndex(-1);
+        } else {
+          setShowCommandMenu(false);
+          setSlashPosition(-1);
+        }
+      } else {
+        setShowCommandMenu(false);
+        setSlashPosition(-1);
+      }
+    } else {
+      setShowCommandMenu(false);
+      setSlashPosition(-1);
+    }
+  }, [input, cursorPosition, slashCommands]);
 
   // Debounced input handling
   useEffect(() => {
@@ -1103,6 +1162,38 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
   };
 
   const handleKeyDown = (e) => {
+    // Handle command menu navigation
+    if (showCommandMenu && filteredCommands.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedCommandIndex(prev => 
+          prev < filteredCommands.length - 1 ? prev + 1 : 0
+        );
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedCommandIndex(prev => 
+          prev > 0 ? prev - 1 : filteredCommands.length - 1
+        );
+        return;
+      }
+      if (e.key === 'Tab' || e.key === 'Enter') {
+        e.preventDefault();
+        if (selectedCommandIndex >= 0) {
+          selectCommand(filteredCommands[selectedCommandIndex]);
+        } else if (filteredCommands.length > 0) {
+          selectCommand(filteredCommands[0]);
+        }
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowCommandMenu(false);
+        return;
+      }
+    }
+    
     // Handle file dropdown navigation
     if (showFileDropdown && filteredFiles.length > 0) {
       if (e.key === 'ArrowDown') {
@@ -1147,6 +1238,28 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         handleSubmit(e);
       }
       // Shift+Enter: Allow default behavior (new line)
+    }
+  };
+
+  const selectCommand = (command) => {
+    const textBeforeSlash = input.slice(0, slashPosition);
+    const textAfterSlashQuery = input.slice(slashPosition);
+    const spaceIndex = textAfterSlashQuery.indexOf(' ');
+    const textAfterQuery = spaceIndex !== -1 ? textAfterSlashQuery.slice(spaceIndex) : '';
+    
+    const newInput = textBeforeSlash + command.command + ' ' + textAfterQuery;
+    setInput(newInput);
+    setShowCommandMenu(false);
+    setSlashPosition(-1);
+    
+    // Focus back to textarea and set cursor position
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+      const newCursorPos = textBeforeSlash.length + command.command.length + 1;
+      setTimeout(() => {
+        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        setCursorPosition(newCursorPos);
+      }, 0);
     }
   };
 
@@ -1353,6 +1466,20 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
               </svg>
             </button>
             
+            {/* Command menu */}
+            {showCommandMenu && filteredCommands.length > 0 && (
+              <CommandMenu
+                commands={filteredCommands}
+                selectedIndex={selectedCommandIndex}
+                onSelectCommand={selectCommand}
+                position={{
+                  bottom: '100%',
+                  left: 0,
+                  right: 0
+                }}
+              />
+            )}
+            
             {/* File dropdown */}
             {showFileDropdown && filteredFiles.length > 0 && (
               <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50">
@@ -1377,12 +1504,12 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
           </div>
           {/* Hint text */}
           <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2 hidden sm:block">
-            Press Enter to send • Shift+Enter for new line • @ to reference files
+            Press Enter to send • Shift+Enter for new line • @ to reference files • / for commands
           </div>
           <div className={`text-xs text-gray-500 dark:text-gray-400 text-center mt-2 sm:hidden transition-opacity duration-200 ${
             isInputFocused ? 'opacity-100' : 'opacity-0'
           }`}>
-            Enter to send • @ for files
+            Enter to send • @ for files • / for commands
           </div>
         </form>
       </div>

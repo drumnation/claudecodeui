@@ -4,12 +4,14 @@
   "description": "A web-based UI for Claude Code CLI",
   "main": "server/index.js",
   "scripts": {
-    "dev": "concurrently --kill-others \"npm run server\" \"npm run client\"",
+    "dev": "concurrently --kill-others \"npm run server\" \"npm run client\" \"npm run ngrok\"",
     "server": "node server/index.js",
-    "client": "vite --host",
+    "client": "vite --host --port 8766",
+    "ngrok": "node scripts/start-ngrok.js",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "npm run build && npm run server"
+    "start": "npm run build && npm run server",
+    "prod": "node scripts/start-prod.js"
   },
   "keywords": [
     "claude",
