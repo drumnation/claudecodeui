@@ -5,6 +5,7 @@ import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import { FolderOpen, Folder, Plus, MessageSquare, Clock, ChevronDown, ChevronRight, Edit3, Check, X, Trash2, Settings, FolderPlus, RefreshCw } from 'lucide-react';
 import { cn } from '../lib/utils';
+import ClaudeLogo from './ClaudeLogo';
 
 // Move formatTimeAgo outside component to avoid recreation on every render
 const formatTimeAgo = (dateString, currentTime) => {
@@ -303,8 +304,8 @@ function Sidebar({
         {/* Desktop Header */}
         <div className="hidden md:flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-sm">
-              <MessageSquare className="w-4 h-4 text-primary-foreground" />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm p-1">
+              <ClaudeLogo className="w-full h-full" />
             </div>
             <div>
               <h1 className="text-lg font-bold text-foreground">Claude Code UI</h1>
@@ -345,8 +346,8 @@ function Sidebar({
         <div className="md:hidden p-3 border-b border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <MessageSquare className="w-4 h-4 text-primary-foreground" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center p-1">
+                <ClaudeLogo className="w-full h-full" />
               </div>
               <div>
                 <h1 className="text-lg font-semibold text-foreground">Claude Code UI</h1>
