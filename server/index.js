@@ -9,7 +9,14 @@ try {
     if (trimmedLine && !trimmedLine.startsWith('#')) {
       const [key, ...valueParts] = trimmedLine.split('=');
       if (key && valueParts.length > 0 && !process.env[key]) {
+        // Handle both VITE_ prefixed and non-prefixed keys
         process.env[key] = valueParts.join('=').trim();
+        if (key.startsWith('VITE_')) {
+          const nonViteKey = key.replace('VITE_', '');
+          if (!process.env[nonViteKey]) {
+            process.env[nonViteKey] = valueParts.join('=').trim();
+          }
+        }
       }
     }
   });
@@ -28,13 +35,17 @@ const fs = require('fs').promises;
 const { spawn } = require('child_process');
 const os = require('os');
 const pty = require('node-pty');
-const { getProjects, getSessions, getSessionMessages, renameProject, deleteSession, deleteProject, addProjectManually } = require('./projects');
-const { spawnClaude, abortClaudeSession } = require('./claude-cli');
+const fetch = require('node-fetch');
+const { getProjects, getSessions, getSessionMessages, renameProject, deleteSession, deleteProject, addProjectManually, updateSessionSummary } = require('./projects');
+const { spawnClaude, abortClaudeSession, markSessionAsManuallyEdited, clearManualEditFlag } = require('./claude-cli');
 const { getSlashCommands } = require('./slash-commands');
+const gitRoutes = require('./routes/git');
+const ServerManager = require('./serverManager');
 
 // File system watcher for projects folder
 let projectsWatcher = null;
 const connectedClients = new Set();
+let serverManager = null;
 
 // Setup file system watcher for Claude projects folder using chokidar
 function setupProjectsWatcher() {
@@ -141,9 +152,24 @@ const wss = new WebSocketServer({
   }
 });
 
+// Initialize server manager with broadcast capability
+serverManager = new ServerManager({
+  broadcast: (message) => {
+    const messageStr = JSON.stringify(message);
+    connectedClients.forEach(client => {
+      if (client.readyState === client.OPEN) {
+        client.send(messageStr);
+      }
+    });
+  }
+});
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../dist')));
+
+// Git API Routes
+app.use('/api/git', gitRoutes);
 
 // API Routes
 app.get('/api/config', (req, res) => {
@@ -247,6 +273,258 @@ app.get('/api/slash-commands', async (req, res) => {
     res.json({ commands });
   } catch (error) {
     console.error('Error getting slash commands:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Generate session summary using OpenAI
+app.post('/api/generate-session-summary', async (req, res) => {
+  try {
+    const { messages } = req.body;
+    
+    console.log('🎯 Summary generation endpoint called with', messages?.length || 0, 'messages');
+    
+    if (!messages || messages.length === 0) {
+      return res.status(400).json({ 
+        error: 'No messages provided',
+        summary: null 
+      });
+    }
+    
+    // Extract user messages and limit to first few for cost efficiency
+    const userMessages = messages
+      .filter(msg => msg.message?.role === 'user' && msg.message?.content)
+      .slice(0, 5)
+      .map(msg => {
+        const content = msg.message.content;
+        // Clean command messages
+        if (typeof content === 'string' && content.startsWith('<command-name>')) {
+          return null;
+        }
+        return content;
+      })
+      .filter(Boolean)
+      .join(' ');
+    
+    console.log('👤 Extracted user messages length:', userMessages.length);
+    
+    if (!userMessages) {
+      console.log('⚠️ No user messages found, returning default');
+      return res.json({ summary: 'New Session' });
+    }
+    
+    // Use Claude to generate summary if available, otherwise fall back to OpenAI
+    const useClaude = process.env.USE_CLAUDE_FOR_SUMMARY !== 'false'; // Default to true
+    console.log('🤖 USE_CLAUDE_FOR_SUMMARY:', useClaude);
+    console.log('🔑 OPENAI_API_KEY set:', !!process.env.OPENAI_API_KEY);
+    
+    if (useClaude) {
+      try {
+        console.log('🔄 Attempting to use Claude CLI for summary...');
+        const { spawn } = require('child_process');
+        
+        // Prepare prompt for Claude
+        const prompt = `Summarize the following user intent into a brief 3-5 word session title. Focus on the main action or goal. Do not include "Caveat" or system messages. Respond with ONLY the title, nothing else. Examples: "Add dark mode", "Fix login bug", "Create API endpoint", "Update navigation menu".
+
+User messages: ${userMessages.substring(0, 500)}`;
+        
+        // Spawn Claude in non-interactive mode
+        const claudeProcess = spawn('claude', ['--print', '--model', 'haiku', prompt], {
+          cwd: process.cwd(),
+          env: process.env
+        });
+        
+        let output = '';
+        let error = '';
+        
+        claudeProcess.stdout.on('data', (data) => {
+          output += data.toString();
+        });
+        
+        claudeProcess.stderr.on('data', (data) => {
+          error += data.toString();
+        });
+        
+        await new Promise((resolve, reject) => {
+          claudeProcess.on('close', (code) => {
+            console.log('📤 Claude process exited with code:', code);
+            console.log('📤 Claude output:', output);
+            console.log('❌ Claude error:', error);
+            if (code === 0) {
+              resolve();
+            } else {
+              reject(new Error(`Claude process exited with code ${code}: ${error}`));
+            }
+          });
+          
+          claudeProcess.on('error', (err) => {
+            console.error('❌ Claude spawn error:', err);
+            reject(err);
+          });
+          
+          // Timeout after 10 seconds
+          setTimeout(() => {
+            claudeProcess.kill();
+            reject(new Error('Claude process timed out'));
+          }, 10000);
+        });
+        
+        // Clean and trim the output
+        const summary = output.trim()
+          .replace(/^["']|["']$/g, '') // Remove quotes
+          .split('\n')[0] // Take only first line
+          .substring(0, 50); // Limit length
+        
+        if (summary) {
+          console.log('✅ Claude summary generated:', summary);
+          return res.json({ summary });
+        } else {
+          console.log('⚠️ Claude returned empty summary');
+        }
+      } catch (error) {
+        console.error('❌ Error using Claude for summary:', error.message);
+        console.error('Full error:', error);
+        // Fall through to OpenAI
+      }
+    }
+    
+    // Fall back to OpenAI if Claude fails or is disabled
+    if (!process.env.OPENAI_API_KEY) {
+      console.log('⚠️ No OpenAI API key set, returning default summary');
+      return res.json({ summary: 'New Session' });
+    }
+    
+    console.log('🔄 Falling back to OpenAI for summary generation...');
+    
+    // Original OpenAI implementation
+    const prompt = `Summarize the following user intent into a brief 3-5 word session title. Focus on the main action or goal. Do not include "Caveat" or system messages. Examples: "Add dark mode", "Fix login bug", "Create API endpoint", "Update navigation menu".
+
+User messages: ${userMessages.substring(0, 500)}
+
+Session title:`;
+    
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a helpful assistant that creates concise, descriptive session titles. Always respond with just the title, nothing else.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 20,
+          temperature: 0.3,
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('OpenAI API error:', error);
+        return res.json({ summary: 'New Session' });
+      }
+      
+      const data = await response.json();
+      const summary = data.choices[0]?.message?.content?.trim() || 'New Session';
+      
+      // Ensure summary is not too long
+      const finalSummary = summary.length > 50 ? summary.substring(0, 47) + '...' : summary;
+      
+      res.json({ summary: finalSummary });
+    } catch (error) {
+      console.error('Error calling OpenAI API:', error);
+      res.json({ summary: 'New Session' });
+    }
+  } catch (error) {
+    console.error('Error generating session summary:', error);
+    res.status(500).json({ error: error.message, summary: null });
+  }
+});
+
+// Manual session summary generation endpoint
+app.post('/api/projects/:projectName/sessions/:sessionId/generate-summary', async (req, res) => {
+  try {
+    const { projectName, sessionId } = req.params;
+    
+    console.log('📝 Manual summary generation requested for:', projectName, sessionId);
+    
+    // Fetch session messages
+    const messages = await getSessionMessages(projectName, sessionId);
+    
+    console.log('📋 Found', messages?.length || 0, 'messages in session');
+    
+    if (!messages || messages.length === 0) {
+      return res.json({ summary: 'New Session' });
+    }
+    
+    // Generate summary using the existing endpoint
+    const summaryResponse = await fetch(`http://localhost:${PORT}/api/generate-session-summary`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ messages }),
+    });
+    
+    console.log('🔄 Summary API response status:', summaryResponse.status);
+    
+    if (!summaryResponse.ok) {
+      const errorText = await summaryResponse.text();
+      console.error('❌ Summary API error:', errorText);
+      throw new Error(`Failed to generate summary: ${errorText}`);
+    }
+    
+    const summaryData = await summaryResponse.json();
+    console.log('✅ Summary generated:', summaryData);
+    
+    if (summaryData.summary) {
+      // Update the session summary
+      await updateSessionSummary(projectName, sessionId, summaryData.summary);
+      
+      // Clear manual edit flag since this is a generated summary
+      clearManualEditFlag(sessionId);
+      
+      res.json({ 
+        success: true,
+        summary: summaryData.summary
+      });
+    } else {
+      console.error('❌ No summary in response:', summaryData);
+      res.status(500).json({ error: 'Failed to generate summary - no summary in response' });
+    }
+  } catch (error) {
+    console.error('❌ Error generating session summary:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update session summary endpoint
+app.put('/api/projects/:projectName/sessions/:sessionId/summary', async (req, res) => {
+  try {
+    const { projectName, sessionId } = req.params;
+    const { summary } = req.body;
+    
+    if (!summary) {
+      return res.status(400).json({ error: 'Summary is required' });
+    }
+    
+    await updateSessionSummary(projectName, sessionId, summary);
+    
+    // Mark this session as manually edited to prevent automatic updates
+    markSessionAsManuallyEdited(sessionId);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating session summary:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -478,6 +756,33 @@ function handleChatConnection(ws) {
           sessionId: data.sessionId,
           success
         }));
+      } else if (data.type === 'server:start') {
+        console.log('🚀 Starting server:', data.script, 'in', data.projectPath);
+        const result = await serverManager.startServer(data.projectPath, data.script);
+        if (result.error) {
+          ws.send(JSON.stringify({
+            type: 'server:error',
+            error: result.error,
+            projectPath: data.projectPath
+          }));
+        }
+      } else if (data.type === 'server:stop') {
+        console.log('🛑 Stopping server in', data.projectPath);
+        await serverManager.stopServer(data.projectPath, data.script);
+      } else if (data.type === 'server:status') {
+        const status = serverManager.getServerStatus(data.projectPath);
+        ws.send(JSON.stringify({
+          type: 'server:status',
+          projectPath: data.projectPath,
+          servers: status
+        }));
+      } else if (data.type === 'server:scripts') {
+        const scripts = await serverManager.getAvailableScripts(data.projectPath);
+        ws.send(JSON.stringify({
+          type: 'server:scripts',
+          projectPath: data.projectPath,
+          scripts
+        }));
       }
     } catch (error) {
       console.error('❌ Chat WebSocket error:', error.message);
@@ -664,6 +969,156 @@ function handleShellConnection(ws) {
   });
 }
 
+// Audio transcription endpoint
+app.post('/api/transcribe', async (req, res) => {
+  try {
+    const multer = require('multer');
+    const upload = multer({ storage: multer.memoryStorage() });
+    
+    // Handle multipart form data
+    upload.single('audio')(req, res, async (err) => {
+      if (err) {
+        return res.status(400).json({ error: 'Failed to process audio file' });
+      }
+      
+      if (!req.file) {
+        return res.status(400).json({ error: 'No audio file provided' });
+      }
+      
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: 'OpenAI API key not configured. Please set OPENAI_API_KEY in server environment.' });
+      }
+      
+      try {
+        // Create form data for OpenAI
+        const FormData = require('form-data');
+        const formData = new FormData();
+        formData.append('file', req.file.buffer, {
+          filename: req.file.originalname,
+          contentType: req.file.mimetype
+        });
+        formData.append('model', 'whisper-1');
+        formData.append('response_format', 'json');
+        formData.append('language', 'en');
+        
+        // Make request to OpenAI
+        const fetch = require('node-fetch');
+        const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            ...formData.getHeaders()
+          },
+          body: formData
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error?.message || `Whisper API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        let transcribedText = data.text || '';
+        
+        // Check if enhancement mode is enabled
+        const mode = req.body.mode || 'default';
+        
+        // If no transcribed text, return empty
+        if (!transcribedText) {
+          return res.json({ text: '' });
+        }
+        
+        // If default mode, return transcribed text without enhancement
+        if (mode === 'default') {
+          return res.json({ text: transcribedText });
+        }
+        
+        // Handle different enhancement modes
+        try {
+          const OpenAI = require('openai');
+          const openai = new OpenAI({ apiKey });
+          
+          let prompt, systemMessage, temperature = 0.7, maxTokens = 800;
+          
+          switch (mode) {
+            case 'prompt':
+              systemMessage = 'You are an expert prompt engineer who creates clear, detailed, and effective prompts.';
+              prompt = `You are an expert prompt engineer. Transform the following rough instruction into a clear, detailed, and context-aware AI prompt.
+
+Your enhanced prompt should:
+1. Be specific and unambiguous
+2. Include relevant context and constraints
+3. Specify the desired output format
+4. Use clear, actionable language
+5. Include examples where helpful
+6. Consider edge cases and potential ambiguities
+
+Transform this rough instruction into a well-crafted prompt:
+"${transcribedText}"
+
+Enhanced prompt:`;
+              break;
+              
+            case 'vibe':
+            case 'instructions':
+            case 'architect':
+              systemMessage = 'You are a helpful assistant that formats ideas into clear, actionable instructions for AI agents.';
+              temperature = 0.5; // Lower temperature for more controlled output
+              prompt = `Transform the following idea into clear, well-structured instructions that an AI agent can easily understand and execute.
+
+IMPORTANT RULES:
+- Format as clear, step-by-step instructions
+- Add reasonable implementation details based on common patterns
+- Only include details directly related to what was asked
+- Do NOT add features or functionality not mentioned
+- Keep the original intent and scope intact
+- Use clear, actionable language an agent can follow
+
+Transform this idea into agent-friendly instructions:
+"${transcribedText}"
+
+Agent instructions:`;
+              break;
+              
+            default:
+              // No enhancement needed
+              break;
+          }
+          
+          // Only make GPT call if we have a prompt
+          if (prompt) {
+            const completion = await openai.chat.completions.create({
+              model: 'gpt-4o-mini',
+              messages: [
+                { role: 'system', content: systemMessage },
+                { role: 'user', content: prompt }
+              ],
+              temperature: temperature,
+              max_tokens: maxTokens
+            });
+            
+            transcribedText = completion.choices[0].message.content || transcribedText;
+          }
+          
+        } catch (gptError) {
+          console.error('GPT processing error:', gptError);
+          // Fall back to original transcription if GPT fails
+        }
+        
+        res.json({ text: transcribedText });
+        
+      } catch (error) {
+        console.error('Transcription error:', error);
+        res.status(500).json({ error: error.message });
+      }
+    });
+  } catch (error) {
+    console.error('Endpoint error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Serve React app for all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
@@ -728,4 +1183,27 @@ server.listen(PORT, '0.0.0.0', () => {
   
   // Start watching the projects folder for changes
   setupProjectsWatcher();
+});
+
+// Cleanup on exit
+process.on('SIGINT', () => {
+  console.log('\n🛑 Shutting down gracefully...');
+  if (serverManager) {
+    serverManager.cleanupAll();
+  }
+  if (projectsWatcher) {
+    projectsWatcher.close();
+  }
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('\n🛑 Shutting down gracefully...');
+  if (serverManager) {
+    serverManager.cleanupAll();
+  }
+  if (projectsWatcher) {
+    projectsWatcher.close();
+  }
+  process.exit(0);
 });

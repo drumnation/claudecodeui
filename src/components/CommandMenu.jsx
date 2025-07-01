@@ -5,13 +5,10 @@ const CommandMenu = memo(({ commands, selectedIndex, onSelectCommand, position }
 
   return (
     <div 
-      className="absolute bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-64 overflow-y-auto z-50"
+      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-48 sm:max-h-64 overflow-y-auto"
       style={{
-        bottom: position?.bottom || 'auto',
-        left: position?.left || 0,
-        right: position?.right || 0,
-        minWidth: '300px',
-        maxWidth: '500px'
+        minWidth: '280px',
+        maxWidth: '100%'
       }}
     >
       <div className="p-2 border-b border-gray-200 dark:border-gray-700">

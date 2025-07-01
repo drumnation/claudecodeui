@@ -3,7 +3,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
-import { FolderOpen, Folder, Plus, MessageSquare, Clock, ChevronDown, ChevronRight, Edit3, Check, X, Trash2, Settings, FolderPlus, RefreshCw } from 'lucide-react';
+import { FolderOpen, Folder, Plus, MessageSquare, Clock, ChevronDown, ChevronRight, Edit3, Check, X, Trash2, Settings, FolderPlus, RefreshCw, Sparkles, Edit2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import ClaudeLogo from './ClaudeLogo';
 
@@ -57,6 +57,9 @@ function Sidebar({
   const [initialSessionsLoaded, setInitialSessionsLoaded] = useState(new Set());
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [editingSession, setEditingSession] = useState(null);
+  const [editingSessionName, setEditingSessionName] = useState('');
+  const [generatingSummary, setGeneratingSummary] = useState({});
 
   // Touch handler to prevent double-tap issues on iPad
   const handleTouchClick = (callback) => {
@@ -173,6 +176,63 @@ function Sidebar({
     } catch (error) {
       console.error('Error deleting session:', error);
       alert('Error deleting session. Please try again.');
+    }
+  };
+
+  const generateSessionSummary = async (projectName, sessionId) => {
+    const key = `${projectName}-${sessionId}`;
+    setGeneratingSummary(prev => ({ ...prev, [key]: true }));
+    
+    try {
+      console.log('🔄 Generating summary for:', projectName, sessionId);
+      const response = await fetch(`/api/projects/${projectName}/sessions/${sessionId}/generate-summary`, {
+        method: 'POST',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Summary generated:', data.summary);
+        // The UI will update automatically via WebSocket
+      } else {
+        const error = await response.json();
+        console.error('Failed to generate summary:', error);
+        alert(`Failed to generate summary: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error generating summary:', error);
+      alert(`Error generating summary: ${error.message || 'Network error'}`);
+    } finally {
+      setGeneratingSummary(prev => {
+        const newState = { ...prev };
+        delete newState[key];
+        return newState;
+      });
+    }
+  };
+
+  const updateSessionSummary = async (projectName, sessionId, newSummary) => {
+    try {
+      const response = await fetch(`/api/projects/${projectName}/sessions/${sessionId}/summary`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ summary: newSummary }),
+      });
+      
+      if (response.ok) {
+        console.log('✅ Summary updated');
+        setEditingSession(null);
+        setEditingSessionName('');
+        // The UI will update automatically via WebSocket
+      } else {
+        const error = await response.json();
+        console.error('Failed to update summary:', error);
+        alert('Failed to update summary. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error updating summary:', error);
+      alert('Error updating summary. Please try again.');
     }
   };
 
@@ -304,8 +364,8 @@ function Sidebar({
         {/* Desktop Header */}
         <div className="hidden md:flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm p-1">
-              <ClaudeLogo className="w-full h-full" />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">
+              <ClaudeLogo className="w-5 h-5" />
             </div>
             <div>
               <h1 className="text-lg font-bold text-foreground">Claude Code UI</h1>
@@ -346,8 +406,8 @@ function Sidebar({
         <div className="md:hidden p-3 border-b border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center p-1">
-                <ClaudeLogo className="w-full h-full" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+                <ClaudeLogo className="w-5 h-5" />
               </div>
               <div>
                 <h1 className="text-lg font-semibold text-foreground">Claude Code UI</h1>
@@ -602,7 +662,7 @@ function Sidebar({
                               <>
                                 {getAllSessions(project).length === 0 && (
                                   <button
-                                    className="w-8 h-8 rounded-lg bg-red-500/10 dark:bg-red-900/30 flex items-center justify-center active:scale-90 transition-all duration-150 border border-red-200 dark:border-red-800"
+                                    className="w-8 h-8 rounded-lg bg-red-500/10 dark:bg-red-900/30 flex items-center justify-center active:scale-90 border border-red-200 dark:border-red-800"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       deleteProject(project.name);
@@ -613,7 +673,7 @@ function Sidebar({
                                   </button>
                                 )}
                                 <button
-                                  className="w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center active:scale-90 transition-all duration-150 border border-primary/20 dark:border-primary/30"
+                                  className="w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center active:scale-90 border border-primary/20 dark:border-primary/30"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     startEditing(project);
@@ -640,7 +700,7 @@ function Sidebar({
                     <Button
                       variant="ghost"
                       className={cn(
-                        "hidden md:flex w-full justify-between p-2 h-auto font-normal hover:bg-accent/50 transition-colors duration-200",
+                        "hidden md:flex w-full justify-between p-2 h-auto font-normal hover:bg-accent/50",
                         isSelected && "bg-accent text-accent-foreground"
                       )}
                       onClick={() => {
@@ -782,14 +842,27 @@ function Sidebar({
                           <p className="text-xs text-muted-foreground">No sessions yet</p>
                         </div>
                       ) : (
-                        getAllSessions(project).map((session) => (
+                        getAllSessions(project).map((session) => {
+                          // Calculate if session is active (within last 10 minutes)
+                          const sessionDate = new Date(session.lastActivity);
+                          const diffInMinutes = Math.floor((currentTime - sessionDate) / (1000 * 60));
+                          const isActive = diffInMinutes < 10;
+                          
+                          return (
                           <div key={session.id} className="group relative">
+                            {/* Active session indicator dot */}
+                            {isActive && (
+                              <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1">
+                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                              </div>
+                            )}
                             {/* Mobile Session Item */}
                             <div className="md:hidden">
                               <div
                                 className={cn(
-                                  "p-2 mx-3 my-0.5 rounded-md bg-card border border-border/30 active:scale-[0.98] transition-all duration-150 relative",
-                                  selectedSession?.id === session.id && "bg-primary/5 border-primary/20"
+                                  "p-2 mx-3 my-0.5 rounded-md bg-card border active:scale-[0.98] transition-all duration-150 relative",
+                                  selectedSession?.id === session.id ? "bg-primary/5 border-primary/20" :
+                                  isActive ? "border-green-500/30 bg-green-50/5 dark:bg-green-900/5" : "border-border/30"
                                 )}
                                 onClick={() => {
                                   onProjectSelect(project);
@@ -803,11 +876,13 @@ function Sidebar({
                                 <div className="flex items-center gap-2">
                                   <div className={cn(
                                     "w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0",
-                                    selectedSession?.id === session.id ? "bg-primary/10" : "bg-muted/50"
+                                    selectedSession?.id === session.id ? "bg-primary/10" : 
+                                    diffInMinutes < 10 ? "bg-green-500/20" : "bg-muted/50"
                                   )}>
                                     <MessageSquare className={cn(
                                       "w-3 h-3",
-                                      selectedSession?.id === session.id ? "text-primary" : "text-muted-foreground"
+                                      selectedSession?.id === session.id ? "text-primary" : 
+                                      diffInMinutes < 10 ? "text-green-600 dark:text-green-500" : "text-muted-foreground"
                                     )} />
                                   </div>
                                   <div className="min-w-0 flex-1">
@@ -815,8 +890,14 @@ function Sidebar({
                                       {session.summary || 'New Session'}
                                     </div>
                                     <div className="flex items-center gap-1 mt-0.5">
-                                      <Clock className="w-2.5 h-2.5 text-muted-foreground" />
-                                      <span className="text-xs text-muted-foreground">
+                                      <Clock className={cn(
+                                        "w-2.5 h-2.5",
+                                        isActive ? "text-green-600 dark:text-green-500" : "text-muted-foreground"
+                                      )} />
+                                      <span className={cn(
+                                        "text-xs",
+                                        isActive ? "text-green-600 dark:text-green-500 font-medium" : "text-muted-foreground"
+                                      )}>
                                         {formatTimeAgo(session.lastActivity, currentTime)}
                                       </span>
                                       {session.messageCount > 0 && (
@@ -826,17 +907,102 @@ function Sidebar({
                                       )}
                                     </div>
                                   </div>
-                                  {/* Mobile delete button */}
-                                  <button
-                                    className="w-5 h-5 rounded-md bg-red-50 dark:bg-red-900/20 flex items-center justify-center active:scale-95 transition-transform opacity-70 ml-1"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      deleteSession(project.name, session.id);
-                                    }}
-                                    onTouchEnd={handleTouchClick(() => deleteSession(project.name, session.id))}
-                                  >
-                                    <Trash2 className="w-2.5 h-2.5 text-red-600 dark:text-red-400" />
-                                  </button>
+                                  {/* Mobile action buttons */}
+                                  <div className="flex items-center gap-1 ml-1">
+                                    {editingSession === session.id ? (
+                                      <>
+                                        <input
+                                          type="text"
+                                          value={editingSessionName}
+                                          onChange={(e) => setEditingSessionName(e.target.value)}
+                                          onKeyDown={(e) => {
+                                            e.stopPropagation();
+                                            if (e.key === 'Enter') {
+                                              updateSessionSummary(project.name, session.id, editingSessionName);
+                                            } else if (e.key === 'Escape') {
+                                              setEditingSession(null);
+                                              setEditingSessionName('');
+                                            }
+                                          }}
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="w-24 px-2 py-1 text-xs border border-border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                                          autoFocus
+                                        />
+                                        <button
+                                          className="w-5 h-5 rounded-md bg-green-50 dark:bg-green-900/20 flex items-center justify-center active:scale-95 transition-transform"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            updateSessionSummary(project.name, session.id, editingSessionName);
+                                          }}
+                                          onTouchEnd={handleTouchClick(() => updateSessionSummary(project.name, session.id, editingSessionName))}
+                                        >
+                                          <Check className="w-2.5 h-2.5 text-green-600 dark:text-green-400" />
+                                        </button>
+                                        <button
+                                          className="w-5 h-5 rounded-md bg-gray-50 dark:bg-gray-900/20 flex items-center justify-center active:scale-95 transition-transform"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingSession(null);
+                                            setEditingSessionName('');
+                                          }}
+                                          onTouchEnd={handleTouchClick(() => {
+                                            setEditingSession(null);
+                                            setEditingSessionName('');
+                                          })}
+                                        >
+                                          <X className="w-2.5 h-2.5 text-gray-600 dark:text-gray-400" />
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        {/* Generate summary button */}
+                                        <button
+                                          className="w-5 h-5 rounded-md bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center active:scale-95 transition-transform opacity-70"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            generateSessionSummary(project.name, session.id);
+                                          }}
+                                          onTouchEnd={handleTouchClick(() => generateSessionSummary(project.name, session.id))}
+                                          disabled={generatingSummary[`${project.name}-${session.id}`]}
+                                          title="Generate AI summary"
+                                        >
+                                          {generatingSummary[`${project.name}-${session.id}`] ? (
+                                            <div className="w-2.5 h-2.5 animate-spin rounded-full border border-blue-600 dark:border-blue-400 border-t-transparent" />
+                                          ) : (
+                                            <Sparkles className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400" />
+                                          )}
+                                        </button>
+                                        {/* Edit button */}
+                                        <button
+                                          className="w-5 h-5 rounded-md bg-gray-50 dark:bg-gray-900/20 flex items-center justify-center active:scale-95 transition-transform opacity-70"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingSession(session.id);
+                                            setEditingSessionName(session.summary || 'New Session');
+                                          }}
+                                          onTouchEnd={handleTouchClick(() => {
+                                            setEditingSession(session.id);
+                                            setEditingSessionName(session.summary || 'New Session');
+                                          })}
+                                          title="Edit session name"
+                                        >
+                                          <Edit2 className="w-2.5 h-2.5 text-gray-600 dark:text-gray-400" />
+                                        </button>
+                                        {/* Delete button */}
+                                        <button
+                                          className="w-5 h-5 rounded-md bg-red-50 dark:bg-red-900/20 flex items-center justify-center active:scale-95 transition-transform opacity-70"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            deleteSession(project.name, session.id);
+                                          }}
+                                          onTouchEnd={handleTouchClick(() => deleteSession(project.name, session.id))}
+                                          title="Delete session"
+                                        >
+                                          <Trash2 className="w-2.5 h-2.5 text-red-600 dark:text-red-400" />
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -847,20 +1013,30 @@ function Sidebar({
                                 variant="ghost"
                                 className={cn(
                                   "w-full justify-start p-2 h-auto font-normal text-left hover:bg-accent/50 transition-colors duration-200",
-                                  selectedSession?.id === session.id && "bg-accent text-accent-foreground"
+                                  selectedSession?.id === session.id ? "bg-accent text-accent-foreground" :
+                                  isActive ? "bg-green-50/50 dark:bg-green-900/10" : ""
                                 )}
                                 onClick={() => onSessionSelect(session)}
                                 onTouchEnd={handleTouchClick(() => onSessionSelect(session))}
                               >
                                 <div className="flex items-start gap-2 min-w-0 w-full">
-                                  <MessageSquare className="w-3 h-3 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                  <MessageSquare className={cn(
+                                    "w-3 h-3 mt-0.5 flex-shrink-0",
+                                    isActive ? "text-green-600 dark:text-green-500" : "text-muted-foreground"
+                                  )} />
                                   <div className="min-w-0 flex-1">
                                     <div className="text-xs font-medium truncate text-foreground">
                                       {session.summary || 'New Session'}
                                     </div>
                                     <div className="flex items-center gap-1 mt-0.5">
-                                      <Clock className="w-2.5 h-2.5 text-muted-foreground" />
-                                      <span className="text-xs text-muted-foreground">
+                                      <Clock className={cn(
+                                        "w-2.5 h-2.5",
+                                        isActive ? "text-green-600 dark:text-green-500" : "text-muted-foreground"
+                                      )} />
+                                      <span className={cn(
+                                        "text-xs",
+                                        isActive ? "text-green-600 dark:text-green-500 font-medium" : "text-muted-foreground"
+                                      )}>
                                         {formatTimeAgo(session.lastActivity, currentTime)}
                                       </span>
                                       {session.messageCount > 0 && (
@@ -872,20 +1048,97 @@ function Sidebar({
                                   </div>
                                 </div>
                               </Button>
-                              {/* Desktop delete button */}
-                              <button
-                                className="absolute right-2 top-1/2 transform -translate-y-1/2 w-6 h-6 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 rounded flex items-center justify-center touch:opacity-100"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteSession(project.name, session.id);
-                                }}
-                                title="Delete session (Delete)"
-                              >
-                                <Trash2 className="w-3 h-3 text-red-600 dark:text-red-400" />
-                              </button>
+                              {/* Desktop hover buttons */}
+                              <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                                {editingSession === session.id ? (
+                                  <>
+                                    <input
+                                      type="text"
+                                      value={editingSessionName}
+                                      onChange={(e) => setEditingSessionName(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        e.stopPropagation();
+                                        if (e.key === 'Enter') {
+                                          updateSessionSummary(project.name, session.id, editingSessionName);
+                                        } else if (e.key === 'Escape') {
+                                          setEditingSession(null);
+                                          setEditingSessionName('');
+                                        }
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="w-32 px-2 py-1 text-xs border border-border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                                      autoFocus
+                                    />
+                                    <button
+                                      className="w-6 h-6 bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40 rounded flex items-center justify-center"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        updateSessionSummary(project.name, session.id, editingSessionName);
+                                      }}
+                                      title="Save"
+                                    >
+                                      <Check className="w-3 h-3 text-green-600 dark:text-green-400" />
+                                    </button>
+                                    <button
+                                      className="w-6 h-6 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900/20 dark:hover:bg-gray-900/40 rounded flex items-center justify-center"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingSession(null);
+                                        setEditingSessionName('');
+                                      }}
+                                      title="Cancel"
+                                    >
+                                      <X className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    {/* Generate summary button */}
+                                    <button
+                                      className="w-6 h-6 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 rounded flex items-center justify-center"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        generateSessionSummary(project.name, session.id);
+                                      }}
+                                      title="Generate AI summary for this session"
+                                      disabled={generatingSummary[`${project.name}-${session.id}`]}
+                                    >
+                                      {generatingSummary[`${project.name}-${session.id}`] ? (
+                                        <div className="w-3 h-3 animate-spin rounded-full border border-blue-600 dark:border-blue-400 border-t-transparent" />
+                                      ) : (
+                                        <Sparkles className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                                      )}
+                                    </button>
+                                    {/* Edit button */}
+                                    <button
+                                      className="w-6 h-6 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900/20 dark:hover:bg-gray-900/40 rounded flex items-center justify-center"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingSession(session.id);
+                                        setEditingSessionName(session.summary || 'New Session');
+                                      }}
+                                      title="Manually edit session name"
+                                    >
+                                      <Edit2 className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+                                    </button>
+                                    {/* Delete button */}
+                                    <button
+                                      className="w-6 h-6 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 rounded flex items-center justify-center"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        deleteSession(project.name, session.id);
+                                      }}
+                                      title="Delete this session permanently"
+                                    >
+                                      <Trash2 className="w-3 h-3 text-red-600 dark:text-red-400" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        ))
+                          );
+                        })
                       )}
                       
                       {/* Show More Sessions Button */}

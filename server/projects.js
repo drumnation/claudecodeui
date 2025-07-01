@@ -471,6 +471,55 @@ async function addProjectManually(projectPath, displayName = null) {
   };
 }
 
+// Update session summary
+async function updateSessionSummary(projectName, sessionId, summary) {
+  const projectDir = path.join(process.env.HOME, '.claude', 'projects', projectName);
+  
+  try {
+    const files = await fs.readdir(projectDir);
+    const jsonlFiles = files.filter(file => file.endsWith('.jsonl'));
+    
+    if (jsonlFiles.length === 0) {
+      throw new Error('No session files found for this project');
+    }
+    
+    // Find the file containing this session and append a summary entry
+    for (const file of jsonlFiles) {
+      const jsonlFile = path.join(projectDir, file);
+      const content = await fs.readFile(jsonlFile, 'utf8');
+      const lines = content.split('\n').filter(line => line.trim());
+      
+      // Check if this file contains the session
+      const hasSession = lines.some(line => {
+        try {
+          const data = JSON.parse(line);
+          return data.sessionId === sessionId;
+        } catch {
+          return false;
+        }
+      });
+      
+      if (hasSession) {
+        // Add summary entry
+        const summaryEntry = {
+          sessionId,
+          type: 'summary',
+          summary,
+          timestamp: new Date().toISOString()
+        };
+        
+        await fs.appendFile(jsonlFile, '\n' + JSON.stringify(summaryEntry) + '\n');
+        return true;
+      }
+    }
+    
+    throw new Error(`Session ${sessionId} not found in any files`);
+  } catch (error) {
+    console.error(`Error updating session summary for ${sessionId}:`, error);
+    throw error;
+  }
+}
+
 
 module.exports = {
   getProjects,
@@ -483,5 +532,6 @@ module.exports = {
   deleteProject,
   addProjectManually,
   loadProjectConfig,
-  saveProjectConfig
+  saveProjectConfig,
+  updateSessionSummary
 };

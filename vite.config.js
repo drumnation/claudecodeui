@@ -5,6 +5,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: process.env.VITE_PORT || 8766,
+    strictPort: true,
+    host: true,
     hmr: {
       // Use different HMR settings based on whether ngrok is being used
       ...(process.env.NGROK_URL ? {
@@ -12,8 +14,14 @@ export default defineConfig({
         protocol: 'wss'
       } : {
         // For local development, use the same port as the dev server
-        port: process.env.VITE_PORT || 8766
+        port: process.env.VITE_PORT || 8766,
+        host: 'localhost'
       })
+    },
+    watch: {
+      // Force polling in case native fs events aren't working
+      usePolling: true,
+      interval: 100
     },
     allowedHosts: [
       'localhost',
@@ -31,6 +39,12 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: 'dist'
+    outDir: 'dist',
+    // Clear output directory before build
+    emptyOutDir: true
+  },
+  // Ensure we're not caching aggressively
+  optimizeDeps: {
+    force: true
   }
 })
