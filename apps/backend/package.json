@@ -4,9 +4,18 @@
   "description": "Backend server for Claude Code UI",
   "main": "index.js",
   "scripts": {
+    "clean": "git clean -xdf .turbo node_modules",
+    "format": "prettier --check \"**/*.{js,ts,tsx}\"",
+    "lint": "eslint .",
+    "typecheck": "echo 'n/a' && exit 0",
     "start": "node index.js",
     "dev": "NODE_ENV=development node index.js",
-    "watch": "nodemon index.js"
+    "watch": "nodemon index.js",
+    "test": "echo 'n/a' && exit 0",
+    "test:unit": "echo 'n/a' && exit 0",
+    "test:integration": "echo 'n/a' && exit 0",
+    "test:e2e": "echo 'n/a' && exit 0",
+    "test:e2e:browser": "echo 'n/a' && exit 0"
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "^1.0.24",
@@ -22,6 +31,18 @@
     "ws": "^8.14.2"
   },
   "devDependencies": {
+    "@kit/tsconfig": "workspace:*",
+    "@kit/eslint-config": "workspace:*",
+    "@kit/prettier-config": "workspace:*",
+    "@kit/testing": "workspace:*",
     "nodemon": "^3.1.10"
-  }
+  },
+  "eslintConfig": {
+    "root": true,
+    "extends": [
+      "@kit/eslint-config/base",
+      "@kit/eslint-config/sort"
+    ]
+  },
+  "prettier": "@kit/prettier-config"
 }

@@ -1,0 +1,12 @@
+{
+  "extends": "@kit/tsconfig/node",
+  "compilerOptions": {
+    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
+    "rootDir": ".",
+    "outDir": "dist",
+    "allowJs": true,
+    "checkJs": true
+  },
+  "include": ["**/*.js", "**/*.ts", "**/*.tsx", "**/*.d.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.js", "**/*.test.ts", "**/*.spec.js", "**/*.spec.ts"]
+}
