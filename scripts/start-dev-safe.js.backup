@@ -1,0 +1,189 @@
+#!/usr/bin/env node
+
+const { exec, spawn } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+
+// Load environment variables
+const envPath = path.join(__dirname, '../.env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  envContent.split('\n').forEach(line => {
+    const trimmedLine = line.trim();
+    if (trimmedLine && !trimmedLine.startsWith('#')) {
+      const [key, ...valueParts] = trimmedLine.split('=');
+      if (key && valueParts.length > 0) {
+        process.env[key] = valueParts.join('=').trim();
+      }
+    }
+  });
+}
+
+const BACKEND_PORT = process.env.PORT || 8765;
+const FRONTEND_PORT = process.env.VITE_PORT || 8766;
+
+console.log('🧹 Cleaning up before starting...');
+console.log(`📍 Backend port: ${BACKEND_PORT}`);
+console.log(`📍 Frontend port: ${FRONTEND_PORT}`);
+
+// Function to kill process on a specific port
+function killPort(port) {
+  return new Promise((resolve) => {
+    // Try lsof first (more reliable on macOS)
+    exec(`lsof -ti:${port} | xargs kill -9 2>/dev/null`, (error) => {
+      if (!error) {
+        console.log(`✅ Killed process on port ${port}`);
+      }
+      
+      // Also try fuser as backup
+      exec(`fuser -k ${port}/tcp 2>/dev/null`, () => {
+        // Ignore errors, just resolve
+        resolve();
+      });
+    });
+  });
+}
+
+// Function to check if port is free
+function isPortFree(port) {
+  return new Promise((resolve) => {
+    exec(`lsof -ti:${port}`, (error, stdout) => {
+      resolve(!stdout || stdout.trim() === '');
+    });
+  });
+}
+
+// Function to wait for port to be free
+async function waitForPortFree(port, maxAttempts = 10) {
+  for (let i = 0; i < maxAttempts; i++) {
+    if (await isPortFree(port)) {
+      return true;
+    }
+    console.log(`⏳ Waiting for port ${port} to be free... (attempt ${i + 1}/${maxAttempts})`);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  return false;
+}
+
+// Function to find an available port starting from a base port
+async function findAvailablePort(basePort) {
+  let port = basePort;
+  let attempts = 0;
+  const maxAttempts = 10;
+  
+  while (attempts < maxAttempts) {
+    if (await isPortFree(port)) {
+      return port;
+    }
+    port++;
+    attempts++;
+  }
+  
+  throw new Error(`Could not find available port after ${maxAttempts} attempts starting from ${basePort}`);
+}
+
+// Main startup function
+async function startDev() {
+  try {
+    // Kill any existing processes on our ports
+    console.log('\n🔪 Killing processes on required ports...');
+    await Promise.all([
+      killPort(BACKEND_PORT),
+      killPort(FRONTEND_PORT)
+    ]);
+    
+    // Wait a bit for ports to be released
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Check if ports are free
+    const backendFree = await waitForPortFree(BACKEND_PORT);
+    const frontendFree = await waitForPortFree(FRONTEND_PORT);
+    
+    let actualBackendPort = BACKEND_PORT;
+    let actualFrontendPort = FRONTEND_PORT;
+    
+    // Find alternative ports if needed
+    if (!backendFree) {
+      console.log(`⚠️  Port ${BACKEND_PORT} is still in use, finding alternative...`);
+      actualBackendPort = await findAvailablePort(parseInt(BACKEND_PORT) + 1);
+      console.log(`✅ Using alternative backend port: ${actualBackendPort}`);
+      
+      // Update environment for child processes
+      process.env.PORT = actualBackendPort.toString();
+      process.env.VITE_API_PORT = actualBackendPort.toString();
+    }
+    
+    if (!frontendFree) {
+      console.log(`⚠️  Port ${FRONTEND_PORT} is still in use, finding alternative...`);
+      actualFrontendPort = await findAvailablePort(parseInt(FRONTEND_PORT) + 1);
+      console.log(`✅ Using alternative frontend port: ${actualFrontendPort}`);
+      
+      // Update environment for child processes
+      process.env.VITE_PORT = actualFrontendPort.toString();
+    }
+    
+    // Clean dist and vite cache
+    console.log('\n🧹 Cleaning build artifacts...');
+    await new Promise((resolve, reject) => {
+      exec('rm -rf dist && rm -rf node_modules/.vite', (error) => {
+        if (error) reject(error);
+        else resolve();
+      });
+    });
+    
+    console.log('\n🚀 Starting development servers...');
+    console.log(`📍 Backend will run on: http://localhost:${actualBackendPort}`);
+    console.log(`📍 Frontend will run on: http://localhost:${actualFrontendPort}`);
+    
+    // Start the development servers using npm-run-all or concurrently
+    const concurrentlyPath = path.join(__dirname, '../node_modules/.bin/concurrently');
+    
+    const devProcess = spawn(concurrentlyPath, [
+      '--kill-others',
+      '--names', 'server,client,ngrok',
+      '--prefix', '[{index}]',
+      '--prefix-colors', 'bgBlue.bold,bgGreen.bold,bgMagenta.bold',
+      `"pnpm --filter @claude-code-ui/backend exec node index-fixed.js"`,
+      `"pnpm --filter @claude-code-ui/frontend exec vite serve --host --port ${actualFrontendPort} --force --clearScreen false"`,
+      `"node scripts/start-ngrok.js"`
+    ], {
+      cwd: path.join(__dirname, '..'),
+      stdio: 'inherit',
+      shell: true,
+      env: {
+        ...process.env,
+        NODE_ENV: 'development',
+        PORT: actualBackendPort.toString(),
+        VITE_PORT: actualFrontendPort.toString(),
+        VITE_API_PORT: actualBackendPort.toString()
+      }
+    });
+    
+    // Handle process termination
+    process.on('SIGINT', () => {
+      console.log('\n\n🛑 Shutting down development servers...');
+      devProcess.kill('SIGTERM');
+      
+      // Also try to clean up the ports
+      setTimeout(async () => {
+        await Promise.all([
+          killPort(actualBackendPort),
+          killPort(actualFrontendPort)
+        ]);
+        process.exit(0);
+      }, 1000);
+    });
+    
+    process.on('SIGTERM', () => {
+      devProcess.kill('SIGTERM');
+      process.exit(0);
+    });
+    
+  } catch (error) {
+    console.error('❌ Error starting development servers:', error);
+    process.exit(1);
+  }
+}
+
+// Start the development environment
+startDev();

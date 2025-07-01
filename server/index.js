@@ -1036,8 +1036,10 @@ app.post('/api/transcribe', async (req, res) => {
         
         // Handle different enhancement modes
         try {
-          const OpenAI = require('openai');
-          const openai = new OpenAI({ apiKey });
+          // Temporarily disable OpenAI package due to Stream module error
+          // const OpenAI = require('openai');
+          // const openai = new OpenAI({ apiKey });
+          throw new Error('OpenAI enhancement temporarily disabled');
           
           let prompt, systemMessage, temperature = 0.7, maxTokens = 800;
           

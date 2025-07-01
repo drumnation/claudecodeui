@@ -1,0 +1,1 @@
+Simplify the problem. Can you create a smaller, isolated version of the code that reproduces the issue? This can make it easier to diagnose and fix the core problem. 

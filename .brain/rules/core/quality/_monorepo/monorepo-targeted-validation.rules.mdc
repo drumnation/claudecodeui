@@ -1,0 +1,62 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Rule: Targeted Validation for Scoped Changes
+# Applies To: All agent code changes in monorepo or multi-package projects
+
+## Purpose
+Minimize overhead and feedback time by running only the validation steps (tests, type checks, linting) relevant to the changed app or package.
+
+## Trigger
+After any agent action that updates TypeScript, configuration, or logic in a monorepo package (`apps/*` or `packages/*`).
+
+## Agent Behavior
+
+1. ✅ **Determine Scope:**
+   - Identify affected package(s) based on file paths changed.
+
+2. ✅ **Read Each package.json:**
+   - For each affected package:
+     - Check for `typecheck`, `type-check`, or similar script name
+     - Check for `lint`, `lint:fix`, `test`, or `test:watch`
+     - Prefer `typecheck` → `type-check` → `tsc --noEmit` as fallback
+
+3. ✅ **Run Scoped Validation Commands:**
+   Example resolution logic:
+   - `pnpm --filter <package> run typecheck`  
+   - if not found: `pnpm --filter <package> run type-check`  
+   - if not found: fallback to raw `pnpm exec tsc --noEmit` in that directory
+
+   Same pattern applies to `lint` (`lint`, `lint:fix`, `eslint .`), and `test`.
+
+4. ✅ **Missing Commands:**
+   - If **no command is found**, skip that validation step for this package and log:  
+     > _"No typecheck script found for package `packages/foo`. Skipping type check."_
+
+5. ✅ **Continue for Each Validation Step**
+   - Do not fail the entire task just because one validation script is missing.
+   - Report what was run, what passed, and what was skipped.
+
+6. 🧠 Auto-Improve Package Scripts
+
+- If validation commands are missing:
+  - Suggest a commit to add standard scripts to the `package.json` of that package:
+    ```json
+    "scripts": {
+      "typecheck": "tsc --noEmit",
+      "lint": "eslint .",
+      "test": "vitest"
+    }
+    ```
+  - Ask the user for permission before modifying unless in auto-fix mode.
+
+## Notes
+- Agents must NOT run root-level `pnpm run validate` unless multiple unrelated packages were affected.
+- Supports: `pnpm`, `turborepo`, workspace layout
+
+## Related
+- `validate-project-before-commit.prompt.md`
+- `monorepo-changelog.rules.mdc`
+- `error-task-plan-generator.rules.mdc`

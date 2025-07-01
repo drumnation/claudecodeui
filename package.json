@@ -5,6 +5,8 @@
   "main": "server/index.js",
   "scripts": {
     "dev": "npm run clean:dist && concurrently --kill-others \"npm run server:dev\" \"npm run client:dev\" \"npm run ngrok\"",
+    "dev:safe": "node scripts/start-dev-safe.js",
+    "kill": "node scripts/kill-servers.js",
     "server": "node server/index.js",
     "server:dev": "NODE_ENV=development node server/index.js",
     "client": "vite --host --port 8766",

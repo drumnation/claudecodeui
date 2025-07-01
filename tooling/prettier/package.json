@@ -1,0 +1,19 @@
+{
+  "name": "@kit/prettier-config",
+  "private": true,
+  "version": "0.1.0",
+  "main": "index.mjs",
+  "scripts": {
+    "clean": "rm -rf .turbo node_modules",
+    "format": "prettier --check \"**/*.{mjs,json}\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "prettier": "^3.3.3"
+  },
+  "devDependencies": {
+    "@kit/tsconfig": "workspace:*",
+    "typescript": "^5.6.3"
+  },
+  "prettier": "./index.mjs"
+}

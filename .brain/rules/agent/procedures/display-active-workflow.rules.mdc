@@ -1,0 +1,42 @@
+---
+description: 
+globs: **/*.workflow.md
+alwaysApply: false
+---
+# display-active-workflow.rules.mdc
+
+## Purpose
+When executing a `.workflow.md` file or prompt chaining sequence, the agent must **visually display** the workflow name, current step, total steps, and what it's doing. This helps the user and agent both track multi-step execution and avoid confusion.
+
+## Behavior
+- At the **start of a workflow**, output a header like:
+
+```markdown
+## 🧭 Executing Workflow: generate-and-validate-rule.workflow.md
+```
+
+- Before each step, output:
+```markdown
+### 🔄 Step [X]/[Y]: [brief step purpose]
+- **Prompt File**: [.brain/prompts/...]
+- **Expected Output**: [summary of what this step produces]
+```
+
+- After each step, confirm success or error:
+```markdown
+✅ Step [X] complete.
+```
+
+- When the workflow is finished:
+```markdown
+🎉 Workflow complete: [filename]
+```
+
+## Notes
+- This rule improves transparency, debugging, and collaboration.
+- Avoid repeating the workflow header unless a new workflow is started.
+- If context is high, output a self-report as well.
+
+## When to Use
+- Automatically when running `.workflow.md` files
+- When chaining multiple prompt files for a single user or agent task

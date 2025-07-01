@@ -1,0 +1,49 @@
+---
+description: The user provides a screenshot of a UI and requests a visual or layout change without specifying the file or component.
+globs: 
+alwaysApply: false
+---
+# Rule: Image-Driven Component Update
+
+Purpose:
+Allow the agent to infer and apply front-end updates directly from UI screenshots, even when the user doesn't specify which component or file to modify.
+
+Trigger Conditions:
+- The user provides a screenshot (e.g. PNG, JPG, or embedded image)
+- The user describes a UI change, layout issue, or design tweak
+- The file/component is not explicitly named in the message
+
+Agent Behavior:
+
+1. **Interpret the Screenshot**
+   - Extract visual and text cues (labels, headings, color, spacing)
+   - Infer layout structure from the image (e.g. vertical stack, grid, card)
+
+2. **Find Matching Component**
+   - Search React components in `apps/` and `packages/ui/` for matching:
+     - Text labels (e.g., "Sign In", "Explore", "Start for free")
+     - Layout structure (stack, flex, grid, padding, etc.)
+     - Class names or styled-component hashes (if available)
+   - Rank and insert top 1–3 likely candidates into context
+
+3. **Apply the Change**
+   - Make styling or layout updates using the appropriate method:
+     - Prefer styled-components or Tailwind (based on project conventions)
+     - Use design system tokens when available
+   - Annotate logic clearly if the match is not 100% certain:
+     ```tsx
+     {/* TODO: Verify this is the correct component to apply UI change */ }
+     ```
+
+4. **Preserve Reasoning for Future Agents**
+   - Inline a short `NOTE:` comment explaining the change and reasoning
+   - Update any related task lists if present
+
+Assumptions:
+- The agent has access to screenshots
+- Project follows a recognizable component structure
+- The change is limited to the visual layer (no complex state or logic refactor)
+
+Examples:
+- “Can you tighten this spacing?” + screenshot of a card layout
+- “This button should be blue” + screenshot of a page header

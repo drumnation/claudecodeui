@@ -1,0 +1,192 @@
+---
+description: Use when adding or modifying a data-testid on a component or in a test file
+globs: 
+alwaysApply: false
+---
+# Guide: Adding New TestIDs to @your-package/testids
+
+## 1. Directory Structure Overview
+
+```txt
+packages/testids/
+├── src/
+│   ├── packages/
+│   │   ├── admin-ui/
+│   │   ├── navigation-ui/
+│   │   └── your-new-package/
+│   └── index.ts
+```
+
+## 2. Adding a New Package
+
+### 2.1. Create Package Structure
+
+```txt
+packages/testids/src/packages/your-package/
+├── index.ts
+├── feature-name/
+│   ├── index.ts
+│   ├── feature-name.testids.ts
+│   └── feature-name.types.ts
+```
+
+### 2.2. Follow Naming Conventions
+
+- Use kebab-case for test IDs
+- Use PascalCase for exported constants
+- Follow pattern: `[feature]-[component]-[element]`
+
+## 3. Implementation Steps
+
+### 3.1. Create Feature TestIDs File
+
+```typescript
+/**
+ * WARNING: These test IDs are critical for automated testing.
+ * Do not modify without approval from the testing team.
+ */
+
+export const FeatureNameTestIds = {
+  Container: 'feature-container',
+  // Group related elements
+  Form: {
+    Container: 'feature-form-container',
+    Input: 'feature-form-input',
+    Submit: 'feature-form-submit'
+  },
+  // Include states
+  States: {
+    Loading: 'feature-loading',
+    Error: 'feature-error'
+  }
+} as const;
+```
+
+### 3.2. Create Types File
+
+```typescript
+import { FeatureNameTestIds } from './feature-name.testids';
+
+export type IFeatureNameTestIds = typeof FeatureNameTestIds;
+```
+
+### 3.3. Create Feature Index File
+
+```typescript
+export { FeatureNameTestIds, type IFeatureNameTestIds } from './feature-name.testids';
+```
+
+### 3.4. Create Package Index File
+
+```typescript
+import { FeatureNameTestIds } from './feature-name';
+
+export const YourPackageTestIds = {
+  FeatureName: FeatureNameTestIds
+} as const;
+
+export type IYourPackageTestIds = typeof YourPackageTestIds;
+```
+
+### 3.5. Update Main Index File
+
+```typescript
+
+export { AdminUITestIds, type IAdminUITestIds } from './admin-ui';
+export { NavigationUITestIds, type INavigationUITestIds } from './navigation-ui';
+export { YourPackageTestIds, type IYourPackageTestIds } from './your-package';
+```
+
+## 4. TestID Guidelines
+
+### 4.1. Naming Patterns
+
+- Components: `[feature]-[component]-[element]`
+
+  ```typescript
+  Container: 'users-list-container'
+  Button: 'users-list-add-button'
+  ```
+
+- Modals: `[feature]-[name]-modal-[element]`
+
+  ```typescript
+  Container: 'users-create-modal-container'
+  Submit: 'users-create-modal-submit'
+  ```
+
+- Forms: `[feature]-[form]-[field]`
+
+  ```typescript
+  Input: 'users-form-email'
+  Select: 'users-form-role'
+  ```
+
+### 4.2. Structure Best Practices
+
+- Group related elements hierarchically
+- Include state-related testIDs
+- Keep IDs unique within feature scope
+- Use consistent naming across similar components
+
+## 5. Validation Rules
+
+### 5.1. Required Checks
+
+```typescript
+// All testIDs must:
+- Use kebab-case
+- Start with feature name
+- Be unique within feature scope
+- Follow established patterns
+- Be grouped logically
+```
+
+### 5.2. Common Patterns
+
+```typescript
+{
+  Container: `${feature}-container`,
+  States: {
+    Loading: `${feature}-loading`,
+    Error: `${feature}-error`
+  },
+  Actions: {
+    Submit: `${feature}-submit`,
+    Cancel: `${feature}-cancel`
+  }
+}
+```
+
+## 6. Usage Example
+
+```typescript
+// In your component:
+import { YourPackageTestIds } from '@cortals/testids';
+
+const YourComponent = () => (
+  <div data-testid={YourPackageTestIds.FeatureName.Container}>
+    <form data-testid={YourPackageTestIds.FeatureName.Form.Container}>
+      <input data-testid={YourPackageTestIds.FeatureName.Form.Input} />
+      <button data-testid={YourPackageTestIds.FeatureName.Form.Submit}>
+        Submit
+      </button>
+    </form>
+  </div>
+);
+```
+
+## 7. Quality Checklist
+
+Before submitting:
+
+- [ ] TestIDs follow kebab-case convention
+- [ ] All constants are properly typed
+- [ ] Exports are properly set up
+- [ ] TestIDs are unique within feature scope
+- [ ] Groups are logically organized
+- [ ] Documentation is included
+- [ ] Types are properly exported
+- [ ] Main index.ts is updated
+
+Remember to follow the existing patterns in the codebase and maintain consistency with the established structure. This ensures maintainability and makes it easier for other developers to work with the testIDs.

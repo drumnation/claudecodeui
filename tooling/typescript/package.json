@@ -1,0 +1,21 @@
+{
+  "name": "@kit/tsconfig",
+  "private": true,
+  "version": "0.1.0",
+  "files": [
+    "base.json",
+    "node.json",
+    "react.json"
+  ],
+  "exports": {
+    "./base": "./base.json",
+    "./node": "./node.json",
+    "./react": "./react.json",
+    ".": "./base.json"
+  },
+  "dependencies": {
+    "tsx": "^4.19.4",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.1.6"
+  }
+}

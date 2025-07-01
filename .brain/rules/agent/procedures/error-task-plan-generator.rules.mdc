@@ -1,0 +1,78 @@
+---
+description: When the agent observes or is given a list of TypeScript, test, linting, or runtime errors and should break them into a task list to fix them systematically.
+globs: 
+alwaysApply: false
+---
+# Rule: Error Task Plan Generator
+
+Purpose:
+Convert a large or complex set of development errors (TypeScript, Jest, ESLint, runtime logs, etc.) into a clean, actionable task plan. This helps agents or developers fix issues methodically while maintaining focus and traceability.
+
+Applicable Error Types:
+- TypeScript build errors
+- Jest test failures (unit, integration, Storybook)
+- ESLint or Prettier violations
+- Runtime console errors (from browser, logs, etc.)
+- API response or server-side stack traces
+
+Agent Behavior:
+
+1. **Parse and Categorize Errors**
+   - Group errors by:
+     - File or module
+     - Error type (TS, lint, runtime, etc.)
+     - Root cause (when identifiable)
+   - Summarize each group in plain language
+
+2. **Generate Task List**
+   - Create a MECE checklist (`- [ ]`) of subtasks required to resolve the issues
+   - Each task should:
+     - Target one issue or group of related issues
+     - Be actionable (e.g., "Fix type mismatch in `user-utils.ts`")
+     - Include a brief summary or reproduction steps if needed
+     - Link to relevant knowledge (e.g., `@.brain/knowledge/ts-narrowing-guide`)
+
+3. **Add TDD Instructions (If Tests Are Involved)**
+   - If fixing test failures:
+     - Link failing test file and describe the failed assertions
+     - Propose rewriting, fixing, or updating logic to resolve failures
+     - Include a command to re-run tests: `pnpm test:watch [filename]`
+
+4. **Create Plan File (Optional)**
+   - If error count > N or user specifies, create `.brain/errors/NN-[description]/NN-[description].md`
+   - Populate:
+     ```md
+     ## Error Summary
+     [Summary of key issues]
+
+     ## Tasks
+     - [ ] Fix type mismatch in ...
+     - [ ] Refactor null check in ...
+     - [ ] Update failing test in ...
+     ```
+
+5. **Track Progress**
+   - Use standard markdown checklist format with status updates
+   - Add inline notes (e.g., "Blocked by unknown function signature")
+
+Finalization:
+- When all checklist items in the error plan are completed:
+  - Move the plan folder from:
+    ```
+    .brain/errors/NN-[error-name]/
+    ```
+  - To:
+    ```
+    .brain/errors/.complete/NN-[error-name]/
+    ```
+  - Log this move and optionally update any changelogs or dashboards.   
+
+Best Practices:
+- Keep tasks atomic and MECE
+- Group tasks logically to avoid duplicate effort
+- Prioritize critical errors and tests before formatting
+
+Examples:
+- “Here’s a huge list of TypeScript build errors. Make a plan.”
+- “This test suite is failing — break this into fixable chunks.”
+- “I pasted 30 linting errors — turn this into a checklist.”

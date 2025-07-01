@@ -31,9 +31,9 @@ export default defineConfig({
       'claude-code.ngrok.io'
     ],
     proxy: {
-      '/api': `http://localhost:${process.env.VITE_API_PORT || 8765}`,
+      '/api': `http://localhost:${process.env.VITE_API_PORT || 8767}`,
       '/ws': {
-        target: `ws://localhost:${process.env.VITE_API_PORT || 8765}`,
+        target: `ws://localhost:${process.env.VITE_API_PORT || 8767}`,
         ws: true
       }
     }

@@ -1,0 +1,163 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+**Cursor Rule: Mobile-First Foundation with Dual-View Consideration**
+
+**Core Principle:** Design and build for the smallest viewport first, then progressively enhance for larger screens. Treat mobile as a first-class citizen, ensuring a polished and intuitive experience. Simultaneously, anticipate desktop needs and design with scalability and adaptation in mind.
+
+**Framework & Guidelines:**
+
+1.  **Mobile-First Mindset (Always the Starting Point):**
+    * **Initial Layout Conception:** When starting a new feature or section, your *initial mental model* and even rough sketches should be based on how it will look and function on a typical mobile screen (portrait orientation).
+    * **Content Prioritization:** Determine the most crucial content and functionality for mobile users. Ensure these are easily accessible and prominent.
+    * **Interaction Design:** Think about touch interactions first (taps, swipes). Ensure elements are appropriately sized and spaced for comfortable touch targets.
+    * **Performance Focus:** Mobile devices often have less processing power and slower network connections. Prioritize performance from the outset (optimize images, avoid unnecessary complexity, consider code splitting).
+
+2.  **Progressive Enhancement for Larger Screens:**
+    * **Breakpoint Strategy:** Define clear and logical breakpoints using Mantine UI's responsive utilities or your own custom breakpoints in styled-components.
+    * **Layout Adjustments:** Utilize CSS Grid and Flexbox (with styled-components) within your Mantine UI components to adapt layouts fluidly as screen sizes increase. Consider:
+        * Moving from single-column layouts on mobile to multi-column layouts on desktop.
+        * Rearranging the order of elements for better visual hierarchy on larger screens.
+        * Introducing more detailed information or secondary content on desktop.
+    * **Component Adaptations:** Leverage Mantine UI's responsive props (e.g., `sm`, `md`, `lg`, `xl` props on many components) to adjust styles and behavior at different breakpoints.
+
+3.  **Simultaneous Dual-View Consideration (No Afterthought Fixing):**
+    * **Early Desktop Mockups (Conceptual):** While starting with mobile, have a conceptual idea of how the layout will expand and utilize the extra screen real estate on desktop. This doesn't mean fully designing the desktop first, but rather anticipating the possibilities.
+    * **"Mobile-Optimized Desktop" Mentality:** Even on desktop, strive for clean, focused designs that don't feel cluttered. Avoid simply stretching mobile layouts.
+    * **Component Dual-Purpose Assessment:** As you build a mobile component, immediately ask:
+        * "Can this component effectively scale and look good on a larger screen with minor adjustments?"
+        * "Are there any inherent limitations in this mobile design that will hinder a good desktop experience?"
+        * "What additional information or functionality might be relevant on desktop that could be integrated now (even if initially hidden on mobile)?"
+
+4.  **Mobile Conventions and Patterns:**
+    * **Navigation:** Prioritize mobile-friendly navigation patterns like hamburger menus, bottom navigation bars (for key actions), and clear back buttons.
+    * **Forms:** Keep mobile forms concise. Use appropriate input types (e.g., `type="email"`, `type="tel"`). Consider using Mantine UI's form components for built-in accessibility and responsiveness.
+    * **Typography:** Ensure readable font sizes and line heights on mobile. Adjust for larger screens to maintain readability and visual hierarchy.
+    * **Imagery and Media:** Optimize images for mobile (smaller file sizes). Consider using the `<picture>` element or responsive image techniques for serving different assets based on screen size.
+
+5.  **Animations with Framer Motion (Mobile-Considered):**
+    * **Subtlety on Mobile:** While animations can enhance the user experience, be mindful of performance on mobile. Keep animations subtle and purposeful. Avoid overly complex or resource-intensive animations that could lead to jank.
+    * **Touch Interactions:** Use Framer Motion's `whileTap` and `whileHover` props to provide tactile feedback for touch interactions, making the UI feel more responsive.
+    * **Meaningful Transitions:** Employ Framer Motion's `transition` prop to create smooth and meaningful transitions between states or routes, improving the perceived performance and user flow, especially on potentially slower mobile connections.
+    * **Conditional Animations:** You can conditionally apply more elaborate animations on desktop while using simpler transitions on mobile for performance reasons.
+
+6.  **Alternative/Custom Mobile Components:**
+    * **Proactive Identification:** If a component designed for desktop feels clunky or doesn't translate well to mobile (e.g., a complex data table, a multi-step desktop wizard), proactively identify the need for a mobile-specific alternative *during the initial design and layout phase*.
+    * **Component Variations:** Create separate components (or use conditional rendering within a single component) that are specifically tailored for the mobile experience. Examples:
+        * Replacing a wide desktop table with a card-based list or horizontally scrollable section on mobile.
+        * Simplifying a multi-step desktop form into a more linear or paginated mobile flow.
+        * Using a bottom sheet or modal for actions that might be displayed inline on desktop.
+    * **Clear Naming Conventions:** Use clear naming conventions (e.g., `MyComponent`, `MyComponentMobile`) to easily distinguish between desktop and mobile-specific components.
+    * **Responsive Rendering:** Use your breakpoint strategy to conditionally render the appropriate component based on the current screen size.
+
+**Implementation Examples (Conceptual):**
+
+```jsx
+import { useState, useEffect } from 'react';
+import { Box, Text, Button, useMediaQuery } from '@mantine/core';
+import { motion } from 'framer-motion';
+import styled from 'styled-components';
+
+// Styled component with mobile-first defaults
+const CallToAction = styled(motion.div)`
+  background-color: #f0f0f0;
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+
+  h2 {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+  }
+
+  p {
+    font-size: 1rem;
+    line-height: 1.4;
+    margin-bottom: 16px;
+  }
+
+  /* Desktop-specific styles using media queries */
+  @media (min-width: 768px) {
+    padding: 32px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    h2 {
+      font-size: 2rem;
+    }
+
+    p {
+      font-size: 1.1rem;
+    }
+  }
+`;
+
+const MobileNavigation = () => (
+  <Box bg="blue.6" color="white" p={16} textAlign="center">
+    {/* Mobile-specific navigation */}
+    <Text>Mobile Nav</Text>
+  </Box>
+);
+
+const DesktopNavigation = () => (
+  <Box bg="gray.2" p={16} display="flex" justifyContent="space-around">
+    {/* Desktop-specific navigation */}
+    <Text>Desktop Link 1</Text>
+    <Text>Desktop Link 2</Text>
+  </Box>
+);
+
+const ResponsiveNavigation = () => {
+  const isMobile = useMediaQuery('(max-width: 767px)');
+
+  return isMobile ? <MobileNavigation /> : <DesktopNavigation />;
+};
+
+const MyComponent = () => {
+  return (
+    <Box>
+      <ResponsiveNavigation />
+      <CallToAction
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h2>Exciting Offer!</h2>
+        <p>This is important information presented clearly on mobile.</p>
+        <Button variant="primary">Learn More</Button>
+      </CallToAction>
+
+      {/* Example of conditionally rendering a mobile-specific element */}
+      {useMediaQuery('(max-width: 599px)') && (
+        <Box mt={20} p={16} bg="yellow.1" radius="md" textAlign="center">
+          <Text size="sm" color="gray.7">
+            Mobile-Optimized Tip: Tap the button above!
+          </Text>
+        </Box>
+      )}
+
+      {/* More content that adapts responsively using Mantine UI's Box and Text */}
+      <Box mt={20} display={{ base: 'block', md: 'flex' }} gap="md">
+        <Box flex={1}>
+          <Text>Section 1 Content (adapts to single column on mobile)</Text>
+        </Box>
+        <Box flex={1}>
+          <Text>Section 2 Content (adapts to single column on mobile)</Text>
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+
+export default MyComponent;
+```
+
+**Enforcement and Iteration:**
+
+* **Code Reviews:** During code reviews, explicitly check for mobile-first considerations and the quality of the mobile experience.
+* **Testing:** Regularly test your application on actual mobile devices and emulators/simulators across various screen sizes.
+* **Iterative Refinement:** Mobile design is often an iterative process. Be prepared to revisit and refine your mobile layouts and components based on testing and feedback.
