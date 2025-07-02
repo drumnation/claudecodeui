@@ -1,6 +1,8 @@
 {
   "extends": "../typescript/base.json",
   "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "rootDir": "src/browser",
     "outDir": "dist/browser",
     "composite": true,

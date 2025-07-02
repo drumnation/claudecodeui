@@ -1,6 +1,7 @@
 {
   "name": "@claude-code-ui/frontend",
   "version": "1.0.0",
+  "type": "module",
   "description": "Frontend app for Claude Code UI",
   "scripts": {
     "clean": "git clean -xdf .turbo node_modules",

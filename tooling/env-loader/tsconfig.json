@@ -4,7 +4,8 @@
     "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
     "rootDir": "src",
     "lib": ["ES2022", "DOM"],
-    "types": ["node"]
+    "types": ["node"],
+    "module": "ESNext"
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
