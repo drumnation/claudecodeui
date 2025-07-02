@@ -1,3 +1,5 @@
+import type { ChalkInstance } from "chalk";
+
 export interface TaskList {
   emoji: string;
   name: string;
@@ -32,4 +34,17 @@ export interface TaskResult {
   duration: number;
   errorCount?: number;
   autoFixed?: boolean;
+}
+
+export interface DevPackageInfo {
+  name: string;
+  path: string;
+  devCommand: string[];
+  logFileName: string;
+  color: ChalkInstance;
+}
+
+export interface PackageDiscoveryOptions {
+  includePrivate?: boolean;
+  excludePatterns?: string[];
 }

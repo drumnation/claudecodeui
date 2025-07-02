@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { spawn, ChildProcess } from "child_process";
 import { writeFileSync } from "fs";
 import { ensureDirectories, getErrorReportPath } from "./utils/paths.js";
@@ -197,14 +198,13 @@ export function watch(options: WatchOptions): void {
     });
 
     let output = "";
-    let errorOutput = "";
 
     proc.stdout?.on("data", (data) => {
       output += data.toString();
     });
 
     proc.stderr?.on("data", (data) => {
-      errorOutput += data.toString();
+      output += data.toString();
     });
 
     proc.on("close", (code) => {

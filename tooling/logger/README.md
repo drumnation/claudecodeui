@@ -1,120 +1,246 @@
-# @kit/logger
+# @kit/logger 🎨
 
-A universal, lightweight logging library for the monorepo with automatic environment detection, structured logging, and React integration.
+A universal, lightweight logging library for the monorepo with automatic environment detection, structured logging, React integration, and **beautiful color themes**.
 
-## Features
+## ✨ Features
 
 - 🌍 **Universal**: Works in both Node.js and browser environments
+- 🎨 **Color Themes**: Multiple beautiful color schemes to match your style
 - 🎯 **Scoped Logging**: Create child loggers with specific scopes
 - 📊 **Structured Data**: Log with metadata and context
 - ⚛️ **React Integration**: Hooks and context for React apps
 - 🎨 **Pretty Formatting**: Colored output in development
-- 🔌 **Extensible**: Custom transports for different outputs
-- 🚀 **Zero Dependencies**: Lightweight and fast
+- 🚀 **Performance**: Optimized with Pino under the hood
 - 📝 **TypeScript**: Full type safety
 
-## Installation
+## 🎨 Pick Your Palette
+
+Choose from our curated color themes to match your terminal aesthetic:
+
+### 🦇 **Dracula** - Dark & Vibrant
+Perfect for late-night coding sessions with high contrast colors.
+```typescript
+const logger = createLogger({ theme: 'Dracula' });
+```
+<details>
+<summary>Color Map</summary>
+
+- Time: `#6272a4` (muted blue-gray)
+- Scope: `#f1fa8c` (bright yellow)
+- Trace: `#6272a4` (comment gray)
+- Debug: `#8be9fd` (cyan)
+- Info: `#50fa7b` (green)
+- Warn: `#ffb86c` (orange)
+- Error: `#ff5555` (red)
+- Fatal: `#ff79c6` (pink)
+</details>
+
+### ☀️ **Solarized** - Balanced & Scientific
+Reduces eye strain with carefully chosen colors based on fixed color wheel relationships.
+```typescript
+const logger = createLogger({ theme: 'Solarized' });
+```
+<details>
+<summary>Color Map</summary>
+
+- Time: `#93a1a1` (base1)
+- Scope: `#b58900` (yellow)
+- Trace: `#586e75` (base01)
+- Debug: `#268bd2` (blue)
+- Info: `#859900` (green)
+- Warn: `#cb4b16` (orange)
+- Error: `#dc322f` (red)
+- Fatal: `#d33682` (magenta)
+</details>
+
+### 🏔️ **Nord** - Arctic & Clean
+Inspired by the Arctic, north-bluish color palette.
+```typescript
+const logger = createLogger({ theme: 'Nord' });
+```
+<details>
+<summary>Color Map</summary>
+
+- Time: `#4C566A` (nord3)
+- Scope: `#EBCB8B` (nord13)
+- Trace: `#4C566A` (nord3)
+- Debug: `#81A1C1` (nord9)
+- Info: `#A3BE8C` (nord14)
+- Warn: `#D08770` (nord12)
+- Error: `#BF616A` (nord11)
+- Fatal: `#B48EAD` (nord15)
+</details>
+
+### 🍂 **Gruvbox** - Retro & Warm
+Designed as a bright theme with pastel 'retro groove' colors.
+```typescript
+const logger = createLogger({ theme: 'Gruvbox' });
+```
+<details>
+<summary>Color Map</summary>
+
+- Time: `#928374` (gray)
+- Scope: `#fabd2f` (yellow)
+- Trace: `#928374` (gray)
+- Debug: `#83a598` (blue)
+- Info: `#b8bb26` (green)
+- Warn: `#fe8019` (orange)
+- Error: `#fb4934` (red)
+- Fatal: `#d3869b` (purple)
+</details>
+
+### 🦉 **Night Owl** - Optimized for Night Coding
+Fine-tuned for developers who live in their text editor at night.
+```typescript
+const logger = createLogger({ theme: 'NightOwl' });
+```
+<details>
+<summary>Color Map</summary>
+
+- Time: `#5f7e97` (steel blue)
+- Scope: `#ecc48d` (peach)
+- Trace: `#5f7e97` (gray)
+- Debug: `#82aaff` (blue)
+- Info: `#addb67` (green)
+- Warn: `#ffcb8b` (orange)
+- Error: `#ff5874` (red)
+- Fatal: `#c792ea` (purple)
+</details>
+
+### ⚫ **Monochrome** - Minimalist & Clean
+No colors, just style variations. Perfect for CI/CD logs or minimalist setups.
+```typescript
+const logger = createLogger({ theme: 'Monochrome' });
+```
+<details>
+<summary>Style Map</summary>
+
+- Time: dim
+- Scope: bold
+- Trace: dim
+- Debug: normal
+- Info: normal
+- Warn: bold
+- Error: bold
+- Fatal: inverse (white on black)
+</details>
+
+### 🎯 **Classic** - The Original
+Our original color scheme, refined over time.
+```typescript
+const logger = createLogger({ theme: 'Classic' });
+// Or just omit the theme option - Classic is the default!
+```
+
+## 📦 Installation
 
 ```bash
 pnpm add @kit/logger
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
-### Node.js
+### Basic Usage
 
 ```typescript
-import { defaultLogger, createLogger } from '@kit/logger';
+import { createLogger } from '@kit/logger';
 
-// Use the default logger
-defaultLogger.info('Server started', { port: 3000 });
-
-// Or create a custom logger
-const logger = createLogger({
-  level: 'debug',
-  isDevelopment: true,
+// Create a logger with your favorite theme
+const logger = createLogger({ 
+  theme: 'Dracula',
+  scope: 'my-app' 
 });
 
-// Create scoped loggers
-const dbLogger = logger.child('database');
-dbLogger.debug('Connecting to database', { host: 'localhost' });
-```
-
-### Browser
-
-```typescript
-import { defaultLogger } from '@kit/logger';
-
-// Automatically uses browser-appropriate formatting
-defaultLogger.info('App initialized');
-defaultLogger.error('API request failed', { 
-  endpoint: '/api/users',
-  status: 500 
+logger.info('Application started', { version: '1.0.0' });
+logger.warn('Cache miss', { key: 'user:123' });
+logger.error('Database connection failed', { 
+  host: 'localhost',
+  port: 5432 
 });
 ```
 
-### React
+### Environment Variables
+
+Set themes globally via environment variables:
+
+```bash
+# Node.js
+LOG_THEME=Dracula
+
+# Browser (Vite)
+VITE_LOG_THEME=Nord
+```
+
+### Custom Themes
+
+Create your own theme with any colors you like:
+
+```typescript
+const myTheme = {
+  time: '#ff00ff',
+  scope: '#00ff00',
+  10: '#gray',     // trace
+  20: '#blue',     // debug
+  30: '#green',    // info
+  40: '#yellow',   // warn
+  50: '#red',      // error
+  60: '#magenta',  // fatal
+};
+
+const logger = createLogger({ theme: myTheme });
+```
+
+### React Integration
 
 ```tsx
 import { LoggerProvider, useLogger } from '@kit/logger';
 
-// Wrap your app
+// Set theme at the app level
 function App() {
   return (
-    <LoggerProvider level="debug" isDevelopment={import.meta.env.DEV}>
+    <LoggerProvider theme="Nord" level="debug">
       <YourApp />
     </LoggerProvider>
   );
 }
 
 // Use in components
-function TodoList() {
-  const logger = useLogger('TodoList');
+function Component() {
+  const logger = useLogger('Component');
   
-  const handleAdd = (todo: Todo) => {
-    logger.info('Adding todo', { id: todo.id });
-  };
-  
-  return <div>...</div>;
+  useEffect(() => {
+    logger.info('Component mounted');
+  }, []);
 }
 ```
 
-## Configuration
-
-### Environment Variables
-
-The logger automatically reads log levels from environment variables:
-
-```bash
-# Node.js
-LOG_LEVEL=debug
-
-# Browser (Vite)
-VITE_LOG_LEVEL=debug
-```
-
-### Log Levels
-
-Available log levels (from highest to lowest priority):
-- `error`: Error messages
-- `warn`: Warning messages
-- `info`: Informational messages
-- `debug`: Debug messages
-
-Only messages at or above the configured level will be logged.
+## 📚 Configuration
 
 ### Logger Options
 
 ```typescript
 interface LoggerOptions {
-  level?: LogLevel;        // Minimum log level (default: 'info')
-  isDevelopment?: boolean; // Enable pretty formatting (default: auto-detected)
-  scope?: string;          // Logger scope/namespace
-  transports?: LoggerTransport[]; // Custom output handlers
+  level?: LogLevel;              // 'silent' | 'error' | 'warn' | 'info' | 'debug' | 'trace'
+  scope?: string;                // Logger namespace
+  prettyPrint?: boolean;         // Enable colored output (auto in dev)
+  metadata?: Record<string, any>; // Default metadata for all logs
+  theme?: string | ThemeDefinition; // Color theme
 }
 ```
 
-## API Reference
+### Environment Variables
+
+```bash
+# Log levels
+LOG_LEVEL=debug          # Node.js
+VITE_LOG_LEVEL=debug    # Browser
+
+# Themes
+LOG_THEME=Dracula       # Node.js
+VITE_LOG_THEME=Dracula  # Browser
+```
+
+## 🎯 API Reference
 
 ### Core Methods
 
@@ -124,244 +250,186 @@ logger.error('Error message', { code: 'ERR_001' });
 logger.warn('Warning message');
 logger.info('Info message');
 logger.debug('Debug message', { details: { ... } });
+logger.trace('Trace message');
 
-// Create scoped logger
-const apiLogger = logger.child('api');
+// Create child logger with inherited theme
+const dbLogger = logger.child({ module: 'database' });
 
-// Check if level is enabled
+// Check if level is enabled (for performance)
 if (logger.isLevelEnabled('debug')) {
-  // Expensive debug operation
+  const expensiveData = calculateMetrics();
+  logger.debug('Metrics', expensiveData);
 }
-
-// Change log level at runtime
-logger.setLevel('warn');
 ```
 
-### React Hooks
+### Theme Functions
 
 ```typescript
-// Get scoped logger
-const logger = useLogger('ComponentName');
+import { themes, getThemeByName, isValidTheme } from '@kit/logger';
 
-// Access root logger
-const { logger } = useLoggerContext();
+// Get a theme by name
+const draculaTheme = getThemeByName('Dracula');
+
+// Check if a theme name is valid
+if (isValidTheme('Dracula')) {
+  // Use the theme
+}
+
+// Access all themes
+console.log(themes.Nord);
+console.log(themes.Solarized);
 ```
 
-### Error Boundary
+## 💡 Examples
 
-```tsx
-<LoggerBoundary fallback={<ErrorFallback />} scope="AppErrors">
-  <YourApp />
-</LoggerBoundary>
+### Backend Server with Theme
+
+```typescript
+import { createLogger } from '@kit/logger/node';
+
+const logger = createLogger({ 
+  theme: 'Gruvbox',
+  scope: 'api-server' 
+});
+
+app.listen(3000, () => {
+  logger.info('Server started', { port: 3000 });
+});
+
+app.use((req, res, next) => {
+  logger.debug('Request received', {
+    method: req.method,
+    path: req.path
+  });
+  next();
+});
 ```
 
-## Migration Guide
+### Frontend with Dark Mode Support
+
+```typescript
+import { createLogger } from '@kit/logger/browser';
+
+// Match logger theme to app theme
+const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+const logger = createLogger({ 
+  theme: isDarkMode ? 'Dracula' : 'Solarized'
+});
+```
+
+### CI/CD with Monochrome
+
+```typescript
+// Perfect for CI environments where ANSI colors might not render properly
+const logger = createLogger({ 
+  theme: 'Monochrome',
+  level: process.env.CI ? 'info' : 'debug'
+});
+```
+
+## 🏃 Migration Guide
 
 ### From console.log
 
 ```typescript
 // Before
-console.log('User logged in', userId);
-console.error('Failed to save', error);
+console.log('User logged in:', userId);
+console.error('Failed to save:', error);
 
-// After
+// After (with theme!)
+const logger = createLogger({ theme: 'NightOwl' });
 logger.info('User logged in', { userId });
 logger.error('Failed to save', { error });
 ```
 
-### Benefits of Migration
-
-1. **Structured Data**: Metadata is properly formatted
-2. **Filtering**: Control what gets logged via levels
-3. **Consistency**: Same API in all environments
-4. **Performance**: Logs can be disabled in production
-5. **Searchability**: Scoped logs are easier to find
-
-## Advanced Usage
-
-### Custom Transports
+### Adding Themes to Existing Loggers
 
 ```typescript
-const customTransport: LoggerTransport = {
-  name: 'sentry',
-  log(entry: LogEntry) {
-    if (entry.level === 'error') {
-      Sentry.captureException(new Error(entry.message), {
-        extra: entry.data,
-      });
-    }
-  },
-};
+// Before
+const logger = createLogger({ scope: 'app' });
 
-const logger = createLogger({
-  transports: [customTransport],
+// After - just add the theme option
+const logger = createLogger({ 
+  scope: 'app',
+  theme: 'Nord'  // ← Add this!
 });
 ```
 
-### Production Considerations
+## 🎨 Theme Gallery
+
+Want to see all themes in action? Run this in your app:
 
 ```typescript
-// Disable debug logs in production
-const logger = createLogger({
-  level: process.env.NODE_ENV === 'production' ? 'warn' : 'debug',
-  isDevelopment: process.env.NODE_ENV !== 'production',
+import { themes, createLogger } from '@kit/logger';
+
+// Demo all themes
+Object.keys(themes).forEach(themeName => {
+  const logger = createLogger({ theme: themeName });
+  logger.info(`Testing ${themeName} theme`);
+  logger.debug('Debug message');
+  logger.warn('Warning message');
+  logger.error('Error message');
 });
 ```
 
-### Performance Tips
+## 🐛 Troubleshooting
 
-1. **Check Level First**: For expensive operations
+### Theme Not Applied?
+
+1. Check environment variable:
    ```typescript
-   if (logger.isLevelEnabled('debug')) {
-     const debugData = computeExpensiveDebugInfo();
-     logger.debug('Debug info', debugData);
-   }
+   console.log('Theme:', process.env.LOG_THEME);
    ```
 
-2. **Use Scoped Loggers**: Easier filtering and debugging
+2. Verify theme name is valid:
    ```typescript
-   const logger = defaultLogger.child('MyModule');
+   import { isValidTheme } from '@kit/logger';
+   console.log(isValidTheme('YourTheme'));
    ```
 
-3. **Avoid Large Objects**: In production environments
+3. Ensure pretty printing is enabled:
    ```typescript
-   // Good
-   logger.info('User action', { userId, action });
-   
-   // Avoid in production
-   logger.debug('Full state', { entireReduxState });
+   const logger = createLogger({ 
+     theme: 'Dracula',
+     prettyPrint: true  // Force enable
+   });
    ```
 
-## Examples
+### Colors Not Showing?
 
-### API Server
+- Some terminals don't support colors. Try a different terminal.
+- In CI/CD, use the `Monochrome` theme for better compatibility.
+- Check if `NO_COLOR` environment variable is set.
+
+## 🔧 Advanced Usage
+
+### Dynamic Theme Switching
 
 ```typescript
-import { createLogger } from '@kit/logger';
-
-const logger = createLogger({ scope: 'api-server' });
-const dbLogger = logger.child('database');
-const authLogger = logger.child('auth');
-
-// Database operations
-dbLogger.info('Connected to database');
-dbLogger.debug('Executing query', { sql: 'SELECT * FROM users' });
-
-// Authentication
-authLogger.info('User authenticated', { userId: '123' });
-authLogger.warn('Invalid token attempt', { ip: '192.168.1.1' });
+// Change theme based on time of day
+const hour = new Date().getHours();
+const theme = hour >= 18 || hour < 6 ? 'Dracula' : 'Solarized';
+const logger = createLogger({ theme });
 ```
 
-### React Error Handling
+### Theme-Aware Components
 
 ```tsx
-function MyApp() {
-  const logger = useLogger('App');
-  
-  const handleError = (error: Error) => {
-    logger.error('Unhandled error', {
-      error: error.message,
-      stack: error.stack,
-    });
-  };
+function ThemedLogger({ children, theme }) {
+  const logger = createLogger({ theme });
   
   return (
-    <ErrorBoundary onError={handleError}>
-      <Routes />
-    </ErrorBoundary>
+    <LoggerContext.Provider value={logger}>
+      {children}
+    </LoggerContext.Provider>
   );
 }
 ```
 
-### Development Debugging
+## 🤝 Contributing
 
-```typescript
-// Temporarily increase log level for debugging
-logger.setLevel('debug');
+Have a theme idea? We'd love to see it! Check our contribution guidelines for adding new themes.
 
-// Log component lifecycle
-function TodoItem({ todo }: Props) {
-  const logger = useLogger('TodoItem');
-  
-  useEffect(() => {
-    logger.debug('Todo mounted', { id: todo.id });
-    return () => logger.debug('Todo unmounted', { id: todo.id });
-  }, [todo.id]);
-  
-  logger.debug('Rendering', { todo });
-  return <div>...</div>;
-}
-```
+---
 
-## Best Practices
-
-1. **Use Appropriate Levels**
-   - `error`: Things that need immediate attention
-   - `warn`: Potential issues or deprecations
-   - `info`: Important business events
-   - `debug`: Development and troubleshooting
-
-2. **Include Context**
-   ```typescript
-   // Good
-   logger.error('Payment failed', { 
-     orderId, 
-     amount, 
-     gateway: 'stripe',
-     error: err.message 
-   });
-   
-   // Less helpful
-   logger.error('Payment failed');
-   ```
-
-3. **Use Scopes**
-   ```typescript
-   const logger = defaultLogger
-     .child('PaymentService')
-     .child('StripeGateway');
-   ```
-
-4. **Avoid Sensitive Data**
-   ```typescript
-   // Don't log sensitive information
-   logger.info('User login', { 
-     email: user.email,
-     // Don't include: password, creditCard, ssn, etc.
-   });
-   ```
-
-## Troubleshooting
-
-### Logs Not Appearing
-
-1. Check the log level:
-   ```typescript
-   console.log('Current level:', logger.level);
-   ```
-
-2. Verify environment variables:
-   ```typescript
-   console.log('LOG_LEVEL:', process.env.LOG_LEVEL);
-   console.log('VITE_LOG_LEVEL:', import.meta.env.VITE_LOG_LEVEL);
-   ```
-
-### Performance Issues
-
-- Reduce log level in production
-- Use `isLevelEnabled()` for expensive operations
-- Avoid logging large objects
-- Consider custom transports for production
-
-### TypeScript Issues
-
-Ensure you have the latest TypeScript version and proper module resolution:
-
-```json
-{
-  "compilerOptions": {
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true
-  }
-}
-```
+Made with 🎨 by the @kit team

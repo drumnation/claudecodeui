@@ -6,6 +6,7 @@
  */
 
 import type { Logger, LoggerOptions, LogLevel, LogEntry, LoggerTransport } from './types.js';
+import { themes, getThemeByName, isValidTheme, resolveTheme, type ThemeDefinition, type ThemeName } from './themes.js';
 
 // Environment detection
 const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
@@ -33,6 +34,10 @@ if (isBrowser) {
 // Re-export everything
 export { createLogger, defaultLogger };
 export type { Logger, LoggerOptions, LogLevel, LogEntry, LoggerTransport };
+
+// Export theme functionality
+export { themes, getThemeByName, isValidTheme, resolveTheme };
+export type { ThemeDefinition, ThemeName };
 
 // Export React integration if in browser
 export * from './react.js';

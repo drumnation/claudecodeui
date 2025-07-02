@@ -156,9 +156,6 @@ importers:
       '@codemirror/view':
         specifier: ^6.38.0
         version: 6.38.0
-      '@kit/logger':
-        specifier: workspace:*
-        version: link:../../tooling/logger
       '@tailwindcss/typography':
         specifier: ^0.5.16
         version: 0.5.16(tailwindcss@3.4.17)
@@ -214,6 +211,9 @@ importers:
       '@kit/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
+      '@kit/logger':
+        specifier: workspace:*
+        version: link:../../tooling/logger
       '@kit/prettier-config':
         specifier: workspace:*
         version: link:../../tooling/prettier
@@ -268,9 +268,18 @@ importers:
       eslint:
         specifier: ^9.17.0
         version: 9.30.0(jiti@2.4.2)
+      express:
+        specifier: ^4.18.2
+        version: 4.21.2
+      glob:
+        specifier: ^10.3.10
+        version: 10.4.5
       globby:
         specifier: ^13.2.2
         version: 13.2.2
+      js-yaml:
+        specifier: ^4.1.0
+        version: 4.1.0
       prettier:
         specifier: ^3.4.2
         version: 3.6.2
@@ -293,6 +302,12 @@ importers:
       '@kit/tsconfig':
         specifier: workspace:*
         version: link:../typescript
+      '@types/express':
+        specifier: ^4.17.21
+        version: 4.17.23
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
       '@types/yargs':
         specifier: ^17.0.32
         version: 17.0.33
@@ -1787,6 +1802,9 @@ packages:
 
   '@types/istanbul-reports@3.0.4':
     resolution: {integrity: sha512-pk2B1NWalF9toCRu6gjBzR69syFjP4Od8WRAX+0mmf9lAjCRicLOWc+ZrxZHx/0XRjotgkF9t6iaMJ+aXcOdZQ==}
+
+  '@types/js-yaml@4.0.9':
+    resolution: {integrity: sha512-k4MGaQl5TGo/iipqb2UDG2UwjXziSWkh0uysQelTlJpX1qGlpUZYm8PnO4DxG1qBomtJUdYJ6qR6xdIah10JLg==}
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
@@ -6961,6 +6979,8 @@ snapshots:
   '@types/istanbul-reports@3.0.4':
     dependencies:
       '@types/istanbul-lib-report': 3.0.3
+
+  '@types/js-yaml@4.0.9': {}
 
   '@types/json-schema@7.0.15': {}
 

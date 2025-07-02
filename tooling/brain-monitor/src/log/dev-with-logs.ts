@@ -1,15 +1,17 @@
 #!/usr/bin/env tsx
+/* eslint-disable no-console */
 
 import { spawn, ChildProcess, execSync } from "child_process";
 import { mkdirSync, writeFileSync, appendFileSync, readdirSync } from "fs";
 import { join } from "path";
-import chalk from "chalk";
+import chalk, { type ChalkInstance } from "chalk";
+import { discoverDevPackages } from "../utils/package-discovery.js";
 
 interface ServerInfo {
   name: string;
   command: string;
   args: string[];
-  color: string;
+  color: ChalkInstance;
   logFile: string;
 }
 
@@ -18,31 +20,17 @@ async function startDevServers() {
   console.log(chalk.blue("🧹 Cleaning up any existing processes..."));
 
   try {
-    // Kill anything that might be running
-    execSync(
-      'pkill -f "concurrently.*frontend,backend,agent" 2>/dev/null || true',
-      {
-        stdio: "ignore",
-      },
-    );
+    // Kill anything that might be running - generic patterns
+    execSync('pkill -f "pnpm.*dev" 2>/dev/null || true', {
+      stdio: "ignore",
+    });
     execSync('pkill -f "vite" 2>/dev/null || true', { stdio: "ignore" });
-    execSync('pkill -f "tsx watch.*financial" 2>/dev/null || true', {
+    execSync('pkill -f "tsx watch" 2>/dev/null || true', {
       stdio: "ignore",
     });
-    execSync('pkill -f "pnpm.*financial.*dev" 2>/dev/null || true', {
+    execSync('pkill -f "node.*dev" 2>/dev/null || true', {
       stdio: "ignore",
     });
-
-    // Kill anything on our ports
-    const ports = [3001, 3002, 3003, 3004, 5173, 5174, 5175];
-    for (const port of ports) {
-      execSync(
-        `lsof -ti :${port} 2>/dev/null | xargs kill -9 2>/dev/null || true`,
-        {
-          stdio: "ignore",
-        },
-      );
-    }
 
     // Clean up lock files
     execSync("rm -f .dev-server-lock .dev-server-pids", { stdio: "ignore" });
@@ -65,54 +53,33 @@ async function startDevServers() {
     writeFileSync(join("_logs", file), "");
   });
 
-  const servers: ServerInfo[] = [
-    {
-      name: "frontend",
-      command: "pnpm",
-      args: ["--filter", "@financial/ui", "dev"],
-      color: "cyan",
-      logFile: "_logs/financial-ui.log",
-    },
-    {
-      name: "backend",
-      command: "pnpm",
-      args: ["--filter", "@financial/financial-api", "dev"],
-      color: "magenta",
-      logFile: "_logs/financial-api.log",
-    },
-    {
-      name: "lead-agent",
-      command: "pnpm",
-      args: ["--filter", "@financial/financial-lead-agent", "dev"],
-      color: "green",
-      logFile: "_logs/financial-lead-agent.log",
-    },
-    {
-      name: "sim-agent",
-      command: "pnpm",
-      args: ["--filter", "@financial/financial-simulation-agent", "dev"],
-      color: "yellow",
-      logFile: "_logs/financial-simulation-agent.log",
-    },
-  ];
+  // Discover packages with dev scripts dynamically
+  const devPackages = await discoverDevPackages();
+
+  if (devPackages.length === 0) {
+    console.warn(chalk.yellow("⚠️  No packages found with dev scripts"));
+    return;
+  }
+
+  console.log(
+    chalk.blue(`🔍 Found ${devPackages.length} packages with dev scripts:`),
+  );
+  devPackages.forEach((pkg) => {
+    console.log(`  - ${pkg.color(pkg.name)} at ${chalk.gray(pkg.path)}`);
+  });
+  console.log("");
+
+  const servers: ServerInfo[] = devPackages.map((pkg) => ({
+    name: pkg.name,
+    command: "pnpm",
+    args: ["--filter", pkg.name, "dev"],
+    color: pkg.color,
+    logFile: join("_logs", pkg.logFileName),
+  }));
 
   const processes: ChildProcess[] = [];
 
-  // Helper to get color function
-  const getColorFn = (color: string) => {
-    switch (color) {
-      case "cyan":
-        return chalk.cyan;
-      case "magenta":
-        return chalk.magenta;
-      case "green":
-        return chalk.green;
-      case "yellow":
-        return chalk.yellow;
-      default:
-        return chalk.white;
-    }
-  };
+  // Color function is now directly stored in server object
 
   // Helper to get timestamp
   const getTimestamp = () => {
@@ -150,7 +117,7 @@ async function startDevServers() {
   );
 
   servers.forEach((server) => {
-    const colorFn = getColorFn(server.color);
+    const colorFn = server.color;
 
     // Write initial header
     writeLogHeader(server.logFile, server.name);
@@ -241,7 +208,7 @@ The \`pnpm dev\` command is capturing server output to these files in real-time.
 
 - **View logs:** Open any log file above
 - **Stop servers:** Press Ctrl+C in the terminal
-- **Monitor specific server:** \`tail -f ${servers[0]?.logFile || "_logs/financial-api.log"}\`
+- **Monitor specific server:** \`tail -f ${servers[0]?.logFile || "_logs/server.log"}\`
 
 ---
 *Logs captured by pnpm dev command*

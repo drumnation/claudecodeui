@@ -17,21 +17,49 @@ export const createGitRoutes = (): Router => {
         return res.status(400).json({error: 'Repository path is required'});
       }
 
+      // Get current branch
+      const {stdout: branchOut} = await execAsync('git rev-parse --abbrev-ref HEAD', {
+        cwd: repoPath,
+      });
+      const branch = branchOut.trim();
+
+      // Get status
       const {stdout} = await execAsync('git status --porcelain', {
         cwd: repoPath,
       });
-      const files = stdout
+      
+      const modified: string[] = [];
+      const added: string[] = [];
+      const deleted: string[] = [];
+      const untracked: string[] = [];
+
+      stdout
         .split('\n')
         .filter(Boolean)
-        .map((line) => {
-          const [status, ...pathParts] = line.trim().split(' ');
-          return {
-            status,
-            path: pathParts.join(' '),
-          };
+        .forEach((line) => {
+          const status = line.substring(0, 2);
+          const filePath = line.substring(3);
+          
+          if (status === ' M' || status === 'M ' || status === 'MM') {
+            modified.push(filePath);
+          } else if (status === 'A ' || status === 'AM') {
+            added.push(filePath);
+          } else if (status === ' D' || status === 'D ') {
+            deleted.push(filePath);
+          } else if (status === '??') {
+            untracked.push(filePath);
+          } else if (status.includes('M')) {
+            modified.push(filePath);
+          }
         });
 
-      res.json({files});
+      res.json({
+        branch,
+        modified,
+        added,
+        deleted,
+        untracked,
+      });
     } catch (error: any) {
       console.error('Git status error:', error);
       res.status(500).json({error: error.message});
@@ -183,9 +211,9 @@ export const createGitRoutes = (): Router => {
 
   // Checkout branch
   router.post('/checkout', async (req: Request, res: Response) => {
-    try {
-      const {path: repoPath, branch} = req.body;
+    const {path: repoPath, branch, force = false} = req.body;
 
+    try {
       if (!repoPath || typeof repoPath !== 'string') {
         return res.status(400).json({error: 'Repository path is required'});
       }
@@ -194,11 +222,33 @@ export const createGitRoutes = (): Router => {
         return res.status(400).json({error: 'Branch name is required'});
       }
 
+      // Check for uncommitted changes
+      if (!force) {
+        try {
+          const {stdout: statusOut} = await execAsync('git status --porcelain', {cwd: repoPath});
+          if (statusOut.trim()) {
+            return res.status(400).json({
+              error: 'Cannot switch branch: You have uncommitted changes. Please commit or stash them before switching branches.',
+              hasUncommittedChanges: true
+            });
+          }
+        } catch (statusError: any) {
+          console.error('Error checking git status:', statusError);
+        }
+      }
+
       await execAsync(`git checkout "${branch}"`, {cwd: repoPath});
       res.json({success: true, branch});
     } catch (error: any) {
       console.error('Git checkout error:', error);
-      res.status(500).json({error: error.message});
+      // Enhance error message for common issues
+      let errorMessage = error.message;
+      if (error.message.includes('pathspec') && error.message.includes('did not match')) {
+        errorMessage = `Branch '${branch}' does not exist`;
+      } else if (error.message.includes('Your local changes')) {
+        errorMessage = 'Cannot switch branch: You have uncommitted changes. Please commit or stash them before switching branches.';
+      }
+      res.status(500).json({error: errorMessage});
     }
   });
 
@@ -300,6 +350,77 @@ export const createGitRoutes = (): Router => {
       }
     },
   );
+
+  // Stash changes
+  router.post('/stash', async (req: Request, res: Response) => {
+    try {
+      const {path: repoPath, message = 'Auto-stash'} = req.body;
+
+      if (!repoPath || typeof repoPath !== 'string') {
+        return res.status(400).json({error: 'Repository path is required'});
+      }
+
+      // Create stash with message
+      const {stdout} = await execAsync(
+        `git stash push -m "${message.replace(/"/g, '\\"')}"`,
+        {cwd: repoPath}
+      );
+
+      res.json({success: true, output: stdout});
+    } catch (error: any) {
+      console.error('Git stash error:', error);
+      res.status(500).json({error: error.message});
+    }
+  });
+
+  // Apply stash
+  router.post('/stash/apply', async (req: Request, res: Response) => {
+    try {
+      const {path: repoPath, stashIndex = 0} = req.body;
+
+      if (!repoPath || typeof repoPath !== 'string') {
+        return res.status(400).json({error: 'Repository path is required'});
+      }
+
+      const {stdout} = await execAsync(`git stash apply stash@{${stashIndex}}`, {
+        cwd: repoPath,
+      });
+
+      res.json({success: true, output: stdout});
+    } catch (error: any) {
+      console.error('Git stash apply error:', error);
+      res.status(500).json({error: error.message});
+    }
+  });
+
+  // List stashes
+  router.get('/stash/list', async (req: Request, res: Response) => {
+    try {
+      const {path: repoPath} = req.query;
+
+      if (!repoPath || typeof repoPath !== 'string') {
+        return res.status(400).json({error: 'Repository path is required'});
+      }
+
+      const {stdout} = await execAsync('git stash list', {cwd: repoPath});
+      const stashes = stdout
+        .split('\n')
+        .filter(Boolean)
+        .map((line, index) => {
+          const match = line.match(/^(stash@\{\d+\}): (.+)$/);
+          return {
+            index,
+            name: match ? match[1] : `stash@{${index}}`,
+            message: match ? match[2] : line,
+          };
+        });
+
+      res.json({stashes});
+    } catch (error: any) {
+      console.error('Git stash list error:', error);
+      res.status(500).json({error: error.message});
+    }
+  });
 
   return router;
 };

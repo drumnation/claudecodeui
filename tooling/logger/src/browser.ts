@@ -1,6 +1,7 @@
 import pino from 'pino';
 import { getEnv } from '@kit/env-loader/browser';
 import type { Logger, LoggerOptions, LoggerMetadata, LogLevel } from './types.js';
+import { resolveTheme, type ThemeDefinition } from './themes.js';
 
 const levelMap: Record<LogLevel, number> = {
   silent: Infinity,
@@ -16,46 +17,66 @@ function getDefaultLevel(): LogLevel {
   return isDevelopment ? 'info' : 'error';
 }
 
+function createThemeWriter(theme: ThemeDefinition, scope: string) {
+  const isMonochrome = theme.time === 'dim';
+  
+  const formatStyle = (color: string): string => {
+    if (isMonochrome) {
+      switch (color) {
+        case 'dim': return 'opacity: 0.6';
+        case 'bold': return 'font-weight: bold';
+        case 'inverse': return 'background-color: white; color: black; padding: 2px 4px';
+        case 'normal': return '';
+        default: return '';
+      }
+    }
+    return `color: ${color}`;
+  };
+
+  const createLogFunction = (level: string, levelNum: keyof ThemeDefinition) => {
+    return function(o: any) {
+      const timestamp = new Date().toLocaleTimeString();
+      const scopeName = o.scope || scope;
+      const consoleMethod = level === 'error' ? 'error' : level === 'warn' ? 'warn' : level === 'info' ? 'info' : 'log';
+      
+      console[consoleMethod](
+        `%c${timestamp} %c[${scopeName}]%c ${level.toUpperCase()} %c| %c${o.msg}`,
+        formatStyle(theme.time),
+        formatStyle(theme.scope),
+        formatStyle(theme[levelNum]),
+        formatStyle(isMonochrome ? 'normal' : '#666666'),
+        formatStyle(isMonochrome ? 'normal' : '#ffffff'),
+        o
+      );
+    };
+  };
+
+  return {
+    error: createLogFunction('error', 50),
+    warn: createLogFunction('warn', 40),
+    info: createLogFunction('info', 30),
+    debug: createLogFunction('debug', 20),
+    trace: createLogFunction('trace', 10),
+  };
+}
+
 export function createLogger(options: LoggerOptions = {}): Logger {
   const {
     level = getEnv('VITE_LOG_LEVEL', getDefaultLevel()) as LogLevel,
     scope = 'app',
     prettyPrint = import.meta.env?.DEV || process.env.NODE_ENV === 'development',
     metadata = {},
+    theme = getEnv('VITE_LOG_THEME', 'Classic'),
   } = options;
+
+  const resolvedTheme = resolveTheme(theme);
 
   const browserOptions: pino.LoggerOptions = {
     level,
     browser: {
       serialize: !prettyPrint,
       asObject: !prettyPrint,
-      write: prettyPrint ? {
-        error: function(o: any) {
-          const timestamp = new Date().toLocaleTimeString();
-          const scopePrefix = `[${o.scope || scope}]`;
-          console.error(`%c${timestamp} ${scopePrefix} ERROR | ${o.msg}`, 'color: #ff6b6b; font-weight: bold', o);
-        },
-        warn: function(o: any) {
-          const timestamp = new Date().toLocaleTimeString();
-          const scopePrefix = `[${o.scope || scope}]`;
-          console.warn(`%c${timestamp} ${scopePrefix} WARN | ${o.msg}`, 'color: #ffd93d; font-weight: bold', o);
-        },
-        info: function(o: any) {
-          const timestamp = new Date().toLocaleTimeString();
-          const scopePrefix = `[${o.scope || scope}]`;
-          console.info(`%c${timestamp} ${scopePrefix} INFO | ${o.msg}`, 'color: #4ecdc4', o);
-        },
-        debug: function(o: any) {
-          const timestamp = new Date().toLocaleTimeString();
-          const scopePrefix = `[${o.scope || scope}]`;
-          console.log(`%c${timestamp} ${scopePrefix} DEBUG | ${o.msg}`, 'color: #95a5a6', o);
-        },
-        trace: function(o: any) {
-          const timestamp = new Date().toLocaleTimeString();
-          const scopePrefix = `[${o.scope || scope}]`;
-          console.log(`%c${timestamp} ${scopePrefix} TRACE | ${o.msg}`, 'color: #7f8c8d', o);
-        },
-      } : undefined,
+      write: prettyPrint ? createThemeWriter(resolvedTheme, scope) : undefined,
     },
     base: {
       ...metadata,

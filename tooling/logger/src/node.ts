@@ -2,6 +2,7 @@ import pino from 'pino';
 import { getEnv } from '@kit/env-loader/node';
 import type { Logger, LoggerOptions, LoggerMetadata, LogLevel, RequestWithLogger, LoggerMiddlewareOptions } from './types.js';
 import type { Request, Response, NextFunction } from 'express';
+import { resolveTheme, type ThemeDefinition } from './themes.js';
 
 const levelMap: Record<LogLevel, number> = {
   silent: Infinity,
@@ -17,13 +18,37 @@ function getDefaultLevel(): LogLevel {
   return nodeEnv === 'production' ? 'error' : 'info';
 }
 
+function buildCustomColors(theme: ThemeDefinition): string | undefined {
+  // Monochrome theme doesn't use colors in pino-pretty
+  if (theme.time === 'dim') {
+    return undefined;
+  }
+  
+  // Build the customColors string for pino-pretty
+  // Format: 'trace:color,debug:color,info:color,warn:color,error:color,fatal:color'
+  const colorMap = [
+    `trace:${theme[10]}`,
+    `debug:${theme[20]}`,
+    `info:${theme[30]}`,
+    `warn:${theme[40]}`,
+    `error:${theme[50]}`,
+    `fatal:${theme[60]}`,
+  ];
+  
+  return colorMap.join(',');
+}
+
 export function createLogger(options: LoggerOptions = {}): Logger {
   const {
     level = getEnv('LOG_LEVEL', getDefaultLevel()) as LogLevel,
     scope = 'app',
     prettyPrint = getEnv('NODE_ENV', 'development') !== 'production',
     metadata = {},
+    theme = getEnv('LOG_THEME', 'Classic'),
   } = options;
+
+  const resolvedTheme = resolveTheme(theme);
+  const customColors = buildCustomColors(resolvedTheme);
 
   const transport = prettyPrint
     ? {
@@ -34,6 +59,7 @@ export function createLogger(options: LoggerOptions = {}): Logger {
           ignore: 'pid,hostname',
           errorProps: 'stack',
           messageFormat: '[{scope}] | {msg}',
+          ...(customColors ? { customColors } : {}),
         },
       }
     : undefined;
@@ -41,9 +67,6 @@ export function createLogger(options: LoggerOptions = {}): Logger {
   const pinoLogger = pino({
     level,
     transport,
-    formatters: {
-      level: (label) => ({ level: label }),
-    },
     base: {
       ...metadata,
       scope,

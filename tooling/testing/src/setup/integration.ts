@@ -5,6 +5,9 @@
 
 import {beforeAll, afterEach, afterAll, vi} from 'vitest';
 
+// Note: @kit/logger uses Pino which manages log levels differently
+// Integration tests can see warnings by default
+
 // Set longer timeouts for integration tests
 vi.setConfig({
   testTimeout: 30000,

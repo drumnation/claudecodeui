@@ -19,6 +19,8 @@
 - **🧪 Local CI Testing**: Test workflows locally with act before pushing
 - **🎨 Cursor IDE support**: Auto-installs validation rules for AI assistants
 - **🌐 Browser Console Capture**: Automatically captures browser console logs to files
+- **🔧 Dynamic Package Discovery**: Automatically finds all packages with dev scripts
+- **🔄 Seamless Dev Integration**: Enhances your existing 'pnpm dev' workflow
 
 ## Installation
 
@@ -28,6 +30,8 @@ pnpm add -D @kit/brain-monitor
 
 # Initialize (adds scripts and documentation)
 pnpm brain-monitor init
+
+# Your regular 'pnpm dev' now includes automatic logging!
 ```
 
 ## Usage
@@ -110,12 +114,12 @@ _errors/
 ```
 _logs/
 ├── index.md                        # Log file directory with status
-├── financial-api.log              # API server logs (auto-discovered)
-├── financial-ui.log               # UI dev server logs (auto-discovered)
-└── [app-name].log                 # Other app logs (dynamic discovery)
+├── claude-code-ui-frontend.log    # Frontend logs (auto-discovered)
+├── claude-code-ui-backend.log     # Backend logs (auto-discovered)
+└── [package-name].log             # Other package logs (dynamic discovery)
 ```
 
-Logs are automatically discovered from your `apps/` directory and update every 3 seconds.
+Logs are automatically discovered from all workspace packages that have `dev` scripts. The tool dynamically finds packages in your monorepo structure (apps/*, packages/*, tooling/*, etc.) without any configuration.
 
 ## Test Suite Detection
 
@@ -141,20 +145,25 @@ Brain-monitor is designed for environments where multiple AI agents work on the 
 3. **Live Updates**: Agents can `tail -f` log files for real-time feedback
 4. **Efficiency**: Check existing reports before running new validations
 
-### Server Logs
+### Getting Started
 
-**Note:** As of the latest update, `pnpm dev` now includes automatic logging!
+**New in v2.0:** After running `brain-monitor init`, your existing `pnpm dev` command is automatically enhanced with logging!
 
 ```bash
-# Standard development (includes logging by default)
-pnpm dev             # Starts all 4 servers with logging to _logs/
+# After initialization:
+pnpm dev             # Now includes automatic logging to _logs/
 
-# Alternative commands
-pnpm brain:dev       # Same as pnpm dev
-pnpm dev:with-logs   # Also same as pnpm dev
+# The tool automatically:
+# 1. Discovers all packages with 'dev' scripts
+# 2. Starts them with proper logging
+# 3. Updates _logs/index.md with real-time status
+# 4. Cleans up processes on exit
 
-# Monitor existing logs (rarely needed)
-pnpm brain:logs      # Only for monitoring external log files
+# If you need the original behavior:
+pnpm dev:original    # Runs the original 'turbo run dev' command
+
+# Monitor logs in real-time:
+tail -f _logs/[package-name].log
 ```
 
 ### Best Practices
@@ -168,10 +177,25 @@ pnpm brain:watch                    # TypeScript + Lint only
 cat _errors/watch-summary.md        # Check live status
 
 # Monitor specific logs while developing
-tail -f _logs/financial-api.log
+tail -f _logs/[package-name].log
 
 # Only run full validations if reports are stale (>10 minutes)
 pnpm brain:validate
+```
+
+### Troubleshooting
+
+#### "No projects matched the filters" error
+This has been fixed! The tool now dynamically discovers all packages with `dev` scripts.
+
+#### @kit/logger in wrong dependencies
+The init command automatically moves `@kit/logger` to devDependencies where it belongs.
+
+#### Need to find which packages have dev scripts?
+```bash
+# The dev command will show discovered packages:
+pnpm brain:dev
+# Output: "Found X packages with dev scripts: ..."
 ```
 
 ### Browser Console Capture
@@ -204,15 +228,29 @@ import { createBrainMonitorRouter } from '@kit/brain-monitor/server';
 app.use('/_brain-monitor', createBrainMonitorRouter());
 ```
 
+## Dynamic Package Discovery
+
+The tool now automatically discovers packages instead of using hardcoded names:
+
+1. **Reads `pnpm-workspace.yaml`** to understand your monorepo structure
+2. **Scans all workspace packages** for those with `dev` scripts
+3. **Assigns unique colors** to each package for console output
+4. **Generates appropriate log file names** from package names
+5. **Works with any package naming convention** (@org/*, @app/*, etc.)
+
+No more hardcoded package lists or "No projects matched" errors!
+
 ## Configuration
 
 Brain-monitor works with zero configuration by following common monorepo patterns:
 
-- Detects packages using `pnpm-workspace.yaml` or similar
+- Detects packages using `pnpm-workspace.yaml` dynamically
+- Finds all packages with `dev` scripts automatically
 - Finds test scripts in each package's `package.json`
 - Uses standard tools (TypeScript, ESLint, Prettier, Vitest/Jest)
-- Auto-discovers dev servers from `apps/` directory
+- Supports any monorepo structure (apps/*, packages/*, tooling/*, etc.)
 - Supports `.cursor/rules/` for AI assistant integration
+- Ensures `@kit/logger` is always a devDependency
 
 ### Watch Mode Options
 

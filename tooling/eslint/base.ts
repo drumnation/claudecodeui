@@ -76,6 +76,12 @@ const config = tseslint.config(
         {argsIgnorePattern: '^_', varsIgnorePattern: '^_'},
       ],
       '@typescript-eslint/no-misused-promises': 'off',
+      'no-console': [
+        'error',
+        {
+          allow: ['warn', 'error'],
+        },
+      ],
       'no-restricted-imports': [
         'error',
         {

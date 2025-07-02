@@ -1,0 +1,13 @@
+{
+  "extends": "../typescript/base.json",
+  "compilerOptions": {
+    "rootDir": "src/browser",
+    "outDir": "dist/browser",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true
+  },
+  "include": ["src/browser/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+}

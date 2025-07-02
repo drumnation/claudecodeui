@@ -1,9 +1,7 @@
 {
-  "extends": "@kit/tsconfig/node",
-  "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist"
-  },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.browser.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
 }

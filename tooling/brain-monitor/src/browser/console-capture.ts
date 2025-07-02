@@ -1,6 +1,7 @@
+/* eslint-disable no-console */
 /**
  * Browser Console Capture Utility
- * 
+ *
  * This module provides a mechanism to capture all console logs in the browser
  * and send them to a backend endpoint for centralized logging. It's designed
  * to be injected into any React/Vue/Angular application with minimal setup.
@@ -16,7 +17,7 @@ interface LogEntry {
   stack?: string;
 }
 
-type ConsoleMethod = 'log' | 'warn' | 'error' | 'info' | 'debug';
+type ConsoleMethod = "log" | "warn" | "error" | "info" | "debug";
 
 interface ConsoleCapturConfig {
   endpoint?: string;
@@ -43,18 +44,20 @@ class BrowserConsoleCapture {
       info: console.info,
       debug: console.debug,
     };
-    
+
     this.capturedLogs = [];
     this.maxBufferSize = config.maxBufferSize || 1000;
     this.isCapturing = false;
-    this.endpoint = config.endpoint || '/_brain-monitor/browser-logs';
+    this.endpoint = config.endpoint || "/_brain-monitor/browser-logs";
     this.flushInterval = config.flushInterval || 5000; // 5 seconds
     this.includeStack = config.includeStack ?? true;
   }
 
   start(): void {
     if (this.isCapturing) {
-      this.originalMethods.warn('Brain-monitor console capture already started');
+      this.originalMethods.warn(
+        "Brain-monitor console capture already started",
+      );
       return;
     }
 
@@ -65,7 +68,7 @@ class BrowserConsoleCapture {
       console[method] = (...args: any[]) => {
         // Call original method
         this.originalMethods[method].apply(console, args);
-        
+
         // Capture the log
         this.capture(method, args);
       };
@@ -73,17 +76,17 @@ class BrowserConsoleCapture {
 
     // Start flush timer
     this.flushTimer = setInterval(() => {
-      this.flush();
+      void this.flush();
     }, this.flushInterval);
 
     // Flush on page unload
-    if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', () => {
-        this.flush();
+    if (typeof window !== "undefined") {
+      window.addEventListener("beforeunload", () => {
+        void this.flush();
       });
     }
 
-    this.originalMethods.info('[Brain-Monitor] Console capture started');
+    this.originalMethods.info("[Brain-Monitor] Console capture started");
   }
 
   stop(): void {
@@ -103,10 +106,10 @@ class BrowserConsoleCapture {
     }
 
     // Final flush
-    this.flush();
+    void this.flush();
 
     this.isCapturing = false;
-    this.originalMethods.info('[Brain-Monitor] Console capture stopped');
+    this.originalMethods.info("[Brain-Monitor] Console capture stopped");
   }
 
   private capture(level: string, args: any[]): void {
@@ -115,20 +118,20 @@ class BrowserConsoleCapture {
         level,
         timestamp: new Date().toISOString(),
         message: this.formatArgs(args),
-        source: 'browser',
+        source: "browser",
         url: window.location.href,
         userAgent: navigator.userAgent,
       };
 
       // Add stack trace for errors
-      if (this.includeStack && (level === 'error' || level === 'warn')) {
+      if (this.includeStack && (level === "error" || level === "warn")) {
         const error = new Error();
         logEntry.stack = error.stack;
       }
 
       // Add to buffer
       this.capturedLogs.push(logEntry);
-      
+
       // Trim buffer if too large
       if (this.capturedLogs.length > this.maxBufferSize) {
         this.capturedLogs.shift();
@@ -140,24 +143,29 @@ class BrowserConsoleCapture {
       }
     } catch (error) {
       // Use original method to avoid infinite loop
-      this.originalMethods.error('[Brain-Monitor] Failed to capture console log:', error);
+      this.originalMethods.error(
+        "[Brain-Monitor] Failed to capture console log:",
+        error,
+      );
     }
   }
 
   private formatArgs(args: any[]): string {
-    return args.map(arg => {
-      if (arg instanceof Error) {
-        return `${arg.name}: ${arg.message}\n${arg.stack}`;
-      }
-      if (typeof arg === 'object') {
-        try {
-          return JSON.stringify(arg, null, 2);
-        } catch (e) {
-          return String(arg);
+    return args
+      .map((arg) => {
+        if (arg instanceof Error) {
+          return `${arg.name}: ${arg.message}\n${arg.stack}`;
         }
-      }
-      return String(arg);
-    }).join(' ');
+        if (typeof arg === "object") {
+          try {
+            return JSON.stringify(arg, null, 2);
+          } catch (e) {
+            return String(arg);
+          }
+        }
+        return String(arg);
+      })
+      .join(" ");
   }
 
   private async flush(): Promise<void> {
@@ -170,9 +178,9 @@ class BrowserConsoleCapture {
 
     try {
       await fetch(this.endpoint, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           logs: logsToSend,
@@ -186,7 +194,7 @@ class BrowserConsoleCapture {
     } catch (error) {
       // Re-add logs to buffer if send failed
       this.capturedLogs.unshift(...logsToSend);
-      this.originalMethods.error('[Brain-Monitor] Failed to send logs:', error);
+      this.originalMethods.error("[Brain-Monitor] Failed to send logs:", error);
     }
   }
 
@@ -206,7 +214,9 @@ let instance: BrowserConsoleCapture | null = null;
  * Initialize browser console capture
  * Should be called as early as possible in your application
  */
-export function initBrowserConsoleCapture(config?: ConsoleCapturConfig): BrowserConsoleCapture {
+export function initBrowserConsoleCapture(
+  config?: ConsoleCapturConfig,
+): BrowserConsoleCapture {
   if (!instance) {
     instance = new BrowserConsoleCapture(config);
     instance.start();
@@ -224,14 +234,14 @@ export function getConsoleCapture(): BrowserConsoleCapture | null {
 /**
  * Auto-initialize if this script is loaded directly
  */
-if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+if (typeof window !== "undefined" && typeof document !== "undefined") {
   // Check if we should auto-init based on a meta tag or global config
   const autoInit = (window as any).__BRAIN_MONITOR_AUTO_INIT__ !== false;
-  
+
   if (autoInit) {
     // Wait for DOM ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => {
         initBrowserConsoleCapture();
       });
     } else {

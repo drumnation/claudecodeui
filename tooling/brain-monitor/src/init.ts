@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -43,6 +44,13 @@ export async function init(): Promise<void> {
       pkg.scripts[key] = value;
     }
   });
+
+  // Add workflow integration - replace dev script if it's just "turbo run dev"
+  if (pkg.scripts.dev === "turbo run dev") {
+    pkg.scripts["dev:original"] = "turbo run dev";
+    pkg.scripts.dev = "brain-monitor dev";
+    console.log(chalk.green("✅ Enhanced 'pnpm dev' with automatic logging"));
+  }
 
   writeFileSync(rootPkgPath, JSON.stringify(pkg, null, 2) + "\n");
   console.log(chalk.green("✅ Package.json scripts updated"));
@@ -257,12 +265,19 @@ Remember: **Efficiency > Redundancy**. Check first, run second!
   // 7. Inject browser console capture into React apps
   console.log(chalk.gray("\n• Setting up browser console capture..."));
   try {
-    const { injectBrowserCapture, generateExpressMiddleware } = await import("./init/inject-browser-capture.js");
+    const {
+      injectBrowserCapture,
+      generateExpressMiddleware,
+      ensureLoggerAsDevDependency,
+    } = await import("./init/inject-browser-capture.js");
+
+    // Ensure @kit/logger is in devDependencies
+    await ensureLoggerAsDevDependency(process.cwd());
     const results = await injectBrowserCapture(process.cwd());
-    
+
     let successCount = 0;
     let alreadyInjectedCount = 0;
-    
+
     for (const result of results) {
       if (result.success) {
         if (result.alreadyInjected) {
@@ -270,23 +285,47 @@ Remember: **Efficiency > Redundancy**. Check first, run second!
           console.log(chalk.gray(`  - ${result.file} (already configured)`));
         } else {
           successCount++;
-          console.log(chalk.green(`  ✅ Injected console capture into ${result.file}`));
+          console.log(
+            chalk.green(`  ✅ Injected console capture into ${result.file}`),
+          );
         }
       } else {
-        console.log(chalk.yellow(`  ⚠️  Failed to inject into ${result.file}: ${result.error}`));
+        console.log(
+          chalk.yellow(
+            `  ⚠️  Failed to inject into ${result.file}: ${result.error}`,
+          ),
+        );
       }
     }
-    
+
     if (successCount > 0) {
-      console.log(chalk.green(`✅ Browser console capture injected into ${successCount} file(s)`));
-      
+      console.log(
+        chalk.green(
+          `✅ Browser console capture injected into ${successCount} file(s)`,
+        ),
+      );
+
       // Generate middleware snippet
       const middlewareSnippet = await generateExpressMiddleware();
-      const middlewarePath = join(process.cwd(), "docs", "automation", "brain-monitor-express-setup.md");
-      writeFileSync(middlewarePath, `# Brain-Monitor Express Setup\n\n${middlewareSnippet}`);
-      
-      console.log(chalk.yellow("\n⚠️  Important: Add the Brain-Monitor Express middleware to your backend:"));
-      console.log(chalk.gray("   See: docs/automation/brain-monitor-express-setup.md"));
+      const middlewarePath = join(
+        process.cwd(),
+        "docs",
+        "automation",
+        "brain-monitor-express-setup.md",
+      );
+      writeFileSync(
+        middlewarePath,
+        `# Brain-Monitor Express Setup\n\n${middlewareSnippet}`,
+      );
+
+      console.log(
+        chalk.yellow(
+          "\n⚠️  Important: Add the Brain-Monitor Express middleware to your backend:",
+        ),
+      );
+      console.log(
+        chalk.gray("   See: docs/automation/brain-monitor-express-setup.md"),
+      );
     } else if (alreadyInjectedCount > 0) {
       console.log(chalk.gray("✅ Browser console capture already configured"));
     }
@@ -307,10 +346,20 @@ Remember: **Efficiency > Redundancy**. Check first, run second!
   console.log(chalk.yellow("\nNext steps:"));
   console.log("  1. Run `pnpm brain:validate` to generate initial reports");
   console.log(
-    "  2. Run `pnpm dev:with-logs` to start dev servers with logging",
+    "  2. Run `pnpm dev` to start dev servers with automatic logging",
   );
   console.log("  3. Check `_errors/` for validation reports");
   console.log("  4. Check `_logs/` for server logs");
   console.log("  5. Browser logs will appear in `_logs/browser-console.log`");
   console.log("  6. Test CI locally: `pnpm ci:test` (requires act)");
+
+  if (pkg.scripts.dev === "brain-monitor dev") {
+    console.log(chalk.green("\n🎉 Your dev workflow has been enhanced!"));
+    console.log(
+      chalk.gray("   'pnpm dev' now includes automatic logging and monitoring"),
+    );
+    console.log(
+      chalk.gray("   To use the original dev command: pnpm dev:original"),
+    );
+  }
 }

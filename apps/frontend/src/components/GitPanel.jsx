@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {
   GitBranch,
   GitCommit,
@@ -15,6 +15,7 @@ import {
   Mic,
   MicOff,
   Sparkles,
+  AlertCircle,
 } from 'lucide-react';
 import {MicButton} from './MicButton';
 import {useLogger} from '@kit/logger/react';
@@ -43,15 +44,33 @@ function GitPanel({selectedProject, isMobile}) {
   const [isGeneratingMessage, setIsGeneratingMessage] = useState(false);
   const textareaRef = useRef(null);
   const dropdownRef = useRef(null);
+  const [showStashModal, setShowStashModal] = useState(false);
+  const [pendingBranch, setPendingBranch] = useState(null);
+  const [isStashing, setIsStashing] = useState(false);
+  const fetchTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (selectedProject) {
-      fetchGitStatus();
-      fetchBranches();
-      if (activeView === 'history') {
-        fetchRecentCommits();
+      // Clear any pending fetch
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
       }
+      
+      // Debounce fetching to prevent rapid successive calls
+      fetchTimeoutRef.current = setTimeout(() => {
+        fetchGitStatus();
+        fetchBranches();
+        if (activeView === 'history') {
+          fetchRecentCommits();
+        }
+      }, 100);
     }
+    
+    return () => {
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+    };
   }, [selectedProject, activeView]);
 
   // Handle click outside dropdown
@@ -131,7 +150,7 @@ function GitPanel({selectedProject, isMobile}) {
     }
   };
 
-  const switchBranch = async (branchName) => {
+  const switchBranch = async (branchName, forceCheckout = false) => {
     try {
       const projectPath = selectedProject.fullPath || selectedProject.path;
       const response = await fetch('/api/git/checkout', {
@@ -140,6 +159,7 @@ function GitPanel({selectedProject, isMobile}) {
         body: JSON.stringify({
           path: projectPath,
           branch: branchName,
+          force: forceCheckout,
         }),
       });
 
@@ -147,12 +167,55 @@ function GitPanel({selectedProject, isMobile}) {
       if (data.success) {
         setCurrentBranch(branchName);
         setShowBranchDropdown(false);
+        setPendingBranch(null);
+        setShowStashModal(false);
         fetchGitStatus(); // Refresh status after branch switch
       } else {
-        logger.error('Failed to switch branch', { error: data.error });
+        // Check if the error is due to uncommitted changes
+        if (data.error && data.error.includes('uncommitted changes')) {
+          setPendingBranch(branchName);
+          setShowStashModal(true);
+        } else {
+          logger.error('Failed to switch branch', { error: data.error });
+          alert(`Failed to switch branch: ${data.error}`);
+        }
       }
     } catch (error) {
       logger.error('Error switching branch', { error: error.message, stack: error.stack });
+      alert('Error switching branch. Please check console for details.');
+    }
+  };
+
+  const stashAndSwitchBranch = async () => {
+    if (!pendingBranch) return;
+    
+    setIsStashing(true);
+    try {
+      const projectPath = selectedProject.fullPath || selectedProject.path;
+      
+      // First, stash the changes
+      const stashResponse = await fetch('/api/git/stash', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          path: projectPath,
+          message: `Auto-stash before switching to ${pendingBranch}`,
+        }),
+      });
+
+      const stashData = await stashResponse.json();
+      if (stashData.success) {
+        // Now switch to the pending branch
+        await switchBranch(pendingBranch, true);
+      } else {
+        logger.error('Failed to stash changes', { error: stashData.error });
+        alert(`Failed to stash changes: ${stashData.error}`);
+      }
+    } catch (error) {
+      logger.error('Error stashing and switching branch', { error: error.message, stack: error.stack });
+      alert('Error stashing changes. Please check console for details.');
+    } finally {
+      setIsStashing(false);
     }
   };
 
@@ -829,6 +892,63 @@ function GitPanel({selectedProject, isMobile}) {
               {recentCommits.map((commit) => renderCommitItem(commit))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* New Branch Modal */}
+      {/* Stash Changes Modal */}
+      {showStashModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50"
+            onClick={() => {
+              setShowStashModal(false);
+              setPendingBranch(null);
+            }}
+          />
+          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <AlertCircle className="w-5 h-5 text-yellow-500 mr-2" />
+                <h3 className="text-lg font-semibold">Uncommitted Changes Detected</h3>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                You have uncommitted changes that need to be stashed before switching to branch <span className="font-mono font-semibold">{pendingBranch}</span>.
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                Would you like to stash your changes and switch branches?
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowStashModal(false);
+                    setPendingBranch(null);
+                  }}
+                  className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                  disabled={isStashing}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={stashAndSwitchBranch}
+                  disabled={isStashing}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {isStashing ? (
+                    <>
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                      <span>Stashing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3 h-3" />
+                      <span>Stash and Switch</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

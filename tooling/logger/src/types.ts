@@ -1,3 +1,5 @@
+import type { ThemeDefinition } from './themes.js';
+
 export type LogLevel = 'silent' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
 
 export interface LoggerOptions {
@@ -5,6 +7,7 @@ export interface LoggerOptions {
   scope?: string;
   prettyPrint?: boolean;
   metadata?: Record<string, unknown>;
+  theme?: string | ThemeDefinition;
 }
 
 export interface LoggerMetadata {
@@ -55,6 +58,8 @@ declare global {
     interface ProcessEnv {
       LOG_LEVEL?: LogLevel;
       VITE_LOG_LEVEL?: LogLevel;
+      LOG_THEME?: string;
+      VITE_LOG_THEME?: string;
     }
   }
 }

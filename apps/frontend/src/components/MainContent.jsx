@@ -478,11 +478,11 @@ function MainContent({
             isActive={activeTab === 'shell'}
           />
         </div>
-        <div
-          className={`h-full overflow-hidden ${activeTab === 'git' ? 'block' : 'hidden'}`}
-        >
-          <GitPanel selectedProject={selectedProject} isMobile={isMobile} />
-        </div>
+        {activeTab === 'git' && (
+          <div className="h-full overflow-hidden">
+            <GitPanel selectedProject={selectedProject} isMobile={isMobile} />
+          </div>
+        )}
         <div
           className={`h-full overflow-hidden ${activeTab === 'preview' ? 'block' : 'hidden'}`}
         >

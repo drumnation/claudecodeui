@@ -5,6 +5,9 @@
 
 import {beforeAll, afterEach, afterAll, vi} from 'vitest';
 
+// Note: @kit/logger uses Pino which manages log levels differently
+// Tests should set LOG_LEVEL environment variable if needed
+
 // Mock console methods in tests to avoid noise
 global.console = {
   ...console,

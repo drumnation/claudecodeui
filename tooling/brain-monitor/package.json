@@ -27,11 +27,11 @@
     }
   },
   "scripts": {
-    "build": "tsc",
-    "clean": "rimraf dist node_modules/.cache",
+    "build": "tsc -b",
+    "clean": "rimraf dist node_modules/.cache *.tsbuildinfo",
     "format": "prettier --check \"**/*.{ts,tsx}\"",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -b --noEmit",
     "test": "vitest run --config ../../tooling/testing/src/unit.js",
     "test:unit": "vitest run --config ../../tooling/testing/src/unit.js",
     "test:integration": "echo 'n/a' && exit 0",
@@ -41,13 +41,18 @@
     "yargs": "^17.7.2",
     "chalk": "^5.3.0",
     "globby": "^13.2.2",
-    "tsx": "^4.7.0"
+    "tsx": "^4.7.0",
+    "glob": "^10.3.10",
+    "js-yaml": "^4.1.0",
+    "express": "^4.18.2"
   },
   "devDependencies": {
     "@kit/tsconfig": "workspace:*",
     "@kit/eslint-config": "workspace:*",
     "@kit/testing": "workspace:*",
     "@types/yargs": "^17.0.32",
+    "@types/express": "^4.17.21",
+    "@types/js-yaml": "^4.0.9",
     "typescript": "^5.3.3",
     "rimraf": "^5.0.5",
     "jiti": "^2.0.0"
