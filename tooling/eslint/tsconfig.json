@@ -1,7 +1,7 @@
 {
   "extends": "@kit/tsconfig/eslint",
   "compilerOptions": {
-    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json"
+    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
   },
   "include": ["*.ts", "types.d.ts"],
   "exclude": ["node_modules", "dist", "*.js", "eslint.config.js"]
