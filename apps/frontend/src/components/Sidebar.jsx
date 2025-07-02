@@ -208,10 +208,27 @@ function Sidebar({
 
     try {
       console.log('🔄 Generating summary for:', projectName, sessionId);
+      
+      // First fetch the messages for this session
+      const messagesResponse = await fetch(
+        `/api/projects/${projectName}/sessions/${sessionId}/messages`,
+      );
+      
+      if (!messagesResponse.ok) {
+        throw new Error('Failed to fetch session messages');
+      }
+      
+      const messagesData = await messagesResponse.json();
+      const messages = messagesData.entries || [];
+      
       const response = await fetch(
         `/api/projects/${projectName}/sessions/${sessionId}/generate-summary`,
         {
           method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({messages}),
         },
       );
 

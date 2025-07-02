@@ -188,32 +188,54 @@ export const buildProject = async (
 ): Promise<Project> => {
   const customName = config[projectName]?.displayName;
   const autoDisplayName = await generateDisplayName(projectName);
-  const fullPath = projectName.replace(/-/g, '/');
-
-  const project: Project = {
-    name: projectName,
-    path: projectPath,
-    displayName: customName || autoDisplayName,
-    fullPath: fullPath,
-    isCustomName: !!customName,
-    sessions: [],
-  };
-
+  
+  // Try to get the actual project path from session cwd
+  let fullPath = projectName.replace(/-/g, '/');
+  
   try {
     const sessionResult = await getSessions(homePath, projectName, 5, 0);
-    project.sessions = sessionResult.sessions || [];
+    const sessions = sessionResult.sessions || [];
+    
+    // Find the first session with a cwd to use as the actual project path
+    const sessionWithCwd = sessions.find(s => s.cwd && path.isAbsolute(s.cwd));
+    if (sessionWithCwd) {
+      fullPath = sessionWithCwd.cwd;
+    } else if (config[projectName]?.originalPath) {
+      // Fall back to config if available
+      fullPath = config[projectName].originalPath;
+    }
+
+    const project: Project = {
+      name: projectName,
+      path: projectPath,
+      displayName: customName || autoDisplayName,
+      fullPath: fullPath,
+      isCustomName: !!customName,
+      sessions: sessions,
+    };
+    
     project.sessionMeta = {
       hasMore: sessionResult.hasMore,
       total: sessionResult.total,
     };
+    
+    return project;
   } catch (e) {
     console.warn(
       `Could not load sessions for project ${projectName}:`,
       (e as Error).message,
     );
+    
+    // Return project with fallback path
+    return {
+      name: projectName,
+      path: projectPath,
+      displayName: customName || autoDisplayName,
+      fullPath: fullPath,
+      isCustomName: !!customName,
+      sessions: [],
+    };
   }
-
-  return project;
 };
 
 export const filterSessionEntriesById = (
