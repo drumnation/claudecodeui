@@ -11,8 +11,19 @@ vi.mock('fs', () => ({
 }));
 
 describe('servers.repository', () => {
+  let mockLogger: any;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn(),
+      isLevelEnabled: vi.fn().mockReturnValue(false),
+      child: vi.fn().mockReturnThis(),
+    };
   });
 
   describe('readPackageJson', () => {
@@ -84,7 +95,7 @@ describe('servers.repository', () => {
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(mockPackageJson));
 
-      const result = await getAvailableScripts('/project/path');
+      const result = await getAvailableScripts('/project/path', mockLogger);
 
       expect(result).toEqual(['dev', 'build', 'test']);
     });
@@ -98,7 +109,7 @@ describe('servers.repository', () => {
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(mockPackageJson));
 
-      const result = await getAvailableScripts('/project/path');
+      const result = await getAvailableScripts('/project/path', mockLogger);
 
       expect(result).toEqual([]);
     });
@@ -106,7 +117,7 @@ describe('servers.repository', () => {
     it('should return empty array if package.json not found', async () => {
       vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
 
-      const result = await getAvailableScripts('/project/path');
+      const result = await getAvailableScripts('/project/path', mockLogger);
 
       expect(result).toEqual([]);
     });
@@ -115,19 +126,12 @@ describe('servers.repository', () => {
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.readFile).mockRejectedValue(new Error('Read error'));
 
-      const result = await getAvailableScripts('/project/path');
+      const result = await getAvailableScripts('/project/path', mockLogger);
 
       expect(result).toEqual([]);
     });
 
     it('should log appropriate messages', async () => {
-      const consoleLogSpy = vi
-        .spyOn(console, 'log')
-        .mockImplementation(() => {});
-      const consoleErrorSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
-
       // Test successful case
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.readFile).mockResolvedValue(
@@ -136,13 +140,15 @@ describe('servers.repository', () => {
         }),
       );
 
-      await getAvailableScripts('/project/path');
+      await getAvailableScripts('/project/path', mockLogger);
 
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '🔍 Looking for scripts in:',
-        '/project/path',
-      );
-      expect(consoleLogSpy).toHaveBeenCalledWith('📜 Found scripts:', ['dev']);
+      expect(mockLogger.debug).toHaveBeenCalledWith('🔍 Looking for scripts', {
+        projectPath: '/project/path',
+      });
+      expect(mockLogger.debug).toHaveBeenCalledWith('📜 Found scripts', {
+        scripts: ['dev'],
+        projectPath: '/project/path',
+      });
 
       // Clear mocks before next test case
       vi.clearAllMocks();
@@ -150,16 +156,14 @@ describe('servers.repository', () => {
       // Test no package.json case
       vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
 
-      await getAvailableScripts('/another/path');
+      await getAvailableScripts('/another/path', mockLogger);
 
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '🔍 Looking for scripts in:',
-        '/another/path',
-      );
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '📦 No package.json found at:',
-        '/another/path',
-      );
+      expect(mockLogger.debug).toHaveBeenCalledWith('🔍 Looking for scripts', {
+        projectPath: '/another/path',
+      });
+      expect(mockLogger.debug).toHaveBeenCalledWith('📦 No package.json found', {
+        projectPath: '/another/path',
+      });
 
       // Clear mocks before next test case
       vi.clearAllMocks();
@@ -168,15 +172,14 @@ describe('servers.repository', () => {
       vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify({name: 'test'}));
 
-      await getAvailableScripts('/third/path');
+      await getAvailableScripts('/third/path', mockLogger);
 
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '🔍 Looking for scripts in:',
-        '/third/path',
-      );
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '📦 No scripts section in package.json',
-      );
+      expect(mockLogger.debug).toHaveBeenCalledWith('🔍 Looking for scripts', {
+        projectPath: '/third/path',
+      });
+      expect(mockLogger.debug).toHaveBeenCalledWith('📦 No scripts section in package.json', {
+        projectPath: '/third/path',
+      });
 
       // Clear mocks before next test case
       vi.clearAllMocks();
@@ -184,19 +187,14 @@ describe('servers.repository', () => {
       // Test error case - readPackageJson returns null for errors
       vi.mocked(fs.access).mockRejectedValue(new Error('Read error'));
 
-      await getAvailableScripts('/error/path');
+      await getAvailableScripts('/error/path', mockLogger);
 
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '🔍 Looking for scripts in:',
-        '/error/path',
-      );
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '📦 No package.json found at:',
-        '/error/path',
-      );
-
-      consoleLogSpy.mockRestore();
-      consoleErrorSpy.mockRestore();
+      expect(mockLogger.debug).toHaveBeenCalledWith('🔍 Looking for scripts', {
+        projectPath: '/error/path',
+      });
+      expect(mockLogger.debug).toHaveBeenCalledWith('📦 No package.json found', {
+        projectPath: '/error/path',
+      });
     });
   });
 });

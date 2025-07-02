@@ -2,12 +2,15 @@ import path from 'node:path';
 import chokidar, {FSWatcher} from 'chokidar';
 import {WebSocket} from 'ws';
 import type {ExtendedWebSocket} from '../../infra/websocket/index.js';
+import type {Logger} from '@kit/logger/types';
 import {getProjectsList} from './projects.facade.js';
 
 let projectsWatcher: FSWatcher | null = null;
+const fileChangeLogCache = new Map<string, number>();
 
 export const createProjectsWatcher = (
   connectedClients: Set<ExtendedWebSocket>,
+  logger: Logger,
 ): void => {
   const claudeProjectsPath = path.join(
     process.env['HOME'] || '',
@@ -52,6 +55,16 @@ export const createProjectsWatcher = (
             process.env['HOME'] || '',
           );
 
+          // Rate-limited logging for file changes
+          const logKey = `${eventType}:${path.basename(filePath)}`;
+          if (!fileChangeLogCache.has(logKey) || Date.now() - fileChangeLogCache.get(logKey)! > 5000) {
+            logger.debug('File change detected', {
+              eventType,
+              relativePath: path.relative(claudeProjectsPath, filePath)
+            });
+            fileChangeLogCache.set(logKey, Date.now());
+          }
+
           // Notify all connected clients about the project changes
           const updateMessage = JSON.stringify({
             type: 'projects_updated',
@@ -67,7 +80,7 @@ export const createProjectsWatcher = (
             }
           });
         } catch (error) {
-          console.error('❌ Error handling project changes:', error);
+          logger.error('❌ Error handling project changes', {error});
         }
       }, 300);
     };
@@ -82,13 +95,13 @@ export const createProjectsWatcher = (
         debouncedUpdate('unlinkDir', dirPath),
       )
       .on('error', (error: unknown) => {
-        console.error('❌ Chokidar watcher error:', error);
+        logger.error('❌ Chokidar watcher error', {error});
       })
       .on('ready', () => {
-        console.log('✅ File watcher ready');
+        logger.info('✅ File watcher ready');
       });
   } catch (error) {
-    console.error('❌ Failed to setup projects watcher:', error);
+    logger.error('❌ Failed to setup projects watcher', {error});
   }
 };
 

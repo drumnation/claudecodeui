@@ -8,9 +8,11 @@ import type {
   FileWithStats,
 } from './projects.types.js';
 import * as repository from './projects.repository.js';
+import type { Logger } from '@kit/logger';
 
 export const generateDisplayName = async (
   projectName: string,
+  logger: Logger,
 ): Promise<string> => {
   let projectPath = projectName.replace(/-/g, '/');
 
@@ -33,6 +35,7 @@ export const generateDisplayName = async (
 
 export const parseJsonlSessions = async (
   filePath: string,
+  logger: Logger,
 ): Promise<Session[]> => {
   const sessions = new Map<string, Session>();
 
@@ -72,7 +75,7 @@ export const parseJsonlSessions = async (
         session.lastActivity = new Date(entry.timestamp);
       }
     }
-  });
+  }, logger);
 
   return Array.from(sessions.values()).sort(
     (a, b) => b.lastActivity.getTime() - a.lastActivity.getTime(),
@@ -84,6 +87,7 @@ export const getSessions = async (
   projectName: string,
   limit: number = 5,
   offset: number = 0,
+  logger: Logger,
 ): Promise<SessionsResult> => {
   const projectDir = path.join(homePath, '.claude', 'projects', projectName);
 
@@ -105,7 +109,7 @@ export const getSessions = async (
 
     for (const {file} of filesWithStats) {
       const jsonlFile = path.join(projectDir, file);
-      const sessions = await parseJsonlSessions(jsonlFile);
+      const sessions = await parseJsonlSessions(jsonlFile, logger);
 
       sessions.forEach((session) => {
         if (!allSessions.has(session.id)) {
@@ -139,7 +143,7 @@ export const getSessions = async (
       limit,
     };
   } catch (error) {
-    console.error(`Error reading sessions for project ${projectName}:`, error);
+    logger.error(`Error reading sessions for project ${projectName}:`, { error });
     return {sessions: [], hasMore: false, total: 0};
   }
 };
@@ -148,6 +152,7 @@ export const getSessionMessages = async (
   homePath: string,
   projectName: string,
   sessionId: string,
+  logger: Logger,
 ): Promise<JsonlEntry[]> => {
   const projectDir = path.join(homePath, '.claude', 'projects', projectName);
 
@@ -166,7 +171,7 @@ export const getSessionMessages = async (
         if (entry.sessionId === sessionId) {
           messages.push(entry);
         }
-      });
+      }, logger);
     }
 
     return messages.sort(
@@ -175,7 +180,7 @@ export const getSessionMessages = async (
         new Date(b.timestamp || 0).getTime(),
     );
   } catch (error) {
-    console.error(`Error reading messages for session ${sessionId}:`, error);
+    logger.error(`Error reading messages for session ${sessionId}:`, { error });
     return [];
   }
 };
@@ -185,15 +190,16 @@ export const buildProject = async (
   projectPath: string | null,
   config: ProjectConfig,
   homePath: string,
+  logger: Logger,
 ): Promise<Project> => {
   const customName = config[projectName]?.displayName;
-  const autoDisplayName = await generateDisplayName(projectName);
+  const autoDisplayName = await generateDisplayName(projectName, logger);
   
   // Try to get the actual project path from session cwd
   let fullPath = projectName.replace(/-/g, '/');
   
   try {
-    const sessionResult = await getSessions(homePath, projectName, 5, 0);
+    const sessionResult = await getSessions(homePath, projectName, 5, 0, logger);
     const sessions = sessionResult.sessions || [];
     
     // Find the first session with a cwd to use as the actual project path
@@ -221,9 +227,9 @@ export const buildProject = async (
     
     return project;
   } catch (e) {
-    console.warn(
+    logger.warn(
       `Could not load sessions for project ${projectName}:`,
-      (e as Error).message,
+      { error: (e as Error).message },
     );
     
     // Return project with fallback path
@@ -256,6 +262,7 @@ export const findSessionFile = async (
   homePath: string,
   projectName: string,
   sessionId: string,
+  logger: Logger,
 ): Promise<string | null> => {
   const projectDir = path.join(homePath, '.claude', 'projects', projectName);
   const jsonlFiles = await repository.readJsonlFiles(projectDir);
@@ -285,12 +292,13 @@ export const findSessionFile = async (
 export const isProjectEmpty = async (
   homePath: string,
   projectName: string,
+  logger: Logger,
 ): Promise<boolean> => {
   try {
-    const sessionsResult = await getSessions(homePath, projectName, 1, 0);
+    const sessionsResult = await getSessions(homePath, projectName, 1, 0, logger);
     return sessionsResult.total === 0;
   } catch (error) {
-    console.error(`Error checking if project ${projectName} is empty:`, error);
+    logger.error(`Error checking if project ${projectName} is empty:`, { error });
     return false;
   }
 };
@@ -300,8 +308,9 @@ export const updateSessionSummary = async (
   projectName: string,
   sessionId: string,
   summary: string,
+  logger: Logger,
 ): Promise<void> => {
-  const jsonlFile = await findSessionFile(homePath, projectName, sessionId);
+  const jsonlFile = await findSessionFile(homePath, projectName, sessionId, logger);
 
   if (!jsonlFile) {
     throw new Error(`Session ${sessionId} not found`);

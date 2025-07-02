@@ -1,7 +1,8 @@
 import type {Request, Response} from 'express';
+import type {Logger} from '@kit/logger/types';
 import {getNetworkIP} from '../../infra/http/server.js';
 
-export const createConfigRoute = () => {
+export const createConfigRoute = (logger: Logger) => {
   return (req: Request, res: Response) => {
     const serverIP = getNetworkIP();
     const PORT = process.env['PORT'] || '8765';
@@ -11,12 +12,10 @@ export const createConfigRoute = () => {
         ? 'wss'
         : 'ws';
 
-    console.log(
-      'Config API called - Returning host:',
+    logger.info('Config API called', {
       host,
-      'Protocol:',
       protocol,
-    );
+    });
 
     res.json({
       serverPort: PORT,

@@ -4,6 +4,7 @@ import {WebSocket} from 'ws';
 import * as watcher from './projects.watcher.js';
 import {getProjectsList} from './projects.facade.js';
 import type {ExtendedWebSocket} from '../../infra/websocket/index.js';
+import type {Logger} from '@kit/logger/types';
 
 vi.mock('chokidar');
 vi.mock('./projects.facade.js');
@@ -13,6 +14,7 @@ describe('projects.watcher', () => {
   let mockClients: Set<ExtendedWebSocket>;
   let mockClient1: Partial<ExtendedWebSocket>;
   let mockClient2: Partial<ExtendedWebSocket>;
+  let mockLogger: Logger;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -20,6 +22,15 @@ describe('projects.watcher', () => {
 
     // Mock HOME environment variable
     vi.stubEnv('HOME', '/home/user');
+    
+    // Create mock logger
+    mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      child: vi.fn(() => mockLogger),
+    } as unknown as Logger;
 
     // Create mock watcher
     mockWatcher = {
@@ -53,7 +64,7 @@ describe('projects.watcher', () => {
 
   describe('createProjectsWatcher', () => {
     it('should initialize watcher with correct options', () => {
-      watcher.createProjectsWatcher(mockClients);
+      watcher.createProjectsWatcher(mockClients, mockLogger);
 
       expect(chokidar.watch).toHaveBeenCalledWith(
         '/home/user/.claude/projects',
@@ -81,7 +92,7 @@ describe('projects.watcher', () => {
 
     it('should close existing watcher before creating new one', () => {
       // Create first watcher
-      watcher.createProjectsWatcher(mockClients);
+      watcher.createProjectsWatcher(mockClients, mockLogger);
       const firstWatcher = mockWatcher;
 
       // Create second watcher
@@ -91,7 +102,7 @@ describe('projects.watcher', () => {
       };
       vi.mocked(chokidar.watch).mockReturnValue(secondWatcher as any);
 
-      watcher.createProjectsWatcher(mockClients);
+      watcher.createProjectsWatcher(mockClients, mockLogger);
 
       expect(firstWatcher.close).toHaveBeenCalled();
     });
@@ -100,7 +111,7 @@ describe('projects.watcher', () => {
       const mockProjects = [{name: 'project1', sessions: []}];
       vi.mocked(getProjectsList).mockResolvedValue(mockProjects);
 
-      watcher.createProjectsWatcher(mockClients);
+      watcher.createProjectsWatcher(mockClients, mockLogger);
 
       // Get the 'add' event handler
       const addHandler = vi
@@ -132,7 +143,7 @@ describe('projects.watcher', () => {
       const mockProjects = [{name: 'project1', sessions: []}];
       vi.mocked(getProjectsList).mockResolvedValue(mockProjects);
 
-      watcher.createProjectsWatcher(mockClients);
+      watcher.createProjectsWatcher(mockClients, mockLogger);
 
       const changeHandler = vi
         .mocked(mockWatcher.on)
@@ -151,7 +162,7 @@ describe('projects.watcher', () => {
       const mockProjects = [];
       vi.mocked(getProjectsList).mockResolvedValue(mockProjects);
 
-      watcher.createProjectsWatcher(mockClients);
+      watcher.createProjectsWatcher(mockClients, mockLogger);
 
       const unlinkHandler = vi
         .mocked(mockWatcher.on)
@@ -170,7 +181,7 @@ describe('projects.watcher', () => {
       const mockProjects = [{name: 'new-project', sessions: []}];
       vi.mocked(getProjectsList).mockResolvedValue(mockProjects);
 
-      watcher.createProjectsWatcher(mockClients);
+      watcher.createProjectsWatcher(mockClients, mockLogger);
 
       const addDirHandler = vi
         .mocked(mockWatcher.on)
@@ -189,7 +200,7 @@ describe('projects.watcher', () => {
       const mockProjects = [{name: 'project1', sessions: []}];
       vi.mocked(getProjectsList).mockResolvedValue(mockProjects);
 
-      watcher.createProjectsWatcher(mockClients);
+      watcher.createProjectsWatcher(mockClients, mockLogger);
 
       const addHandler = vi
         .mocked(mockWatcher.on)
@@ -255,7 +266,7 @@ describe('projects.watcher', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {});
 
-      watcher.createProjectsWatcher(mockClients);
+      watcher.createProjectsWatcher(mockClients, mockLogger);
 
       const addHandler = vi
         .mocked(mockWatcher.on)
@@ -279,7 +290,7 @@ describe('projects.watcher', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {});
 
-      watcher.createProjectsWatcher(mockClients);
+      watcher.createProjectsWatcher(mockClients, mockLogger);
 
       const errorHandler = vi
         .mocked(mockWatcher.on)
@@ -300,7 +311,7 @@ describe('projects.watcher', () => {
         .spyOn(console, 'log')
         .mockImplementation(() => {});
 
-      watcher.createProjectsWatcher(mockClients);
+      watcher.createProjectsWatcher(mockClients, mockLogger);
 
       const readyHandler = vi
         .mocked(mockWatcher.on)
@@ -321,7 +332,7 @@ describe('projects.watcher', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {});
 
-      watcher.createProjectsWatcher(mockClients);
+      watcher.createProjectsWatcher(mockClients, mockLogger);
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         '❌ Failed to setup projects watcher:',
@@ -334,14 +345,14 @@ describe('projects.watcher', () => {
 
   describe('stopProjectsWatcher', () => {
     it('should close watcher if exists', () => {
-      watcher.createProjectsWatcher(mockClients);
+      watcher.createProjectsWatcher(mockClients, mockLogger);
       watcher.stopProjectsWatcher();
 
       expect(mockWatcher.close).toHaveBeenCalled();
     });
 
     it('should handle multiple stop calls gracefully', () => {
-      watcher.createProjectsWatcher(mockClients);
+      watcher.createProjectsWatcher(mockClients, mockLogger);
       watcher.stopProjectsWatcher();
       watcher.stopProjectsWatcher(); // Second call should not error
 

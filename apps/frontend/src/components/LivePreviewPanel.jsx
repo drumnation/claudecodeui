@@ -13,6 +13,7 @@ import {
 import {Button} from './ui/button';
 import {Input} from './ui/input';
 import {Badge} from './ui/badge';
+import {useLogger} from '@kit/logger/react';
 
 function LivePreviewPanel({
   selectedProject,
@@ -28,6 +29,7 @@ function LivePreviewPanel({
   serverLogs = [],
   onClearLogs,
 }) {
+  const logger = useLogger({ scope: 'LivePreviewPanel' });
   // Check if the current dev server is already running
   const isCurrentProjectServer =
     window.location.hostname === 'localhost' && window.location.port === '8766';
@@ -53,11 +55,15 @@ function LivePreviewPanel({
     }
   }, [serverUrl, isCurrentProjectServer, serverStatus]);
 
-  // Debug logging for scripts
+  // Log script changes when they actually change
   useEffect(() => {
-    console.log('📦 Available scripts:', availableScripts);
-    console.log('📁 Selected project:', selectedProject);
-  }, [availableScripts, selectedProject]);
+    if (availableScripts.length > 0) {
+      logger.debug('Available scripts loaded', { 
+        scripts: availableScripts,
+        project: selectedProject?.name 
+      });
+    }
+  }, [availableScripts.length, selectedProject?.name]);
 
   // Auto-show app if dev server is detected
   useEffect(() => {
@@ -81,7 +87,7 @@ function LivePreviewPanel({
       try {
         iframeRef.current.contentWindow.history.back();
       } catch (e) {
-        console.warn('Cannot access iframe history:', e);
+        logger.warn('Cannot access iframe history', { error: e.message });
       }
     }
   };
@@ -91,7 +97,7 @@ function LivePreviewPanel({
       try {
         iframeRef.current.contentWindow.history.forward();
       } catch (e) {
-        console.warn('Cannot access iframe history:', e);
+        logger.warn('Cannot access iframe history', { error: e.message });
       }
     }
   };
@@ -128,7 +134,10 @@ function LivePreviewPanel({
   };
 
   const handleIframeError = (e) => {
-    console.error('Iframe error:', e);
+    // Only log if it's not a cross-origin error (which is expected)
+    if (e.message && !e.message.includes('cross-origin')) {
+      logger.error('Iframe error', { error: e.message });
+    }
     setIsLoading(false);
     // Don't set error for cross-origin issues, as they're expected
   };

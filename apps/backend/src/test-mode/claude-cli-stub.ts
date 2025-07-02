@@ -14,7 +14,7 @@ interface StubResponse {
   response: any;
 }
 
-const STUB_RESPONSES: Record<string, StubResponse[]> = {
+const STUB_RESPONSES: Record<string, StubResponse[]> & {default: StubResponse[]} = {
   default: [
     {
       delay: 100,
@@ -148,15 +148,15 @@ function getResponsesForInput(input: string): StubResponse[] {
   const lowerInput = input.toLowerCase();
   
   if (lowerInput.includes('test')) {
-    return STUB_RESPONSES['test message'];
+    return STUB_RESPONSES['test message'] || STUB_RESPONSES.default;
   }
   
   if (lowerInput.includes('tool') || lowerInput.includes('read') || lowerInput.includes('file')) {
-    return STUB_RESPONSES['use tool'];
+    return STUB_RESPONSES['use tool'] || STUB_RESPONSES.default;
   }
   
   if (lowerInput.includes('error') || lowerInput.includes('fail')) {
-    return STUB_RESPONSES['error test'];
+    return STUB_RESPONSES['error test'] || STUB_RESPONSES.default;
   }
   
   return STUB_RESPONSES.default;

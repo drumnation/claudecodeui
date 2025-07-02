@@ -14,17 +14,21 @@ import {createGitRoutes} from '../../modules/git/git.controller.js';
 import {createServerRoutes} from '../../modules/servers/servers.controller.js';
 import {createSlashCommandRoutes} from '../../modules/claude-cli/slash-commands.controller.js';
 import {handleGenerateSummary} from '../../modules/claude-cli/summary.handler.js';
+import {createLogger} from '@kit/logger/node';
 
 interface RouteDependencies {
   connectedClients: Set<ExtendedWebSocket>;
 }
 
 export const setupRoutes = (app: Express, deps: RouteDependencies): void => {
+  // Create logger for routes
+  const logger = createLogger({scope: 'routes'});
+  
   // Health check
   app.get('/health', createHealthRoute());
 
   // Config endpoint
-  app.get('/api/config', createConfigRoute());
+  app.get('/api/config', createConfigRoute(logger.child({scope: 'config'})));
 
   // Project routes
   app.get('/api/projects', async (req: Request, res: Response) => {
@@ -48,20 +52,20 @@ export const setupRoutes = (app: Express, deps: RouteDependencies): void => {
     async (req: Request, res: Response) => {
       try {
         const {messages} = req.body;
-        const result = await handleGenerateSummary(messages);
+        const result = await handleGenerateSummary(messages, logger.child({scope: 'summary'}));
         res.json(result);
       } catch (error: any) {
-        console.error('Error generating summary:', error);
+        logger.error('Error generating summary', {error});
         res.status(500).json({error: error.message});
       }
     },
   );
 
   // Session routes
-  app.use('/api/projects/:projectName/sessions', createSessionRoutes());
+  app.use('/api/projects/:projectName/sessions', createSessionRoutes(logger.child({scope: 'sessions'})));
 
   // File routes
-  app.use('/api/projects/:projectName', createFileRoutes());
+  app.use('/api/projects/:projectName', createFileRoutes(logger.child({scope: 'files'})));
 
   // Git routes
   app.use('/api/git', createGitRoutes());

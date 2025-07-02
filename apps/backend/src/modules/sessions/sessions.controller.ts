@@ -1,6 +1,7 @@
 import {Router} from 'express';
 import type {Request, Response} from 'express';
 import fetch from 'node-fetch';
+import type {Logger} from '@kit/logger/types';
 import {
   getSessionsHandler,
   getSessionMessagesHandler,
@@ -12,7 +13,7 @@ import {
   clearManualEditFlag,
 } from '../claude-cli/index.js';
 
-export const createSessionRoutes = (): Router => {
+export const createSessionRoutes = (logger: Logger): Router => {
   const router = Router({mergeParams: true});
 
   // Get sessions for a project
@@ -48,16 +49,16 @@ export const createSessionRoutes = (): Router => {
           },
         );
 
-        console.log('🔄 Summary API response status:', summaryResponse.status);
+        logger.info('🔄 Summary API response status', {status: summaryResponse.status});
 
         if (!summaryResponse.ok) {
           const errorText = await summaryResponse.text();
-          console.error('❌ Summary API error:', errorText);
+          logger.error('❌ Summary API error', {errorText});
           throw new Error(`Failed to generate summary: ${errorText}`);
         }
 
         const summaryData = await summaryResponse.json();
-        console.log('✅ Summary generated:', summaryData);
+        logger.info('✅ Summary generated', {summaryData});
 
         if (summaryData.summary) {
           // Update the session summary
@@ -102,7 +103,7 @@ export const createSessionRoutes = (): Router => {
             summary: summaryData.summary,
           });
         } else {
-          console.error('❌ No summary in response:', summaryData);
+          logger.error('❌ No summary in response', {summaryData});
           res
             .status(500)
             .json({
@@ -110,7 +111,7 @@ export const createSessionRoutes = (): Router => {
             });
         }
       } catch (error: any) {
-        console.error('❌ Error generating session summary:', error);
+        logger.error('❌ Error generating session summary', {error});
         res.status(500).json({error: error.message});
       }
     },

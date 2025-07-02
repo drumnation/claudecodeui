@@ -1,13 +1,14 @@
 import {WebSocket} from 'ws';
 import type {ConnectionHandler} from '../../infra/websocket/index.js';
+import type {Logger} from '@kit/logger/types';
 import {createShellManager, generateSessionId} from './shell.service.js';
 import type {ShellMessage} from './shell.types.js';
 
 const shellManager = createShellManager();
 
-export const createShellHandler = (): ConnectionHandler => {
+export const createShellHandler = (logger: Logger): ConnectionHandler => {
   return (ws: WebSocket) => {
-    console.log('🖥️ Shell WebSocket connected');
+    logger.info('🖥️ Shell WebSocket connected');
 
     // Generate unique session ID
     const sessionId = generateSessionId();
@@ -28,9 +29,10 @@ export const createShellHandler = (): ConnectionHandler => {
     // Handle PTY exit
     ptyProcess.onExit(
       ({exitCode, signal}: {exitCode: number; signal?: number}) => {
-        console.log(
-          `Shell process exited with code ${exitCode} and signal ${signal}`,
-        );
+        logger.info('Shell process exited', {
+          exitCode,
+          signal,
+        });
         shellManager.terminateSession(sessionId);
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({type: 'exit', exitCode, signal}));
@@ -50,19 +52,19 @@ export const createShellHandler = (): ConnectionHandler => {
           ptyProcess.resize(data.cols, data.rows);
         }
       } catch (error) {
-        console.error('Error handling shell message:', error);
+        logger.error('Error handling shell message', {error});
       }
     });
 
     // Handle WebSocket close
     ws.on('close', () => {
-      console.log('🖥️ Shell WebSocket disconnected');
+      logger.info('🖥️ Shell WebSocket disconnected');
       shellManager.terminateSession(sessionId);
     });
 
     // Handle WebSocket error
     ws.on('error', (error: Error) => {
-      console.error('❌ Shell WebSocket error:', error);
+      logger.error('❌ Shell WebSocket error', {error});
       shellManager.terminateSession(sessionId);
     });
   };

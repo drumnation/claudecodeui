@@ -157,6 +157,13 @@ function discoverServers(): ServerConfig[] {
 // Server configurations - auto-discovered
 const SERVERS: ServerConfig[] = discoverServers();
 
+// Add browser console log as a special "server"
+SERVERS.push({
+  name: "browser-console",
+  logPatterns: ["_logs/browser-console.log"],
+  color: COLORS.cyan,
+});
+
 // Ensure _logs directory exists
 mkdirSync("_logs", { recursive: true });
 

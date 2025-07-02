@@ -2,6 +2,7 @@ import express, {Express} from 'express';
 import http from 'node:http';
 import os from 'node:os';
 import type {ServerConfig, ServerInfo} from './server.types.js';
+import type {Logger} from '@kit/logger/types';
 
 export const createExpressApp = (): Express => express();
 
@@ -26,17 +27,18 @@ export const getNetworkIP = (): string => {
 export const startServer = (
   server: http.Server,
   config: ServerConfig,
+  logger: Logger,
 ): Promise<ServerInfo> => {
   return new Promise((resolve, reject) => {
-    console.log(
-      `startServer: Attempting to listen on ${config.host}:${config.port}`,
+    logger.info(
+      `Attempting to listen on ${config.host}:${config.port}`,
     );
 
     server
       .listen(config.port, config.host, () => {
-        console.log(`startServer: Server.listen callback triggered`);
+        logger.debug(`Server.listen callback triggered`);
         const networkIP = getNetworkIP();
-        console.log(`startServer: Network IP resolved to ${networkIP}`);
+        logger.debug(`Network IP resolved to ${networkIP}`);
 
         const serverInfo = {
           port: config.port,
@@ -44,14 +46,14 @@ export const startServer = (
           networkIP,
         };
 
-        console.log(`startServer: Resolving with server info:`, serverInfo);
+        logger.info(`Server listening`, serverInfo);
         resolve(serverInfo);
       })
       .on('error', (error) => {
-        console.error(`startServer: Error occurred:`, error);
+        logger.error(`Server start error:`, { error });
         reject(error);
       });
 
-    console.log(`startServer: Server.listen called, waiting for callback...`);
+    logger.debug(`Server.listen called, waiting for callback...`);
   });
 };

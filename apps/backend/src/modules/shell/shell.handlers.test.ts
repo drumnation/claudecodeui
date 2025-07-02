@@ -1,6 +1,7 @@
 import {describe, it, expect, vi, beforeEach, beforeAll} from 'vitest';
 import {WebSocket} from 'ws';
 import type {IPty} from 'node-pty';
+import type {Logger} from '@kit/logger/types';
 
 // Mock the module with a factory function
 vi.mock('./shell.service.js', () => {
@@ -27,10 +28,20 @@ describe('shell.handlers', () => {
   let mockPty: Partial<IPty>;
   let handler: ReturnType<typeof createShellHandler>;
   let mockShellManager: any;
+  let mockLogger: Logger;
 
   beforeAll(() => {
+    // Create mock logger
+    mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      child: vi.fn(() => mockLogger),
+    } as unknown as Logger;
+    
     // Ensure the handler is created after mocks are set up
-    handler = createShellHandler();
+    handler = createShellHandler(mockLogger);
     // Get the mock shell manager
     mockShellManager = vi.mocked(shellService.createShellManager).mock
       .results[0]?.value;
@@ -182,10 +193,6 @@ describe('shell.handlers', () => {
     });
 
     it('should handle invalid JSON messages', () => {
-      const consoleErrorSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
-
       handler(mockWs as WebSocket);
 
       const messageHandler = vi
@@ -194,13 +201,11 @@ describe('shell.handlers', () => {
 
       messageHandler(Buffer.from('invalid json'));
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Error handling shell message:',
-        expect.any(Error),
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Error handling shell message',
+        {error: expect.any(Error)},
       );
       expect(mockPty.write).not.toHaveBeenCalled();
-
-      consoleErrorSpy.mockRestore();
     });
 
     it('should handle unknown message types', () => {
@@ -235,10 +240,6 @@ describe('shell.handlers', () => {
     });
 
     it('should terminate session on WebSocket error', () => {
-      const consoleErrorSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
-
       handler(mockWs as WebSocket);
 
       const errorHandler = vi
@@ -248,15 +249,13 @@ describe('shell.handlers', () => {
       const error = new Error('WebSocket error');
       errorHandler(error);
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        '❌ Shell WebSocket error:',
-        error,
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        '❌ Shell WebSocket error',
+        {error},
       );
       expect(mockShellManager.terminateSession).toHaveBeenCalledWith(
         'shell-123-abc',
       );
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -270,24 +269,14 @@ describe('shell.handlers', () => {
 
   describe('logging', () => {
     it('should log connection', () => {
-      const consoleLogSpy = vi
-        .spyOn(console, 'log')
-        .mockImplementation(() => {});
-
       handler(mockWs as WebSocket);
 
-      expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect(mockLogger.info).toHaveBeenCalledWith(
         '🖥️ Shell WebSocket connected',
       );
-
-      consoleLogSpy.mockRestore();
     });
 
     it('should log disconnection', () => {
-      const consoleLogSpy = vi
-        .spyOn(console, 'log')
-        .mockImplementation(() => {});
-
       handler(mockWs as WebSocket);
 
       const closeHandler = vi
@@ -296,28 +285,21 @@ describe('shell.handlers', () => {
 
       closeHandler();
 
-      expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect(mockLogger.info).toHaveBeenCalledWith(
         '🖥️ Shell WebSocket disconnected',
       );
-
-      consoleLogSpy.mockRestore();
     });
 
     it('should log process exit details', () => {
-      const consoleLogSpy = vi
-        .spyOn(console, 'log')
-        .mockImplementation(() => {});
-
       handler(mockWs as WebSocket);
 
       const exitHandler = vi.mocked(mockPty.onExit!).mock.calls[0][0];
       exitHandler({exitCode: 1, signal: 9});
 
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        'Shell process exited with code 1 and signal 9',
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Shell process exited',
+        {exitCode: 1, signal: 9},
       );
-
-      consoleLogSpy.mockRestore();
     });
   });
 });

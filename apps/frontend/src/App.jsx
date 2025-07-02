@@ -26,6 +26,7 @@ import {
   useNavigate,
   useParams,
 } from 'react-router-dom';
+import { useLogger } from '@kit/logger/react';
 import Sidebar from './components/Sidebar';
 import MainContent from './components/MainContent';
 import MobileNav from './components/MobileNav';
@@ -38,6 +39,7 @@ import {ThemeProvider} from './contexts/ThemeContext';
 function AppContent() {
   const navigate = useNavigate();
   const {sessionId} = useParams();
+  const logger = useLogger({ component: 'App' });
 
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
@@ -205,11 +207,12 @@ function AppContent() {
 
       // Handle session summary updates
       if (latestMessage.type === 'session-summary-updated') {
-        console.log(
-          '📝 Session summary updated:',
-          latestMessage.sessionId,
-          latestMessage.summary,
-        );
+        if (logger.isLevelEnabled('debug')) {
+          logger.debug({
+            sessionId: latestMessage.sessionId,
+            summary: latestMessage.summary
+          }, 'Session summary updated');
+        }
 
         // Update the session summary in the projects state
         setProjects((prevProjects) => {
@@ -284,7 +287,7 @@ function AppContent() {
 
       // Don't auto-select any project - user should choose manually
     } catch (error) {
-      console.error('Error fetching projects:', error);
+      logger.error({ err: error }, 'Error fetching projects');
     } finally {
       setIsLoadingProjects(false);
     }
@@ -430,7 +433,7 @@ function AppContent() {
         }
       }
     } catch (error) {
-      console.error('Error refreshing sidebar:', error);
+      logger.error({ err: error }, 'Error refreshing sidebar');
     }
   };
 

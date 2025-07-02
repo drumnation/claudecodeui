@@ -3,6 +3,9 @@ import * as path from 'path';
 import * as service from './projects.service.js';
 import * as repository from './projects.repository.js';
 import type {Project, ProjectConfig} from './projects.types.js';
+import { createLogger } from '@kit/logger/node';
+
+const logger = createLogger({ scope: 'projects-controller' });
 
 const getHomePath = (): string => process.env['HOME'] || '';
 
@@ -17,7 +20,7 @@ export const getProjects = async (
     const projects: Project[] = [];
     const existingProjects = new Set<string>();
 
-    const directories = await repository.readProjectDirectories(claudeDir);
+    const directories = await repository.readProjectDirectories(claudeDir, logger);
 
     for (const projectName of directories) {
       existingProjects.add(projectName);
@@ -27,6 +30,7 @@ export const getProjects = async (
         projectPath,
         config,
         homePath,
+        logger,
       );
       projects.push(project);
     }
@@ -40,7 +44,7 @@ export const getProjects = async (
           path: null,
           displayName:
             projectConfig.displayName ||
-            (await service.generateDisplayName(projectName)),
+            (await service.generateDisplayName(projectName, logger)),
           fullPath: fullPath,
           isCustomName: !!projectConfig.displayName,
           isManuallyAdded: true,
@@ -53,7 +57,7 @@ export const getProjects = async (
 
     res.json(projects);
   } catch (error) {
-    console.error('Error getting projects:', error);
+    logger.error('Error getting projects:', { error });
     res.status(500).json({error: 'Failed to load projects'});
   }
 };
@@ -77,10 +81,11 @@ export const getSessions = async (
       projectName,
       limit,
       offset,
+      logger,
     );
     res.json(sessions);
   } catch (error) {
-    console.error('Error getting sessions:', error);
+    logger.error('Error getting sessions:', { error });
     res.status(500).json({error: 'Failed to load sessions'});
   }
 };
@@ -100,10 +105,11 @@ export const getSessionMessages = async (
       homePath,
       projectName,
       sessionId,
+      logger,
     );
     res.json({messages});
   } catch (error) {
-    console.error('Error getting session messages:', error);
+    logger.error('Error getting session messages:', { error });
     res.status(500).json({error: 'Failed to load session messages'});
   }
 };
@@ -134,7 +140,7 @@ export const renameProject = async (
     await repository.writeProjectConfig(homePath, config);
     res.json({success: true});
   } catch (error) {
-    console.error('Error renaming project:', error);
+    logger.error('Error renaming project:', { error });
     res.status(500).json({error: 'Failed to rename project'});
   }
 };
@@ -155,6 +161,7 @@ export const deleteSession = async (
       homePath,
       projectName,
       sessionId,
+      logger,
     );
 
     if (!jsonlFile) {
@@ -173,7 +180,7 @@ export const deleteSession = async (
 
     res.json({success: true});
   } catch (error) {
-    console.error('Error deleting session:', error);
+    logger.error('Error deleting session:', { error });
     res.status(500).json({error: 'Failed to delete session'});
   }
 };
@@ -190,7 +197,7 @@ export const deleteProject = async (
     }
     const homePath = getHomePath();
 
-    const isEmpty = await service.isProjectEmpty(homePath, projectName);
+    const isEmpty = await service.isProjectEmpty(homePath, projectName, logger);
     if (!isEmpty) {
       res
         .status(400)
@@ -207,7 +214,7 @@ export const deleteProject = async (
 
     res.json({success: true});
   } catch (error) {
-    console.error('Error deleting project:', error);
+    logger.error('Error deleting project:', { error });
     res.status(500).json({error: 'Failed to delete project'});
   }
 };
@@ -261,7 +268,7 @@ export const addProject = async (
       path: null,
       fullPath: absolutePath,
       displayName:
-        displayName || (await service.generateDisplayName(projectName)),
+        displayName || (await service.generateDisplayName(projectName, logger)),
       isCustomName: !!displayName,
       isManuallyAdded: true,
       sessions: [],
@@ -269,7 +276,7 @@ export const addProject = async (
 
     res.json(project);
   } catch (error) {
-    console.error('Error adding project:', error);
+    logger.error('Error adding project:', { error });
     res.status(500).json({error: 'Failed to add project'});
   }
 };
@@ -296,6 +303,7 @@ export const updateSessionSummary = async (
       homePath,
       projectName,
       sessionId,
+      logger,
     );
 
     if (!jsonlFile) {
@@ -313,7 +321,7 @@ export const updateSessionSummary = async (
     await repository.appendToJsonlFile(jsonlFile, summaryEntry);
     res.json({success: true});
   } catch (error) {
-    console.error('Error updating session summary:', error);
+    logger.error('Error updating session summary:', { error });
     res.status(500).json({error: 'Failed to update session summary'});
   }
 };

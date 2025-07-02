@@ -47,7 +47,12 @@ build.on('close', (code) => {
   // Start the server
   const server = spawn('node', ['server/index.js'], { 
     stdio: 'inherit',
-    env: { ...process.env, NODE_ENV: 'production' }
+    env: { 
+      ...process.env, 
+      NODE_ENV: 'production',
+      LOG_LEVEL: 'error',
+      VITE_LOG_LEVEL: 'silent'
+    }
   });
   
   // Start ngrok

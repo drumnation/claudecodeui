@@ -18,6 +18,7 @@ import CodeEditor from './CodeEditor';
 import Shell from './Shell';
 import GitPanel from './GitPanel';
 import LivePreviewPanel from './LivePreviewPanel';
+import {useLogger} from '@kit/logger/react';
 
 function MainContent({
   selectedProject,
@@ -42,6 +43,7 @@ function MainContent({
   showRawParameters, // Show raw parameters in tool accordions
   autoScrollToBottom, // Auto-scroll to bottom when new messages arrive
 }) {
+  const logger = useLogger({ scope: 'MainContent' });
   const [editingFile, setEditingFile] = useState(null);
   const [serverStatus, setServerStatus] = useState('stopped');
   const [serverUrl, setServerUrl] = useState('');
@@ -52,10 +54,7 @@ function MainContent({
   // Load available scripts when project changes
   useEffect(() => {
     if (selectedProject?.fullPath && ws && ws.readyState === WebSocket.OPEN) {
-      console.log(
-        '📡 Requesting scripts for project:',
-        selectedProject.fullPath,
-      );
+      logger.debug('Requesting scripts for project', { projectPath: selectedProject.fullPath });
       sendMessage({
         type: 'server:scripts',
         projectPath: selectedProject.fullPath,
@@ -74,7 +73,7 @@ function MainContent({
 
       if (latestMessage.type === 'server:scripts') {
         if (latestMessage.projectPath === selectedProject?.fullPath) {
-          console.log('📦 Received scripts:', latestMessage.scripts);
+          logger.debug('Received scripts', { scripts: latestMessage.scripts });
           setAvailableScripts(latestMessage.scripts || []);
         }
       } else if (latestMessage.type === 'server:status') {
@@ -93,7 +92,7 @@ function MainContent({
       } else if (latestMessage.type === 'server:error') {
         if (latestMessage.projectPath === selectedProject?.fullPath) {
           setServerStatus('error');
-          console.error('Server error:', latestMessage.error);
+          logger.error('Server error', { error: latestMessage.error, projectPath: latestMessage.projectPath });
         }
       } else if (latestMessage.type === 'server:log') {
         if (latestMessage.projectPath === selectedProject?.fullPath) {

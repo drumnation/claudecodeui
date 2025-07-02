@@ -3,13 +3,15 @@ import type {
   ExtendedWebSocket,
   ConnectionHandler,
 } from '../../infra/websocket/index.js';
+import type {Logger} from '@kit/logger/types';
 import {spawnClaude, handleAbortSession} from './claude-cli.handlers.js';
 
 export const createChatHandler = (
   connectedClients: Set<ExtendedWebSocket>,
+  logger: Logger,
 ): ConnectionHandler => {
   return (ws: WebSocket) => {
-    console.log('💬 Chat WebSocket connected');
+    logger.info('💬 Chat WebSocket connected');
 
     // Add to connected clients for project updates
     connectedClients.add(ws as ExtendedWebSocket);
@@ -19,19 +21,21 @@ export const createChatHandler = (
         const data = JSON.parse(message.toString());
 
         if (data.type === 'claude-command') {
-          console.log('💬 User message:', data.command || '[Continue/Resume]');
-          console.log('📁 Project:', data.options?.projectPath || 'Unknown');
-          console.log(
-            '🔄 Session:',
-            data.options?.sessionId ? 'Resume' : 'New',
-          );
-          await spawnClaude(data.command, data.options, ws);
+          const sessionLogger = logger.child({
+            sessionId: data.options?.sessionId,
+            projectPath: data.options?.projectPath,
+          });
+          sessionLogger.info('💬 User message', {
+            command: data.command || '[Continue/Resume]',
+            sessionType: data.options?.sessionId ? 'Resume' : 'New',
+          });
+          await spawnClaude(data.command, data.options, ws, sessionLogger);
         } else if (data.type === 'abort-session') {
-          console.log('🛑 Aborting session:', data.sessionId);
+          logger.info('🛑 Aborting session', {sessionId: data.sessionId});
           handleAbortSession(data.sessionId);
         }
       } catch (error) {
-        console.error('Error handling WebSocket message:', error);
+        logger.error('Error handling WebSocket message', {error});
         ws.send(
           JSON.stringify({type: 'error', message: 'Failed to process message'}),
         );
@@ -39,12 +43,12 @@ export const createChatHandler = (
     });
 
     ws.on('close', () => {
-      console.log('💬 Chat WebSocket disconnected');
+      logger.info('💬 Chat WebSocket disconnected');
       connectedClients.delete(ws as ExtendedWebSocket);
     });
 
     ws.on('error', (error: Error) => {
-      console.error('❌ Chat WebSocket error:', error);
+      logger.error('❌ Chat WebSocket error', {error});
       connectedClients.delete(ws as ExtendedWebSocket);
     });
   };

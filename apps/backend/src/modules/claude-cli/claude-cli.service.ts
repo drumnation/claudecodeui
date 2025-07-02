@@ -6,6 +6,7 @@ import type {
   ClaudeStatusData,
   WebSocketMessage,
 } from './claude-cli.types.js';
+import type {Logger} from '@kit/logger/types';
 import {
   sessionManager,
   parseStatusMessage,
@@ -19,6 +20,7 @@ import {
 interface ClaudeServiceDeps {
   sendMessage: (message: WebSocketMessage) => void;
   apiPort?: number;
+  logger?: Logger;
 }
 
 // Process spawning function
@@ -33,14 +35,7 @@ export const createClaudeProcess = (
   const args = buildClaudeArgs(command, options);
   const workingDir = cwd ?? process.cwd();
 
-  console.log('Spawning Claude CLI:', formatCommandForLogging('claude', args));
-  console.log('Working directory:', workingDir);
-  console.log(
-    'Session info - Input sessionId:',
-    options.sessionId,
-    'Resume:',
-    options.resume,
-  );
+  // Note: Logging is handled by the caller with proper logger instance
 
   const claudeProcess = spawn('claude', args, {
     cwd: workingDir,
@@ -80,7 +75,9 @@ export const handleProcessOutput = (
   deps: ClaudeServiceDeps,
 ): void => {
   const rawOutput = data.toString();
-  console.log(`📤 Claude CLI ${type}:`, rawOutput);
+  if (deps.logger?.isLevelEnabled('trace')) {
+    deps.logger.trace(`📤 Claude CLI ${type}`, {output: rawOutput.trim()});
+  }
 
   if (type === 'stderr' && isStatusMessage(rawOutput)) {
     handleStatusMessage(rawOutput, deps);
@@ -112,7 +109,9 @@ export const handleProcessOutput = (
 
     try {
       const response: ClaudeResponse = JSON.parse(line);
-      console.log('📄 Parsed JSON response:', response);
+      if (deps.logger?.isLevelEnabled('debug')) {
+        deps.logger.debug('📄 Parsed JSON response', {response});
+      }
 
       // Handle session ID capture
       if (response.session_id && !state.capturedSessionId) {
@@ -161,7 +160,7 @@ const handleSessionIdCapture = (
   deps: ClaudeServiceDeps,
 ): void => {
   state.capturedSessionId = sessionId;
-  console.log('📝 Captured session ID:', sessionId);
+  deps.logger?.info('📝 Captured session ID', {sessionId});
 
   if (!options.sessionId && !state.sessionCreatedSent) {
     state.sessionCreatedSent = true;
@@ -189,9 +188,11 @@ const handleUserMessage = (
     );
 
     if (updateInterval > 0 && newCount > 0 && newCount % updateInterval === 0) {
-      console.log(
-        `📊 User message count reached ${newCount}, updating session summary...`,
-      );
+      deps.logger?.info('📊 User message count reached threshold, updating session summary', {
+        sessionId,
+        messageCount: newCount,
+        updateInterval,
+      });
       setTimeout(() => {
         void generateSessionSummary(sessionId, deps, true);
       }, updateDelay);
@@ -200,7 +201,7 @@ const handleUserMessage = (
 };
 
 const handleStatusMessage = (text: string, deps: ClaudeServiceDeps): void => {
-  console.log('🔔 Status message detected:', text);
+  deps.logger?.debug('🔔 Status message detected', {message: text});
   const {action, tokens} = parseStatusMessage(text);
 
   deps.sendMessage({
@@ -215,7 +216,7 @@ const handleStatusMessage = (text: string, deps: ClaudeServiceDeps): void => {
 };
 
 const handleNonJsonOutput = (line: string, deps: ClaudeServiceDeps): void => {
-  console.log('📄 Non-JSON response:', line);
+  deps.logger?.trace('📄 Non-JSON response', {line});
 
   if (isStatusMessage(line)) {
     handleStatusMessage(line, deps);
@@ -235,7 +236,7 @@ const handleBufferContent = (
   if (!buffer) return;
 
   if (isInteractivePrompt(buffer)) {
-    console.log('🔔 Interactive prompt detected:', buffer);
+    deps.logger?.debug('🔔 Interactive prompt detected', {prompt: buffer});
     deps.sendMessage({
       type: 'claude-interactive-prompt',
       data: buffer,
@@ -253,7 +254,7 @@ export const generateSessionSummary = async (
   forceUpdate = false,
 ): Promise<void> => {
   try {
-    console.log(`🤖 Checking if summary needed for session ${sessionId}`);
+    deps.logger?.debug('🤖 Checking if summary needed for session', {sessionId});
 
     const projectName = sessionId.split('-').slice(0, -1).join('-');
     const port = deps.apiPort ?? process.env['PORT'] ?? 3000;
@@ -271,13 +272,17 @@ export const generateSessionSummary = async (
     const session = sessionsData.sessions?.find((s: any) => s.id === sessionId);
 
     if (!forceUpdate && session?.summary && session.summary !== 'New Session') {
-      console.log(`✅ Session already has summary: ${session.summary}`);
+      deps.logger?.debug('✅ Session already has summary', {
+        sessionId,
+        summary: session.summary,
+      });
       return;
     }
 
-    console.log(
-      `🤖 Generating summary for session ${sessionId}${forceUpdate ? ' (forced update)' : ''}`,
-    );
+    deps.logger?.info('🤖 Generating summary for session', {
+      sessionId,
+      forceUpdate,
+    });
 
     // Fetch messages
     const response = await fetch(
@@ -321,7 +326,10 @@ export const generateSessionSummary = async (
         },
       );
 
-      console.log(`✅ Session summary updated: ${summaryData.summary}`);
+      deps.logger?.info('✅ Session summary updated', {
+        sessionId,
+        summary: summaryData.summary,
+      });
 
       deps.sendMessage({
         type: 'session-summary-updated',
@@ -330,7 +338,10 @@ export const generateSessionSummary = async (
       });
     }
   } catch (error) {
-    console.error('Error generating session summary:', error);
+    deps.logger?.error('Error generating session summary', {
+      error,
+      sessionId,
+    });
   }
 };
 
@@ -338,7 +349,7 @@ export const generateSessionSummary = async (
 export const abortClaudeSession = (sessionId: string): boolean => {
   const process = sessionManager.getProcess(sessionId);
   if (process) {
-    console.log(`🛑 Aborting Claude session: ${sessionId}`);
+    // Caller handles logging
     process.kill('SIGTERM');
     sessionManager.deleteProcess(sessionId);
     return true;

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import {cn} from '../lib/utils';
 import ClaudeLogo from './ClaudeLogo';
+import {useLogger} from '@kit/logger/react';
 
 // Move formatTimeAgo outside component to avoid recreation on every render
 const formatTimeAgo = (dateString, currentTime) => {
@@ -63,6 +64,7 @@ function Sidebar({
   onRefresh,
   onShowSettings,
 }) {
+  const logger = useLogger({ scope: 'Sidebar' });
   const [expandedProjects, setExpandedProjects] = useState(new Set());
   const [editingProject, setEditingProject] = useState(null);
   const [showNewProject, setShowNewProject] = useState(false);
@@ -160,10 +162,10 @@ function Sidebar({
           window.location.reload();
         }
       } else {
-        console.error('Failed to rename project');
+        logger.error('Failed to rename project', { projectName, status: response.status });
       }
     } catch (error) {
-      console.error('Error renaming project:', error);
+      logger.error('Error renaming project', { error: error.message, projectName });
     }
 
     setEditingProject(null);
@@ -193,11 +195,11 @@ function Sidebar({
           onSessionDelete(sessionId);
         }
       } else {
-        console.error('Failed to delete session');
+        logger.error('Failed to delete session', { sessionId, status: response.status });
         alert('Failed to delete session. Please try again.');
       }
     } catch (error) {
-      console.error('Error deleting session:', error);
+      logger.error('Error deleting session', { error: error.message, sessionId });
       alert('Error deleting session. Please try again.');
     }
   };
@@ -207,7 +209,7 @@ function Sidebar({
     setGeneratingSummary((prev) => ({...prev, [key]: true}));
 
     try {
-      console.log('🔄 Generating summary for:', projectName, sessionId);
+      logger.info('Generating summary', { projectName, sessionId });
       
       // First fetch the messages for this session
       const messagesResponse = await fetch(
@@ -219,7 +221,7 @@ function Sidebar({
       }
       
       const messagesData = await messagesResponse.json();
-      const messages = messagesData.entries || [];
+      const messages = messagesData.messages || [];
       
       const response = await fetch(
         `/api/projects/${projectName}/sessions/${sessionId}/generate-summary`,
@@ -234,15 +236,15 @@ function Sidebar({
 
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Summary generated:', data.summary);
+        logger.info('Summary generated successfully', { summary: data.summary });
         // The UI will update automatically via WebSocket
       } else {
         const error = await response.json();
-        console.error('Failed to generate summary:', error);
+        logger.error('Failed to generate summary', { error: error.error || 'Unknown error', projectName, sessionId });
         alert(`Failed to generate summary: ${error.error || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error generating summary:', error);
+      logger.error('Error generating summary', { error: error.message, projectName, sessionId });
       alert(`Error generating summary: ${error.message || 'Network error'}`);
     } finally {
       setGeneratingSummary((prev) => {
@@ -267,17 +269,17 @@ function Sidebar({
       );
 
       if (response.ok) {
-        console.log('✅ Summary updated');
+        logger.info('Summary updated successfully', { projectName, sessionId });
         setEditingSession(null);
         setEditingSessionName('');
         // The UI will update automatically via WebSocket
       } else {
         const error = await response.json();
-        console.error('Failed to update summary:', error);
+        logger.error('Failed to update summary', { error: error.error, projectName, sessionId });
         alert('Failed to update summary. Please try again.');
       }
     } catch (error) {
-      console.error('Error updating summary:', error);
+      logger.error('Error updating summary', { error: error.message, projectName, sessionId });
       alert('Error updating summary. Please try again.');
     }
   };
@@ -303,11 +305,11 @@ function Sidebar({
         }
       } else {
         const error = await response.json();
-        console.error('Failed to delete project');
+        logger.error('Failed to delete project', { error: error.error, projectName });
         alert(error.error || 'Failed to delete project. Please try again.');
       }
     } catch (error) {
-      console.error('Error deleting project:', error);
+      logger.error('Error deleting project', { error: error.message, projectName });
       alert('Error deleting project. Please try again.');
     }
   };
@@ -347,7 +349,7 @@ function Sidebar({
         alert(error.error || 'Failed to create project. Please try again.');
       }
     } catch (error) {
-      console.error('Error creating project:', error);
+      logger.error('Error creating project', { error: error.message, path: newProjectPath });
       alert('Error creating project. Please try again.');
     } finally {
       setCreatingProject(false);
@@ -393,7 +395,7 @@ function Sidebar({
         }
       }
     } catch (error) {
-      console.error('Error loading more sessions:', error);
+      logger.error('Error loading more sessions', { error: error.message, projectName: project.name });
     } finally {
       setLoadingSessions((prev) => ({...prev, [project.name]: false}));
     }

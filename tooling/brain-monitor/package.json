@@ -12,6 +12,18 @@
         "types": "./src/index.ts",
         "default": "./src/index.ts"
       }
+    },
+    "./browser": {
+      "import": {
+        "types": "./src/browser/index.ts",
+        "default": "./src/browser/index.ts"
+      }
+    },
+    "./server": {
+      "import": {
+        "types": "./src/server/index.ts",
+        "default": "./src/server/index.ts"
+      }
     }
   },
   "scripts": {

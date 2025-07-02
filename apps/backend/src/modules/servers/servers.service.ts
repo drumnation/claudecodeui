@@ -6,11 +6,13 @@ import type {
   StopServerResult,
   WebSocketMessage,
 } from './servers.types.js';
+import type {Logger} from '@kit/logger/types';
 import {readPackageJson} from './servers.repository.js';
 
 // Create a closure to maintain server state
 export const createServerManager = (
   broadcast: (message: WebSocketMessage) => void,
+  logger: Logger,
 ) => {
   const servers = new Map<string, ServerInfo>();
 
@@ -100,7 +102,9 @@ export const createServerManager = (
 
       child.stdout?.on('data', (data: Buffer) => {
         const output = data.toString();
-        console.log(`[${scriptName}] ${output}`);
+        if (logger.isLevelEnabled('trace')) {
+          logger.trace(`[${scriptName}] stdout`, {output: output.trim(), projectPath});
+        }
 
         if (!port) {
           const detectedPort = detectPort(output);
@@ -118,18 +122,18 @@ export const createServerManager = (
 
       child.stderr?.on('data', (data: Buffer) => {
         const output = data.toString();
-        console.error(`[${scriptName} ERROR] ${output}`);
+        logger.warn(`[${scriptName}] stderr`, {output: output.trim(), projectPath});
         broadcastLog(projectPath, output, 'stderr');
       });
 
       child.on('error', (error: Error) => {
-        console.error(`Failed to start server:`, error);
+        logger.error('Failed to start server', {error, scriptName, projectPath});
         servers.delete(key);
         broadcastStatus(projectPath, 'error', null, scriptName);
       });
 
       child.on('exit', (code: number | null) => {
-        console.log(`Server process exited with code ${code}`);
+        logger.info('Server process exited', {code, scriptName, projectPath});
         servers.delete(key);
         broadcastStatus(projectPath, 'stopped', null, scriptName);
       });
@@ -160,7 +164,7 @@ export const createServerManager = (
 
       return {success: true, url};
     } catch (error) {
-      console.error('Error starting server:', error);
+      logger.error('Error starting server', {error, scriptName, projectPath});
       broadcastStatus(projectPath, 'error', null, scriptName);
       return {error: (error as Error).message};
     }
@@ -200,7 +204,7 @@ export const createServerManager = (
 
           servers.delete(key);
         } catch (error) {
-          console.error('Error stopping server:', error);
+          logger.error('Error stopping server', {error, scriptName, projectPath});
           broadcastStatus(projectPath, 'error', null, server.script);
         }
       }
@@ -231,7 +235,7 @@ export const createServerManager = (
         try {
           server.process.kill();
         } catch (error) {
-          console.error('Error killing process:', error);
+          logger.error('Error killing process', {error, key});
         }
       }
     }

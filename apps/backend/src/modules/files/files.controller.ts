@@ -2,8 +2,9 @@ import {Router} from 'express';
 import type {Request, Response} from 'express';
 import {promises as fs} from 'fs';
 import path from 'path';
+import type {Logger} from '@kit/logger/types';
 
-export const createFileRoutes = (): Router => {
+export const createFileRoutes = (logger: Logger): Router => {
   const router = Router({mergeParams: true});
 
   // Read file content
@@ -12,7 +13,7 @@ export const createFileRoutes = (): Router => {
       const {projectName} = req.params;
       const {filePath} = req.query;
 
-      console.log('📄 File read request:', projectName, filePath);
+      logger.info('📄 File read request', {projectName, filePath});
 
       // Security check - ensure the path is safe and absolute
       if (
@@ -26,7 +27,7 @@ export const createFileRoutes = (): Router => {
       const content = await fs.readFile(filePath, 'utf8');
       res.json({content, path: filePath});
     } catch (error: any) {
-      console.error('Error reading file:', error);
+      logger.error('Error reading file', {error});
       if (error.code === 'ENOENT') {
         res.status(404).json({error: 'File not found'});
       } else if (error.code === 'EACCES') {
@@ -43,7 +44,7 @@ export const createFileRoutes = (): Router => {
       const {projectName} = req.params;
       const {path: filePath} = req.query;
 
-      console.log('🖼️ Binary file serve request:', projectName, filePath);
+      logger.info('🖼️ Binary file serve request', {projectName, filePath});
 
       // Security check
       if (
@@ -64,7 +65,7 @@ export const createFileRoutes = (): Router => {
       // Send the file
       res.sendFile(filePath);
     } catch (error: any) {
-      console.error('Error serving binary file:', error);
+      logger.error('Error serving binary file', {error});
       res.status(500).json({error: error.message});
     }
   });
@@ -75,7 +76,7 @@ export const createFileRoutes = (): Router => {
       const {projectName} = req.params;
       const {filePath, content, backup = true} = req.body;
 
-      console.log('💾 File write request:', projectName, filePath);
+      logger.info('💾 File write request', {projectName, filePath});
 
       // Security check
       if (!filePath || !path.isAbsolute(filePath)) {
@@ -92,7 +93,7 @@ export const createFileRoutes = (): Router => {
       ) {
         const backupPath = `${filePath}.backup-${Date.now()}`;
         await fs.copyFile(filePath, backupPath);
-        console.log('📋 Created backup:', backupPath);
+        logger.info('📋 Created backup', {backupPath});
       }
 
       // Ensure directory exists
@@ -104,7 +105,7 @@ export const createFileRoutes = (): Router => {
 
       res.json({success: true, path: filePath});
     } catch (error: any) {
-      console.error('Error writing file:', error);
+      logger.error('Error writing file', {error});
       if (error.code === 'EACCES') {
         res.status(403).json({error: 'Permission denied'});
       } else {
@@ -119,7 +120,13 @@ export const createFileRoutes = (): Router => {
       const {projectName} = req.params;
       const {dirPath} = req.query;
 
-      console.log('📁 Directory listing request:', projectName, dirPath);
+      logger.info('📁 Directory listing request', {
+        projectName,
+        dirPath,
+        queryParams: req.query,
+        url: req.url,
+        originalUrl: req.originalUrl
+      });
 
       // Security check
       if (
@@ -127,6 +134,11 @@ export const createFileRoutes = (): Router => {
         typeof dirPath !== 'string' ||
         !path.isAbsolute(dirPath)
       ) {
+        logger.error('❌ Invalid directory path', {
+          dirPath,
+          typeOfDirPath: typeof dirPath,
+          isAbsolute: dirPath && typeof dirPath === 'string' ? path.isAbsolute(dirPath) : 'N/A'
+        });
         return res.status(400).json({error: 'Invalid directory path'});
       }
 
@@ -160,7 +172,7 @@ export const createFileRoutes = (): Router => {
 
       res.json({files, path: dirPath});
     } catch (error: any) {
-      console.error('Error listing directory:', error);
+      logger.error('Error listing directory', {error});
       if (error.code === 'ENOENT') {
         res.status(404).json({error: 'Directory not found'});
       } else if (error.code === 'EACCES') {

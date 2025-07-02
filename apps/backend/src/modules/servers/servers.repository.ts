@@ -1,5 +1,6 @@
 import {promises as fs} from 'fs';
 import path from 'path';
+import type {Logger} from '@kit/logger/types';
 
 export const readPackageJson = async (projectPath: string): Promise<any> => {
   const packageJsonPath = path.join(projectPath, 'package.json');
@@ -15,26 +16,27 @@ export const readPackageJson = async (projectPath: string): Promise<any> => {
 
 export const getAvailableScripts = async (
   projectPath: string,
+  logger: Logger,
 ): Promise<string[]> => {
   try {
-    console.log('🔍 Looking for scripts in:', projectPath);
+    logger.debug('🔍 Looking for scripts', {projectPath});
     const packageJson = await readPackageJson(projectPath);
 
     if (!packageJson) {
-      console.log('📦 No package.json found at:', projectPath);
+      logger.debug('📦 No package.json found', {projectPath});
       return [];
     }
 
     if (packageJson.scripts) {
       const scripts = Object.keys(packageJson.scripts);
-      console.log('📜 Found scripts:', scripts);
+      logger.debug('📜 Found scripts', {scripts, projectPath});
       return scripts;
     }
 
-    console.log('📦 No scripts section in package.json');
+    logger.debug('📦 No scripts section in package.json', {projectPath});
     return [];
   } catch (error) {
-    console.error('❌ Error reading package.json:', (error as Error).message);
+    logger.error('❌ Error reading package.json', {error: (error as Error).message, projectPath});
     return [];
   }
 };

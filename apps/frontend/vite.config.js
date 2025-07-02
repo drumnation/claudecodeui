@@ -3,6 +3,17 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    // Inject LOG_LEVEL environment variable for pino
+    'process.env.LOG_LEVEL': JSON.stringify(process.env.VITE_LOG_LEVEL || 'info'),
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+  },
+  resolve: {
+    alias: {
+      // Ensure pino uses the browser version
+      'pino': 'pino/browser',
+    },
+  },
   server: {
     port: process.env.VITE_PORT || 8766,
     strictPort: true,
@@ -50,9 +61,17 @@ export default defineConfig({
     outDir: 'dist',
     // Clear output directory before build
     emptyOutDir: true,
+    // Configure tree-shaking for production builds
+    rollupOptions: {
+      treeshake: {
+        // Remove unused pino code in production
+        moduleSideEffects: false,
+      },
+    },
   },
   // Ensure we're not caching aggressively
   optimizeDeps: {
     force: true,
+    include: ['pino', 'pino/browser'],
   },
 });

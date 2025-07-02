@@ -1,4 +1,5 @@
 import type {CorsOptions} from 'cors';
+import type { Logger } from '@kit/logger';
 
 const allowedPatterns = [
   /^http:\/\/localhost:\d+$/,
@@ -8,7 +9,10 @@ const allowedPatterns = [
   /^https?:\/\/.*\.ngrok\.io$/,
 ];
 
-export const createCorsOptions = (): CorsOptions => ({
+// Backwards compatibility wrapper
+export const getCorsOptions = (logger: Logger): CorsOptions => createCorsOptions(logger);
+
+export const createCorsOptions = (logger: Logger): CorsOptions => ({
   origin: (
     origin: string | undefined,
     callback: (err: Error | null, allow?: boolean) => void,
@@ -20,7 +24,7 @@ export const createCorsOptions = (): CorsOptions => ({
     if (isAllowed) {
       callback(null, true);
     } else {
-      console.warn(`CORS blocked origin: ${origin}`);
+      logger.warn(`CORS blocked origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },

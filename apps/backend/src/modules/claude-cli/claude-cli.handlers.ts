@@ -1,5 +1,6 @@
 import type {WebSocket} from 'ws';
 import type {SpawnClaudeOptions, WebSocketMessage} from './claude-cli.types.js';
+import type {Logger} from '@kit/logger/types';
 import {
   createClaudeProcess,
   handleProcessOutput,
@@ -13,6 +14,7 @@ export const spawnClaude = async (
   command: string | undefined,
   options: SpawnClaudeOptions = {},
   ws: WebSocket,
+  logger: Logger,
 ): Promise<void> => {
   return new Promise<void>((resolve, reject) => {
     const {sessionId} = options;
@@ -26,6 +28,7 @@ export const spawnClaude = async (
     const deps = {
       sendMessage,
       apiPort: parseInt(process.env['PORT'] ?? '3000'),
+      logger,
     };
 
     // State management
@@ -43,10 +46,11 @@ export const spawnClaude = async (
 
     // Handle process close
     const onClose = (code: number | null): void => {
-      console.log(`Claude CLI process exited with code ${code}`);
-
       const finalSessionId =
         state.capturedSessionId ?? sessionId ?? Date.now().toString();
+      
+      logger.info('Claude CLI process exited', {code, sessionId: finalSessionId});
+
       sessionManager.deleteProcess(finalSessionId);
       sessionManager.deleteMessageCount(finalSessionId);
       sessionManager.deleteManualEditFlag(finalSessionId);
@@ -71,10 +75,11 @@ export const spawnClaude = async (
 
     // Handle process error
     const onError = (error: Error): void => {
-      console.error('Claude CLI process error:', error);
-
       const finalSessionId =
         state.capturedSessionId ?? sessionId ?? Date.now().toString();
+        
+      logger.error('Claude CLI process error', {error, sessionId: finalSessionId});
+
       sessionManager.deleteProcess(finalSessionId);
 
       sendMessage({
@@ -130,6 +135,7 @@ export const handleClearManualEdit = (sessionId: string): void => {
 export const handleGenerateSummary = async (
   sessionId: string,
   ws: WebSocket,
+  logger: Logger,
   forceUpdate = false,
 ): Promise<void> => {
   const sendMessage = (message: WebSocketMessage): void => {
@@ -139,6 +145,7 @@ export const handleGenerateSummary = async (
   const deps = {
     sendMessage,
     apiPort: parseInt(process.env['PORT'] ?? '3000'),
+    logger,
   };
 
   await generateSessionSummary(sessionId, deps, forceUpdate);

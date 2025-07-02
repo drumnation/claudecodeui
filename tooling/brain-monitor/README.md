@@ -18,6 +18,7 @@
 - **🎯 CI/CD Integration**: Generates GitHub Actions workflows with PR comments
 - **🧪 Local CI Testing**: Test workflows locally with act before pushing
 - **🎨 Cursor IDE support**: Auto-installs validation rules for AI assistants
+- **🌐 Browser Console Capture**: Automatically captures browser console logs to files
 
 ## Installation
 
@@ -171,6 +172,36 @@ tail -f _logs/financial-api.log
 
 # Only run full validations if reports are stale (>10 minutes)
 pnpm brain:validate
+```
+
+### Browser Console Capture
+
+Brain-monitor can automatically capture browser console logs from your React/Vue/Angular applications:
+
+```bash
+# During initialization, brain-monitor will:
+# 1. Auto-inject console capture into your App.tsx/jsx files
+# 2. Provide Express middleware setup instructions
+
+# Browser logs appear in:
+tail -f _logs/browser-console.log
+
+# Features:
+# - Captures console.log, warn, error, info, debug
+# - Includes timestamps, URLs, and stack traces
+# - Automatic log rotation at 10MB
+# - Zero-config after initialization
+```
+
+**Backend Setup Required:**
+
+After running `brain-monitor init`, add the middleware to your Express app:
+
+```typescript
+import { createBrainMonitorRouter } from '@kit/brain-monitor/server';
+
+// Add this line to your Express setup:
+app.use('/_brain-monitor', createBrainMonitorRouter());
 ```
 
 ## Configuration

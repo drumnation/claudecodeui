@@ -254,7 +254,47 @@ Remember: **Efficiency > Redundancy**. Check first, run second!
   mkdirSync("_errors", { recursive: true });
   mkdirSync("_logs", { recursive: true });
 
-  // 7. Ask about CI setup
+  // 7. Inject browser console capture into React apps
+  console.log(chalk.gray("\n• Setting up browser console capture..."));
+  try {
+    const { injectBrowserCapture, generateExpressMiddleware } = await import("./init/inject-browser-capture.js");
+    const results = await injectBrowserCapture(process.cwd());
+    
+    let successCount = 0;
+    let alreadyInjectedCount = 0;
+    
+    for (const result of results) {
+      if (result.success) {
+        if (result.alreadyInjected) {
+          alreadyInjectedCount++;
+          console.log(chalk.gray(`  - ${result.file} (already configured)`));
+        } else {
+          successCount++;
+          console.log(chalk.green(`  ✅ Injected console capture into ${result.file}`));
+        }
+      } else {
+        console.log(chalk.yellow(`  ⚠️  Failed to inject into ${result.file}: ${result.error}`));
+      }
+    }
+    
+    if (successCount > 0) {
+      console.log(chalk.green(`✅ Browser console capture injected into ${successCount} file(s)`));
+      
+      // Generate middleware snippet
+      const middlewareSnippet = await generateExpressMiddleware();
+      const middlewarePath = join(process.cwd(), "docs", "automation", "brain-monitor-express-setup.md");
+      writeFileSync(middlewarePath, `# Brain-Monitor Express Setup\n\n${middlewareSnippet}`);
+      
+      console.log(chalk.yellow("\n⚠️  Important: Add the Brain-Monitor Express middleware to your backend:"));
+      console.log(chalk.gray("   See: docs/automation/brain-monitor-express-setup.md"));
+    } else if (alreadyInjectedCount > 0) {
+      console.log(chalk.gray("✅ Browser console capture already configured"));
+    }
+  } catch (error) {
+    console.log(chalk.yellow("⚠️  Browser console capture setup skipped"));
+  }
+
+  // 8. Ask about CI setup
   console.log(chalk.gray("\n• Setting up CI/CD..."));
   try {
     const { initCI } = await import("./ci/init.js");
@@ -271,5 +311,6 @@ Remember: **Efficiency > Redundancy**. Check first, run second!
   );
   console.log("  3. Check `_errors/` for validation reports");
   console.log("  4. Check `_logs/` for server logs");
-  console.log("  5. Test CI locally: `pnpm ci:test` (requires act)");
+  console.log("  5. Browser logs will appear in `_logs/browser-console.log`");
+  console.log("  6. Test CI locally: `pnpm ci:test` (requires act)");
 }

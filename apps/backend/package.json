@@ -24,6 +24,7 @@
   "dependencies": {
     "@anthropic-ai/claude-code": "^1.0.24",
     "@kit/env-loader": "workspace:*",
+    "@kit/logger": "workspace:*",
     "chokidar": "^4.0.3",
     "cors": "^2.8.5",
     "express": "^4.18.2",

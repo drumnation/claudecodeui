@@ -1,4 +1,7 @@
 import {useState, useEffect, useRef} from 'react';
+import { createLogger } from '@kit/logger/browser';
+
+const logger = createLogger({ component: 'WebSocket' });
 
 export function useWebSocket() {
   const [ws, setWs] = useState(null);
@@ -33,9 +36,7 @@ export function useWebSocket() {
           wsBaseUrl.includes('localhost') &&
           !window.location.hostname.includes('localhost')
         ) {
-          console.warn(
-            'Config returned localhost, using current host with API server port instead',
-          );
+          logger.warn('Config returned localhost, using current host with API server port instead');
           const protocol =
             window.location.protocol === 'https:' ? 'wss:' : 'ws:';
           // For development, API server is typically on port 8765 when Vite is on 8766
@@ -44,9 +45,7 @@ export function useWebSocket() {
           wsBaseUrl = `${protocol}//${window.location.hostname}:${apiPort}`;
         }
       } catch (error) {
-        console.warn(
-          'Could not fetch server config, falling back to current host with API server port',
-        );
+        logger.warn('Could not fetch server config, falling back to current host with API server port');
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         // For development, API server is typically on port 8765 when Vite is on 8766
         const apiPort =
@@ -67,7 +66,7 @@ export function useWebSocket() {
           const data = JSON.parse(event.data);
           setMessages((prev) => [...prev, data]);
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          logger.error('Error parsing WebSocket message', { error });
         }
       };
 
@@ -82,10 +81,10 @@ export function useWebSocket() {
       };
 
       websocket.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        logger.error('WebSocket error', { error });
       };
     } catch (error) {
-      console.error('Error creating WebSocket connection:', error);
+      logger.error('Error creating WebSocket connection', { error });
     }
   };
 
@@ -93,7 +92,7 @@ export function useWebSocket() {
     if (ws && isConnected) {
       ws.send(JSON.stringify(message));
     } else {
-      console.warn('WebSocket not connected');
+      logger.warn('WebSocket not connected');
     }
   };
 

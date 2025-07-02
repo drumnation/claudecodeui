@@ -17,8 +17,10 @@ import {
   Sparkles,
 } from 'lucide-react';
 import {MicButton} from './MicButton';
+import {useLogger} from '@kit/logger/react';
 
 function GitPanel({selectedProject, isMobile}) {
+  const logger = useLogger({ scope: 'GitPanel' });
   const [gitStatus, setGitStatus] = useState(null);
   const [gitDiff, setGitDiff] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -67,12 +69,10 @@ function GitPanel({selectedProject, isMobile}) {
   const fetchGitStatus = async () => {
     if (!selectedProject) return;
 
-    console.log(
-      'Fetching git status for project:',
-      selectedProject.name,
-      'path:',
-      selectedProject.fullPath,
-    );
+    logger.info('Fetching git status', {
+      project: selectedProject.name,
+      path: selectedProject.fullPath,
+    });
 
     setIsLoading(true);
     try {
@@ -82,10 +82,10 @@ function GitPanel({selectedProject, isMobile}) {
       );
       const data = await response.json();
 
-      console.log('Git status response:', data);
+      logger.debug('Git status response', { data });
 
       if (data.error) {
-        console.error('Git status error:', data.error);
+        logger.error('Git status error', { error: data.error });
         setGitStatus(null);
       } else {
         setGitStatus(data);
@@ -109,7 +109,7 @@ function GitPanel({selectedProject, isMobile}) {
         }
       }
     } catch (error) {
-      console.error('Error fetching git status:', error);
+      logger.error('Error fetching git status', { error: error.message, stack: error.stack });
     } finally {
       setIsLoading(false);
     }
@@ -127,7 +127,7 @@ function GitPanel({selectedProject, isMobile}) {
         setBranches(data.branches);
       }
     } catch (error) {
-      console.error('Error fetching branches:', error);
+      logger.error('Error fetching branches', { error: error.message, stack: error.stack });
     }
   };
 
@@ -149,10 +149,10 @@ function GitPanel({selectedProject, isMobile}) {
         setShowBranchDropdown(false);
         fetchGitStatus(); // Refresh status after branch switch
       } else {
-        console.error('Failed to switch branch:', data.error);
+        logger.error('Failed to switch branch', { error: data.error });
       }
     } catch (error) {
-      console.error('Error switching branch:', error);
+      logger.error('Error switching branch', { error: error.message, stack: error.stack });
     }
   };
 
@@ -180,10 +180,10 @@ function GitPanel({selectedProject, isMobile}) {
         fetchBranches(); // Refresh branch list
         fetchGitStatus(); // Refresh status
       } else {
-        console.error('Failed to create branch:', data.error);
+        logger.error('Failed to create branch', { error: data.error });
       }
     } catch (error) {
-      console.error('Error creating branch:', error);
+      logger.error('Error creating branch', { error: error.message, stack: error.stack });
     } finally {
       setIsCreatingBranch(false);
     }
@@ -204,7 +204,7 @@ function GitPanel({selectedProject, isMobile}) {
         }));
       }
     } catch (error) {
-      console.error('Error fetching file diff:', error);
+      logger.error('Error fetching file diff', { error: error.message, filePath });
     }
   };
 
@@ -220,7 +220,7 @@ function GitPanel({selectedProject, isMobile}) {
         setRecentCommits(data.commits);
       }
     } catch (error) {
-      console.error('Error fetching commits:', error);
+      logger.error('Error fetching commits', { error: error.message, stack: error.stack });
     }
   };
 
@@ -239,7 +239,7 @@ function GitPanel({selectedProject, isMobile}) {
         }));
       }
     } catch (error) {
-      console.error('Error fetching commit diff:', error);
+      logger.error('Error fetching commit diff', { error: error.message, commitHash });
     }
   };
 
@@ -260,10 +260,10 @@ function GitPanel({selectedProject, isMobile}) {
       if (data.message) {
         setCommitMessage(data.message);
       } else {
-        console.error('Failed to generate commit message:', data.error);
+        logger.error('Failed to generate commit message', { error: data.error });
       }
     } catch (error) {
-      console.error('Error generating commit message:', error);
+      logger.error('Error generating commit message', { error: error.message, stack: error.stack });
     } finally {
       setIsGeneratingMessage(false);
     }
@@ -332,10 +332,10 @@ function GitPanel({selectedProject, isMobile}) {
         setSelectedFiles(new Set());
         fetchGitStatus();
       } else {
-        console.error('Commit failed:', data.error);
+        logger.error('Commit failed', { error: data.error });
       }
     } catch (error) {
-      console.error('Error committing changes:', error);
+      logger.error('Error committing changes', { error: error.message, stack: error.stack });
     } finally {
       setIsCommitting(false);
     }

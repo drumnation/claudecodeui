@@ -25,6 +25,7 @@ import React, {
   memo,
 } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { useLogger } from '@kit/logger/react';
 import TodoList from './TodoList';
 import CommandMenu from './CommandMenu';
 import ClaudeLogo from './ClaudeLogo';
@@ -42,6 +43,7 @@ const MessageComponent = memo(
     onShowSettings,
     autoExpandTools,
     showRawParameters,
+    logger,
   }) => {
     const isGrouped =
       prevMessage &&
@@ -318,19 +320,20 @@ const MessageComponent = memo(
                     message.toolName !== 'Edit' &&
                     (() => {
                       // Debug log to see what we're dealing with
-                      console.log(
-                        'Tool display - name:',
-                        message.toolName,
-                        'input type:',
-                        typeof message.toolInput,
-                      );
+                      if (logger.isLevelEnabled('debug')) {
+                        logger.debug('Tool display', {
+                          name: message.toolName,
+                          inputType: typeof message.toolInput,
+                        });
+                      }
 
                       // Special handling for Write tool
                       if (message.toolName === 'Write') {
-                        console.log(
-                          'Write tool detected, toolInput:',
-                          message.toolInput,
-                        );
+                        if (logger.isLevelEnabled('debug')) {
+                          logger.debug('Write tool detected', {
+                            toolInput: message.toolInput,
+                          });
+                        }
                         try {
                           let input;
                           // Handle both JSON string and already parsed object
@@ -340,7 +343,9 @@ const MessageComponent = memo(
                             input = message.toolInput;
                           }
 
-                          console.log('Parsed Write input:', input);
+                          if (logger.isLevelEnabled('debug')) {
+                            logger.debug('Parsed Write input', { input });
+                          }
 
                           if (input.file_path && input.content !== undefined) {
                             return (
@@ -1262,6 +1267,8 @@ function ChatInterface({
   showRawParameters,
   autoScrollToBottom,
 }) {
+  const logger = useLogger({ component: 'ChatInterface' });
+  
   const [input, setInput] = useState(() => {
     if (typeof window !== 'undefined' && selectedProject) {
       return localStorage.getItem(`draft_input_${selectedProject.name}`) || '';
@@ -1341,7 +1348,7 @@ function ChatInterface({
       const data = await response.json();
       return data.messages || [];
     } catch (error) {
-      console.error('Error loading session messages:', error);
+      logger.error('Error loading session messages', { error });
       return [];
     } finally {
       setIsLoadingSessionMessages(false);
@@ -1653,10 +1660,12 @@ function ChatInterface({
             currentSessionId &&
             latestMessage.data.session_id !== currentSessionId
           ) {
-            console.log('🔄 Claude CLI session duplication detected:', {
-              originalSession: currentSessionId,
-              newSession: latestMessage.data.session_id,
-            });
+            if (logger.isLevelEnabled('debug')) {
+              logger.debug('Claude CLI session duplication detected', {
+                originalSession: currentSessionId,
+                newSession: latestMessage.data.session_id,
+              });
+            }
 
             // Mark this as a system-initiated session change to preserve messages
             setIsSystemSessionChange(true);
@@ -1676,9 +1685,11 @@ function ChatInterface({
             latestMessage.data.session_id &&
             !currentSessionId
           ) {
-            console.log('🔄 New session init detected:', {
-              newSession: latestMessage.data.session_id,
-            });
+            if (logger.isLevelEnabled('debug')) {
+              logger.debug('New session init detected', {
+                newSession: latestMessage.data.session_id,
+              });
+            }
 
             // Mark this as a system-initiated session change to preserve messages
             setIsSystemSessionChange(true);
@@ -1698,7 +1709,9 @@ function ChatInterface({
             currentSessionId &&
             latestMessage.data.session_id === currentSessionId
           ) {
-            console.log('🔄 System init message for current session, ignoring');
+            if (logger.isLevelEnabled('debug')) {
+              logger.debug('System init message for current session, ignoring');
+            }
             return; // Don't process the message further
           }
 
@@ -1862,7 +1875,9 @@ function ChatInterface({
 
         case 'claude-status':
           // Handle Claude working status messages
-          console.log('🔔 Received claude-status message:', latestMessage);
+          if (logger.isLevelEnabled('debug')) {
+            logger.debug('Received claude-status message', { message: latestMessage });
+          }
           const statusData = latestMessage.data;
           if (statusData) {
             // Parse the status message to extract relevant information
@@ -1893,7 +1908,9 @@ function ChatInterface({
               statusInfo.can_interrupt = statusData.can_interrupt;
             }
 
-            console.log('📊 Setting claude status:', statusInfo);
+            if (logger.isLevelEnabled('debug')) {
+              logger.debug('Setting claude status', { statusInfo });
+            }
             setClaudeStatus(statusInfo);
             setIsLoading(true);
             setCanAbortSession(statusInfo.can_interrupt);
@@ -1917,17 +1934,26 @@ function ChatInterface({
 
   const fetchProjectFiles = async () => {
     try {
+      // Get the project's full path to use as dirPath
+      const projectPath = selectedProject.fullPath || selectedProject.path;
+      if (!projectPath) {
+        logger.warn('No project path available for file listing');
+        return;
+      }
+      
       const response = await fetch(
-        `/api/projects/${selectedProject.name}/files`,
+        `/api/projects/${selectedProject.name}/files?${new URLSearchParams({
+          dirPath: projectPath
+        })}`,
       );
       if (response.ok) {
-        const files = await response.json();
-        // Flatten the file tree to get all file paths
-        const flatFiles = flattenFileTree(files);
+        const data = await response.json();
+        // The response now has a files array
+        const flatFiles = flattenFileTree(data.files || []);
         setFileList(flatFiles);
       }
     } catch (error) {
-      console.error('Error fetching files:', error);
+      logger.error('Error fetching files', { error });
     }
   };
 
@@ -1939,21 +1965,24 @@ function ChatInterface({
         setSlashCommands(data.commands || []);
       }
     } catch (error) {
-      console.error('Error fetching slash commands:', error);
+      logger.error('Error fetching slash commands', { error });
     }
   };
 
   const flattenFileTree = (files, basePath = '') => {
     let result = [];
     for (const file of files) {
-      const fullPath = basePath ? `${basePath}/${file.name}` : file.name;
-      if (file.type === 'directory' && file.children) {
-        result = result.concat(flattenFileTree(file.children, fullPath));
-      } else if (file.type === 'file') {
+      // The backend returns files with isDirectory property
+      if (file.isDirectory) {
+        // For now, we'll just skip directories since we only have one level
+        // In the future, we could recursively fetch subdirectories
+        continue;
+      } else {
+        // It's a file, add it to the result
         result.push({
           name: file.name,
-          path: fullPath,
-          relativePath: file.path,
+          path: file.path, // Use the full path from backend
+          relativePath: file.name, // Just the filename for display
         });
       }
     }
@@ -2201,7 +2230,7 @@ function ChatInterface({
           return JSON.parse(savedSettings);
         }
       } catch (error) {
-        console.error('Error loading tools settings:', error);
+        logger.error('Error loading tools settings', { error });
       }
       return {
         allowedTools: [],
@@ -2455,6 +2484,7 @@ function ChatInterface({
                     onShowSettings={onShowSettings}
                     autoExpandTools={autoExpandTools}
                     showRawParameters={showRawParameters}
+                    logger={logger}
                   />
                 );
               })}

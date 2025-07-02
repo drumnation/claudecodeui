@@ -1,8 +1,10 @@
 import React, {useState, useEffect, useRef} from 'react';
 import {Mic, Loader2, Brain} from 'lucide-react';
 import {transcribeWithWhisper} from '../utils/whisper';
+import {useLogger} from '@kit/logger/react';
 
 export function MicButton({onTranscript, className = ''}) {
+  const logger = useLogger({ scope: 'MicButton' });
   const [state, setState] = useState('idle'); // idle, recording, transcribing, processing
   const [error, setError] = useState(null);
 
@@ -11,13 +13,10 @@ export function MicButton({onTranscript, className = ''}) {
   const chunksRef = useRef([]);
   const lastTapRef = useRef(0);
 
-  // Version indicator to verify updates
-  console.log('MicButton v2.0 loaded');
-
   // Start recording
   const startRecording = async () => {
     try {
-      console.log('Starting recording...');
+      logger.info('Starting recording...');
       setError(null);
       chunksRef.current = [];
 
@@ -37,7 +36,7 @@ export function MicButton({onTranscript, className = ''}) {
       };
 
       recorder.onstop = async () => {
-        console.log('Recording stopped, creating blob...');
+        logger.info('Recording stopped, creating blob...', { mimeType, chunks: chunksRef.current.length });
         const blob = new Blob(chunksRef.current, {type: mimeType});
 
         // Clean up stream
@@ -72,7 +71,7 @@ export function MicButton({onTranscript, className = ''}) {
             onTranscript(text);
           }
         } catch (err) {
-          console.error('Transcription error:', err);
+          logger.error('Transcription error', { error: err.message, stack: err.stack });
           setError(err.message);
         } finally {
           if (processingTimer) {
@@ -84,9 +83,9 @@ export function MicButton({onTranscript, className = ''}) {
 
       recorder.start();
       setState('recording');
-      console.log('Recording started successfully');
+      logger.info('Recording started successfully');
     } catch (err) {
-      console.error('Failed to start recording:', err);
+      logger.error('Failed to start recording', { error: err.message, stack: err.stack });
       setError('Microphone access denied');
       setState('idle');
     }
@@ -94,7 +93,7 @@ export function MicButton({onTranscript, className = ''}) {
 
   // Stop recording
   const stopRecording = () => {
-    console.log('Stopping recording...');
+    logger.info('Stopping recording...');
     if (
       mediaRecorderRef.current &&
       mediaRecorderRef.current.state === 'recording'
@@ -103,7 +102,7 @@ export function MicButton({onTranscript, className = ''}) {
       // Don't set state here - let the onstop handler do it
     } else {
       // If recorder isn't in recording state, force cleanup
-      console.log('Recorder not in recording state, forcing cleanup');
+      logger.warn('Recorder not in recording state, forcing cleanup');
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
@@ -123,12 +122,16 @@ export function MicButton({onTranscript, className = ''}) {
     // Debounce for mobile double-tap issue
     const now = Date.now();
     if (now - lastTapRef.current < 300) {
-      console.log('Ignoring rapid tap');
+      if (logger.isLevelEnabled('debug')) {
+        logger.debug('Ignoring rapid tap', { timeDiff: now - lastTapRef.current });
+      }
       return;
     }
     lastTapRef.current = now;
 
-    console.log('Button clicked, current state:', state);
+    if (logger.isLevelEnabled('debug')) {
+      logger.debug('Button clicked', { currentState: state });
+    }
 
     if (state === 'idle') {
       startRecording();

@@ -11,11 +11,21 @@ describe('servers.service', () => {
   let broadcast: ReturnType<typeof vi.fn>;
   let serverManager: ReturnType<typeof createServerManager>;
   let mockChildProcess: any;
+  let mockLogger: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
     broadcast = vi.fn();
-    serverManager = createServerManager(broadcast);
+    mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn(),
+      isLevelEnabled: vi.fn().mockReturnValue(false),
+      child: vi.fn().mockReturnThis(),
+    };
+    serverManager = createServerManager(broadcast, mockLogger);
 
     // Create mock child process
     mockChildProcess = {

@@ -1,6 +1,8 @@
 import {useState, useRef, useCallback} from 'react';
+import { useLogger } from '@kit/logger/react';
 
 export function useAudioRecorder() {
+  const logger = useLogger({ component: 'AudioRecorder' });
   const [isRecording, setRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
   const [error, setError] = useState(null);
@@ -54,7 +56,7 @@ export function useAudioRecorder() {
       };
 
       recorder.onerror = (event) => {
-        console.error('MediaRecorder error:', event);
+        logger.error('MediaRecorder error', { event });
         setError('Recording failed');
         setRecording(false);
       };
@@ -62,19 +64,22 @@ export function useAudioRecorder() {
       // Start recording
       recorder.start();
       setRecording(true);
-      console.log('Recording started');
+      if (logger.isLevelEnabled('debug')) {
+        logger.debug('Recording started');
+      }
     } catch (err) {
-      console.error('Failed to start recording:', err);
+      logger.error('Failed to start recording', { error: err });
       setError(err.message || 'Failed to start recording');
       setRecording(false);
     }
   }, []);
 
   const stop = useCallback(() => {
-    console.log(
-      'Stop called, recorder state:',
-      mediaRecorderRef.current?.state,
-    );
+    if (logger.isLevelEnabled('debug')) {
+      logger.debug('Stop called', {
+        recorderState: mediaRecorderRef.current?.state,
+      });
+    }
 
     try {
       if (
@@ -82,10 +87,12 @@ export function useAudioRecorder() {
         mediaRecorderRef.current.state === 'recording'
       ) {
         mediaRecorderRef.current.stop();
-        console.log('Recording stopped');
+        if (logger.isLevelEnabled('debug')) {
+          logger.debug('Recording stopped');
+        }
       }
     } catch (err) {
-      console.error('Error stopping recorder:', err);
+      logger.error('Error stopping recorder', { error: err });
     }
 
     // Always update state

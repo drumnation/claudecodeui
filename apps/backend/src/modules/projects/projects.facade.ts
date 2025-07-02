@@ -2,11 +2,13 @@ import path from 'node:path';
 import * as repository from './projects.repository.js';
 import * as service from './projects.service.js';
 import type {Project} from './projects.types.js';
+import { createLogger } from '@kit/logger/node';
 
 // Simple function to get projects without Express dependencies
 export const getProjectsList = async (homePath: string): Promise<Project[]> => {
+  const logger = createLogger({ scope: 'projects-facade' });
   const claudeDir = path.join(homePath, '.claude', 'projects');
-  const projectDirs = await repository.readProjectDirectories(claudeDir);
+  const projectDirs = await repository.readProjectDirectories(claudeDir, logger);
   const config = await repository.readProjectConfig(homePath);
   const projects: Project[] = [];
   const existingProjects = new Set<string>();
@@ -20,6 +22,7 @@ export const getProjectsList = async (homePath: string): Promise<Project[]> => {
       projectPath,
       config,
       homePath,
+      logger,
     );
     projects.push(project);
   }
@@ -38,7 +41,7 @@ export const getProjectsList = async (homePath: string): Promise<Project[]> => {
         path: null,
         displayName:
           projectConfig.displayName ||
-          (await service.generateDisplayName(projectName)),
+          (await service.generateDisplayName(projectName, logger)),
         fullPath: fullPath,
         isCustomName: !!projectConfig.displayName,
         isManuallyAdded: true,

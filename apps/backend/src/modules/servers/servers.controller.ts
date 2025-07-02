@@ -6,11 +6,13 @@ import type {
   WebSocketMessage,
 } from '../../infra/websocket/index.js';
 import {createServerManager, getAvailableScripts} from './index.js';
+import {createLogger} from '@kit/logger/node';
 
 export const createServerRoutes = (
   connectedClients: Set<ExtendedWebSocket>,
 ): Router => {
   const router = Router({mergeParams: true});
+  const logger = createLogger({scope: 'servers'});
 
   // Create server manager with broadcast capability
   const broadcast = (message: WebSocketMessage): void => {
@@ -22,7 +24,7 @@ export const createServerRoutes = (
     });
   };
 
-  const serverManager = createServerManager(broadcast);
+  const serverManager = createServerManager(broadcast, logger);
 
   // Get available scripts
   router.get('/scripts', async (req: Request, res: Response) => {
@@ -45,10 +47,10 @@ export const createServerRoutes = (
         return res.status(400).json({error: 'Project path is not available'});
       }
 
-      const scripts = await getAvailableScripts(project.path);
+      const scripts = await getAvailableScripts(project.path, logger);
       res.json({scripts});
     } catch (error: any) {
-      console.error('Error getting scripts:', error);
+      logger.error('Error getting scripts', {error});
       res.status(500).json({error: error.message});
     }
   });
@@ -94,7 +96,7 @@ export const createServerRoutes = (
         res.json({success: true, server: result});
       }
     } catch (error: any) {
-      console.error('Error starting server:', error);
+      logger.error('Error starting server', {error});
       res.status(500).json({error: error.message});
     }
   });
@@ -125,7 +127,7 @@ export const createServerRoutes = (
       await serverManager.stopServer(project.path, serverId);
       res.json({success: true});
     } catch (error: any) {
-      console.error('Error stopping server:', error);
+      logger.error('Error stopping server', {error});
       res.status(500).json({error: error.message});
     }
   });
