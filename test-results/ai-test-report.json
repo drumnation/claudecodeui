@@ -1,0 +1,30 @@
+{
+  "timestamp": "2025-07-02T17:05:31.903Z",
+  "summary": {
+    "totalSuites": 3,
+    "passed": 3,
+    "failed": 0,
+    "duration": 5759.683130023261
+  },
+  "suites": [
+    {
+      "suite": "Unit Tests",
+      "status": "passed",
+      "duration": 2799.33133991365
+    },
+    {
+      "suite": "Integration Tests",
+      "status": "passed",
+      "duration": 1472.710004136045
+    },
+    {
+      "suite": "E2E Tests",
+      "status": "passed",
+      "duration": 1487.6417859735652
+    }
+  ],
+  "coverage": null,
+  "recommendations": [
+    "Increase test coverage to meet thresholds"
+  ]
+}

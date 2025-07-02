@@ -1,15 +1,5 @@
-import {mergeConfig} from 'vitest/config';
-
-import baseConfig from './base';
-
-export default mergeConfig(baseConfig, {
-  test: {
-    coverage: {
-      exclude: ['src/**/*.integration.test.{ts,tsx}', 'src/**/__tests__/**'],
-      include: ['src/**/*.{ts,tsx}'],
-    },
-    include: ['**/*.integration.test.{ts,tsx}'],
-    setupFiles: ['./jest.setup.ts'],
-    testTimeout: 30000,
-  },
-});
+/**
+ * Integration test configuration export
+ * Re-exports the integration test configuration for use as a vitest config
+ */
+export {default} from './configs/vitest/integration';

@@ -8,17 +8,17 @@ const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
 function createIconSVG(size) {
   const cornerRadius = Math.round(size * 0.25); // 25% corner radius
   const strokeWidth = Math.max(2, Math.round(size * 0.06)); // Scale stroke width
-  
+
   // MessageSquare path scaled to size
   const padding = Math.round(size * 0.25);
-  const iconSize = size - (padding * 2);
+  const iconSize = size - padding * 2;
   const startX = padding;
   const startY = Math.round(padding * 0.7);
   const endX = startX + iconSize;
   const endY = startY + Math.round(iconSize * 0.6);
   const tailX = startX;
   const tailY = endY + Math.round(iconSize * 0.3);
-  
+
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" fill="none" xmlns="http://www.w3.org/2000/svg">
   <!-- Background with rounded corners -->
   <rect width="${size}" height="${size}" rx="${cornerRadius}" fill="hsl(262.1 83.3% 57.8%)"/>
@@ -34,11 +34,11 @@ function createIconSVG(size) {
 }
 
 // Generate SVG files for each size
-sizes.forEach(size => {
+sizes.forEach((size) => {
   const svgContent = createIconSVG(size);
   const filename = `icon-${size}x${size}.svg`;
   const filepath = path.join(__dirname, 'icons', filename);
-  
+
   fs.writeFileSync(filepath, svgContent);
   console.log(`Created ${filename}`);
 });

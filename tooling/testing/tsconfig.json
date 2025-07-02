@@ -1,8 +1,16 @@
 {
-  "extends": "@kit/tsconfig/base",
+  "extends": "@kit/tsconfig/node",
   "compilerOptions": {
-    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json"
+    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
+    "rootDir": "src",
+    "outDir": "dist",
+    "declaration": true,
+    "declarationMap": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": false,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
   },
-  "include": ["*.ts", "*.tsx", "src"],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
 }

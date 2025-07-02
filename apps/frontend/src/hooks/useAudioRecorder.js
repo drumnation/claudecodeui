@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import {useState, useRef, useCallback} from 'react';
 
 export function useAudioRecorder() {
   const [isRecording, setRecording] = useState(false);
@@ -15,23 +15,23 @@ export function useAudioRecorder() {
       chunksRef.current = [];
 
       // Request microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           sampleRate: 16000,
-        } 
+        },
       });
-      
+
       streamRef.current = stream;
 
       // Determine supported MIME type
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm') 
-        ? 'audio/webm' 
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
         : 'audio/mp4';
-      
+
       // Create media recorder
-      const recorder = new MediaRecorder(stream, { mimeType });
+      const recorder = new MediaRecorder(stream, {mimeType});
       mediaRecorderRef.current = recorder;
 
       // Set up event handlers
@@ -43,12 +43,12 @@ export function useAudioRecorder() {
 
       recorder.onstop = () => {
         // Create blob from chunks
-        const blob = new Blob(chunksRef.current, { type: mimeType });
+        const blob = new Blob(chunksRef.current, {type: mimeType});
         setAudioBlob(blob);
-        
+
         // Clean up stream
         if (streamRef.current) {
-          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current.getTracks().forEach((track) => track.stop());
           streamRef.current = null;
         }
       };
@@ -71,23 +71,29 @@ export function useAudioRecorder() {
   }, []);
 
   const stop = useCallback(() => {
-    console.log('Stop called, recorder state:', mediaRecorderRef.current?.state);
-    
+    console.log(
+      'Stop called, recorder state:',
+      mediaRecorderRef.current?.state,
+    );
+
     try {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state === 'recording'
+      ) {
         mediaRecorderRef.current.stop();
         console.log('Recording stopped');
       }
     } catch (err) {
       console.error('Error stopping recorder:', err);
     }
-    
+
     // Always update state
     setRecording(false);
-    
+
     // Clean up stream if still active
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
   }, []);
@@ -98,12 +104,12 @@ export function useAudioRecorder() {
     chunksRef.current = [];
   }, []);
 
-  return { 
-    isRecording, 
-    audioBlob, 
+  return {
+    isRecording,
+    audioBlob,
     error,
-    start, 
-    stop, 
-    reset 
+    start,
+    stop,
+    reset,
   };
 }

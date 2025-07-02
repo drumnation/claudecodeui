@@ -1,8 +1,8 @@
 import React from 'react';
-import { Button } from './ui/button';
-import { X } from 'lucide-react';
+import {Button} from './ui/button';
+import {X} from 'lucide-react';
 
-function ImageViewer({ file, onClose }) {
+function ImageViewer({file, onClose}) {
   const imagePath = `/api/projects/${file.projectName}/files/content?path=${encodeURIComponent(file.path)}`;
 
   return (
@@ -34,7 +34,7 @@ function ImageViewer({ file, onClose }) {
           />
           <div
             className="text-center text-gray-500 dark:text-gray-400"
-            style={{ display: 'none' }}
+            style={{display: 'none'}}
           >
             <p>Unable to load image</p>
             <p className="text-sm mt-2">{file.path}</p>

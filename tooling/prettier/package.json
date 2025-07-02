@@ -2,18 +2,19 @@
   "name": "@kit/prettier-config",
   "private": true,
   "version": "0.1.0",
-  "main": "index.mjs",
+  "type": "module",
+  "main": "./index.ts",
+  "exports": "./index.ts",
   "scripts": {
     "clean": "rm -rf .turbo node_modules",
-    "format": "prettier --check \"**/*.{mjs,json}\"",
+    "format": "prettier --check \"**/*.{ts,mjs,json}\"",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "prettier": "^3.3.3"
-  },
   "devDependencies": {
+    "prettier": "^3.4.2",
     "@kit/tsconfig": "workspace:*",
-    "typescript": "^5.6.3"
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.3"
   },
-  "prettier": "./index.mjs"
+  "prettier": "./index.ts"
 }

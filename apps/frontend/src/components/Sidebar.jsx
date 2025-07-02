@@ -1,28 +1,45 @@
-import React, { useState, useEffect } from 'react';
-import { ScrollArea } from './ui/scroll-area';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { Input } from './ui/input';
-import { FolderOpen, Folder, Plus, MessageSquare, Clock, ChevronDown, ChevronRight, Edit3, Check, X, Trash2, Settings, FolderPlus, RefreshCw, Sparkles, Edit2 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import React, {useState, useEffect} from 'react';
+import {ScrollArea} from './ui/scroll-area';
+import {Button} from './ui/button';
+import {Badge} from './ui/badge';
+import {Input} from './ui/input';
+import {
+  FolderOpen,
+  Folder,
+  Plus,
+  MessageSquare,
+  Clock,
+  ChevronDown,
+  ChevronRight,
+  Edit3,
+  Check,
+  X,
+  Trash2,
+  Settings,
+  FolderPlus,
+  RefreshCw,
+  Sparkles,
+  Edit2,
+} from 'lucide-react';
+import {cn} from '../lib/utils';
 import ClaudeLogo from './ClaudeLogo';
 
 // Move formatTimeAgo outside component to avoid recreation on every render
 const formatTimeAgo = (dateString, currentTime) => {
   const date = new Date(dateString);
   const now = currentTime;
-  
+
   // Check if date is valid
   if (isNaN(date.getTime())) {
     return 'Unknown';
   }
-  
+
   const diffInMs = now - date;
   const diffInSeconds = Math.floor(diffInMs / 1000);
   const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
   const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
   const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-  
+
   if (diffInSeconds < 60) return 'Just now';
   if (diffInMinutes === 1) return '1 min ago';
   if (diffInMinutes < 60) return `${diffInMinutes} mins ago`;
@@ -33,18 +50,18 @@ const formatTimeAgo = (dateString, currentTime) => {
   return date.toLocaleDateString();
 };
 
-function Sidebar({ 
-  projects, 
-  selectedProject, 
-  selectedSession, 
-  onProjectSelect, 
-  onSessionSelect, 
+function Sidebar({
+  projects,
+  selectedProject,
+  selectedSession,
+  onProjectSelect,
+  onSessionSelect,
   onNewSession,
   onSessionDelete,
   onProjectDelete,
   isLoading,
   onRefresh,
-  onShowSettings
+  onShowSettings,
 }) {
   const [expandedProjects, setExpandedProjects] = useState(new Set());
   const [editingProject, setEditingProject] = useState(null);
@@ -88,7 +105,7 @@ function Sidebar({
   // Auto-expand project folder when a session is selected
   useEffect(() => {
     if (selectedSession && selectedProject) {
-      setExpandedProjects(prev => new Set([...prev, selectedProject.name]));
+      setExpandedProjects((prev) => new Set([...prev, selectedProject.name]));
     }
   }, [selectedSession, selectedProject]);
 
@@ -96,7 +113,7 @@ function Sidebar({
   useEffect(() => {
     if (projects.length > 0 && !isLoading) {
       const newLoaded = new Set();
-      projects.forEach(project => {
+      projects.forEach((project) => {
         if (project.sessions && project.sessions.length >= 0) {
           newLoaded.add(project.name);
         }
@@ -115,7 +132,6 @@ function Sidebar({
     setExpandedProjects(newExpanded);
   };
 
-
   const startEditing = (project) => {
     setEditingProject(project.name);
     setEditingName(project.displayName);
@@ -133,7 +149,7 @@ function Sidebar({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ displayName: editingName }),
+        body: JSON.stringify({displayName: editingName}),
       });
 
       if (response.ok) {
@@ -149,20 +165,27 @@ function Sidebar({
     } catch (error) {
       console.error('Error renaming project:', error);
     }
-    
+
     setEditingProject(null);
     setEditingName('');
   };
 
   const deleteSession = async (projectName, sessionId) => {
-    if (!confirm('Are you sure you want to delete this session? This action cannot be undone.')) {
+    if (
+      !confirm(
+        'Are you sure you want to delete this session? This action cannot be undone.',
+      )
+    ) {
       return;
     }
 
     try {
-      const response = await fetch(`/api/projects/${projectName}/sessions/${sessionId}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(
+        `/api/projects/${projectName}/sessions/${sessionId}`,
+        {
+          method: 'DELETE',
+        },
+      );
 
       if (response.ok) {
         // Call parent callback if provided
@@ -181,14 +204,17 @@ function Sidebar({
 
   const generateSessionSummary = async (projectName, sessionId) => {
     const key = `${projectName}-${sessionId}`;
-    setGeneratingSummary(prev => ({ ...prev, [key]: true }));
-    
+    setGeneratingSummary((prev) => ({...prev, [key]: true}));
+
     try {
       console.log('🔄 Generating summary for:', projectName, sessionId);
-      const response = await fetch(`/api/projects/${projectName}/sessions/${sessionId}/generate-summary`, {
-        method: 'POST',
-      });
-      
+      const response = await fetch(
+        `/api/projects/${projectName}/sessions/${sessionId}/generate-summary`,
+        {
+          method: 'POST',
+        },
+      );
+
       if (response.ok) {
         const data = await response.json();
         console.log('✅ Summary generated:', data.summary);
@@ -202,8 +228,8 @@ function Sidebar({
       console.error('Error generating summary:', error);
       alert(`Error generating summary: ${error.message || 'Network error'}`);
     } finally {
-      setGeneratingSummary(prev => {
-        const newState = { ...prev };
+      setGeneratingSummary((prev) => {
+        const newState = {...prev};
         delete newState[key];
         return newState;
       });
@@ -212,14 +238,17 @@ function Sidebar({
 
   const updateSessionSummary = async (projectName, sessionId, newSummary) => {
     try {
-      const response = await fetch(`/api/projects/${projectName}/sessions/${sessionId}/summary`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        `/api/projects/${projectName}/sessions/${sessionId}/summary`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({summary: newSummary}),
         },
-        body: JSON.stringify({ summary: newSummary }),
-      });
-      
+      );
+
       if (response.ok) {
         console.log('✅ Summary updated');
         setEditingSession(null);
@@ -237,7 +266,11 @@ function Sidebar({
   };
 
   const deleteProject = async (projectName) => {
-    if (!confirm('Are you sure you want to delete this empty project? This action cannot be undone.')) {
+    if (
+      !confirm(
+        'Are you sure you want to delete this empty project? This action cannot be undone.',
+      )
+    ) {
       return;
     }
 
@@ -269,15 +302,15 @@ function Sidebar({
     }
 
     setCreatingProject(true);
-    
+
     try {
       const response = await fetch('/api/projects/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          path: newProjectPath.trim()
+        body: JSON.stringify({
+          path: newProjectPath.trim(),
         }),
       });
 
@@ -285,7 +318,7 @@ function Sidebar({
         const result = await response.json();
         setShowNewProject(false);
         setNewProjectPath('');
-        
+
         // Refresh projects to show the new one
         if (window.refreshProjects) {
           window.refreshProjects();
@@ -312,41 +345,40 @@ function Sidebar({
   const loadMoreSessions = async (project) => {
     // Check if we can load more sessions
     const canLoadMore = project.sessionMeta?.hasMore !== false;
-    
+
     if (!canLoadMore || loadingSessions[project.name]) {
       return;
     }
 
-    setLoadingSessions(prev => ({ ...prev, [project.name]: true }));
+    setLoadingSessions((prev) => ({...prev, [project.name]: true}));
 
     try {
-      const currentSessionCount = (project.sessions?.length || 0) + (additionalSessions[project.name]?.length || 0);
+      const currentSessionCount =
+        (project.sessions?.length || 0) +
+        (additionalSessions[project.name]?.length || 0);
       const response = await fetch(
-        `/api/projects/${project.name}/sessions?limit=5&offset=${currentSessionCount}`
+        `/api/projects/${project.name}/sessions?limit=5&offset=${currentSessionCount}`,
       );
-      
+
       if (response.ok) {
         const result = await response.json();
-        
+
         // Store additional sessions locally
-        setAdditionalSessions(prev => ({
+        setAdditionalSessions((prev) => ({
           ...prev,
-          [project.name]: [
-            ...(prev[project.name] || []),
-            ...result.sessions
-          ]
+          [project.name]: [...(prev[project.name] || []), ...result.sessions],
         }));
-        
+
         // Update project metadata if needed
         if (result.hasMore === false) {
           // Mark that there are no more sessions to load
-          project.sessionMeta = { ...project.sessionMeta, hasMore: false };
+          project.sessionMeta = {...project.sessionMeta, hasMore: false};
         }
       }
     } catch (error) {
       console.error('Error loading more sessions:', error);
     } finally {
-      setLoadingSessions(prev => ({ ...prev, [project.name]: false }));
+      setLoadingSessions((prev) => ({...prev, [project.name]: false}));
     }
   };
 
@@ -368,8 +400,12 @@ function Sidebar({
               <ClaudeLogo className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-foreground">Claude Code UI</h1>
-              <p className="text-sm text-muted-foreground">AI coding assistant interface</p>
+              <h1 className="text-lg font-bold text-foreground">
+                Claude Code UI
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                AI coding assistant interface
+              </p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -387,8 +423,11 @@ function Sidebar({
               }}
               disabled={isRefreshing}
               title="Refresh projects and sessions (Ctrl+R)"
+              data-testid="refresh-projects-button"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''} group-hover:rotate-180 transition-transform duration-300`} />
+              <RefreshCw
+                className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''} group-hover:rotate-180 transition-transform duration-300`}
+              />
             </Button>
             <Button
               variant="default"
@@ -396,12 +435,13 @@ function Sidebar({
               className="h-9 w-9 px-0 bg-primary hover:bg-primary/90 transition-all duration-200 shadow-sm hover:shadow-md"
               onClick={() => setShowNewProject(true)}
               title="Create new project (Ctrl+N)"
+              data-testid="new-project-button"
             >
               <FolderPlus className="w-4 h-4" />
             </Button>
           </div>
         </div>
-        
+
         {/* Mobile Header */}
         <div className="md:hidden p-3 border-b border-border">
           <div className="flex items-center justify-between">
@@ -410,7 +450,9 @@ function Sidebar({
                 <ClaudeLogo className="w-5 h-5" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-foreground">Claude Code UI</h1>
+                <h1 className="text-lg font-semibold text-foreground">
+                  Claude Code UI
+                </h1>
                 <p className="text-sm text-muted-foreground">Projects</p>
               </div>
             </div>
@@ -426,12 +468,16 @@ function Sidebar({
                   }
                 }}
                 disabled={isRefreshing}
+                data-testid="refresh-projects-button"
               >
-                <RefreshCw className={`w-4 h-4 text-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`w-4 h-4 text-foreground ${isRefreshing ? 'animate-spin' : ''}`}
+                />
               </button>
               <button
                 className="w-8 h-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center active:scale-95 transition-all duration-150"
                 onClick={() => setShowNewProject(true)}
+                data-testid="new-project-button"
               >
                 <FolderPlus className="w-4 h-4" />
               </button>
@@ -439,7 +485,7 @@ function Sidebar({
           </div>
         </div>
       </div>
-      
+
       {/* New Project Form */}
       {showNewProject && (
         <div className="md:p-3 md:border-b md:border-border md:bg-muted/30">
@@ -480,7 +526,7 @@ function Sidebar({
               </Button>
             </div>
           </div>
-          
+
           {/* Mobile Form - Simple Overlay */}
           <div className="md:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
             <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-lg border-t border-border p-4 space-y-4 animate-in slide-in-from-bottom duration-300">
@@ -490,7 +536,9 @@ function Sidebar({
                     <FolderPlus className="w-3 h-3 text-primary" />
                   </div>
                   <div>
-                    <h2 className="text-base font-semibold text-foreground">New Project</h2>
+                    <h2 className="text-base font-semibold text-foreground">
+                      New Project
+                    </h2>
                   </div>
                 </div>
                 <button
@@ -501,7 +549,7 @@ function Sidebar({
                   <X className="w-3 h-3" />
                 </button>
               </div>
-              
+
               <div className="space-y-3">
                 <Input
                   value={newProjectPath}
@@ -514,7 +562,7 @@ function Sidebar({
                     if (e.key === 'Escape') cancelNewProject();
                   }}
                 />
-                
+
                 <div className="flex gap-2">
                   <Button
                     onClick={cancelNewProject}
@@ -533,14 +581,14 @@ function Sidebar({
                   </Button>
                 </div>
               </div>
-              
+
               {/* Safe area for mobile */}
               <div className="h-4" />
             </div>
           </div>
         </div>
       )}
-      
+
       {/* Projects List */}
       <ScrollArea className="flex-1 md:px-2 md:py-3 overflow-y-auto overscroll-contain">
         <div className="md:space-y-1 pb-safe-area-inset-bottom">
@@ -549,7 +597,9 @@ function Sidebar({
               <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center mx-auto mb-4 md:mb-3">
                 <div className="w-6 h-6 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
               </div>
-              <h3 className="text-base font-medium text-foreground mb-2 md:mb-1">Loading projects...</h3>
+              <h3 className="text-base font-medium text-foreground mb-2 md:mb-1">
+                Loading projects...
+              </h3>
               <p className="text-sm text-muted-foreground">
                 Fetching your Claude projects and sessions
               </p>
@@ -559,7 +609,9 @@ function Sidebar({
               <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center mx-auto mb-4 md:mb-3">
                 <Folder className="w-6 h-6 text-muted-foreground" />
               </div>
-              <h3 className="text-base font-medium text-foreground mb-2 md:mb-1">No projects found</h3>
+              <h3 className="text-base font-medium text-foreground mb-2 md:mb-1">
+                No projects found
+              </h3>
               <p className="text-sm text-muted-foreground">
                 Run Claude CLI in a project directory to get started
               </p>
@@ -568,7 +620,7 @@ function Sidebar({
             projects.map((project) => {
               const isExpanded = expandedProjects.has(project.name);
               const isSelected = selectedProject?.name === project.name;
-              
+
               return (
                 <div key={project.name} className="md:space-y-1">
                   {/* Project Header */}
@@ -577,21 +629,26 @@ function Sidebar({
                     <div className="md:hidden">
                       <div
                         className={cn(
-                          "p-3 mx-3 my-1 rounded-lg bg-card border border-border/50 active:scale-[0.98] transition-all duration-150",
-                          isSelected && "bg-primary/5 border-primary/20"
+                          'p-3 mx-3 my-1 rounded-lg bg-card border border-border/50 active:scale-[0.98] transition-all duration-150',
+                          isSelected && 'bg-primary/5 border-primary/20',
                         )}
                         onClick={() => {
                           // On mobile, just toggle the folder - don't select the project
                           toggleProject(project.name);
                         }}
-                        onTouchEnd={handleTouchClick(() => toggleProject(project.name))}
+                        onTouchEnd={handleTouchClick(() =>
+                          toggleProject(project.name),
+                        )}
+                        data-testid={`project-item-${project.name}`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className={cn(
-                              "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
-                              isExpanded ? "bg-primary/10" : "bg-muted"
-                            )}>
+                            <div
+                              className={cn(
+                                'w-8 h-8 rounded-lg flex items-center justify-center transition-colors',
+                                isExpanded ? 'bg-primary/10' : 'bg-muted',
+                              )}
+                            >
                               {isExpanded ? (
                                 <FolderOpen className="w-4 h-4 text-primary" />
                               ) : (
@@ -603,20 +660,23 @@ function Sidebar({
                                 <input
                                   type="text"
                                   value={editingName}
-                                  onChange={(e) => setEditingName(e.target.value)}
+                                  onChange={(e) =>
+                                    setEditingName(e.target.value)
+                                  }
                                   className="w-full px-3 py-2 text-sm border-2 border-primary/40 focus:border-primary rounded-lg bg-background text-foreground shadow-sm focus:shadow-md transition-all duration-200 focus:outline-none"
                                   placeholder="Project name"
                                   autoFocus
                                   autoComplete="off"
                                   onClick={(e) => e.stopPropagation()}
                                   onKeyDown={(e) => {
-                                    if (e.key === 'Enter') saveProjectName(project.name);
+                                    if (e.key === 'Enter')
+                                      saveProjectName(project.name);
                                     if (e.key === 'Escape') cancelEditing();
                                   }}
                                   style={{
                                     fontSize: '16px', // Prevents zoom on iOS
                                     WebkitAppearance: 'none',
-                                    borderRadius: '8px'
+                                    borderRadius: '8px',
                                   }}
                                 />
                               ) : (
@@ -626,9 +686,14 @@ function Sidebar({
                                   </h3>
                                   <p className="text-xs text-muted-foreground">
                                     {(() => {
-                                      const sessionCount = getAllSessions(project).length;
-                                      const hasMore = project.sessionMeta?.hasMore !== false;
-                                      const count = hasMore && sessionCount >= 5 ? `${sessionCount}+` : sessionCount;
+                                      const sessionCount =
+                                        getAllSessions(project).length;
+                                      const hasMore =
+                                        project.sessionMeta?.hasMore !== false;
+                                      const count =
+                                        hasMore && sessionCount >= 5
+                                          ? `${sessionCount}+`
+                                          : sessionCount;
                                       return `${count} session${count === 1 ? '' : 's'}`;
                                     })()}
                                   </p>
@@ -667,7 +732,10 @@ function Sidebar({
                                       e.stopPropagation();
                                       deleteProject(project.name);
                                     }}
-                                    onTouchEnd={handleTouchClick(() => deleteProject(project.name))}
+                                    onTouchEnd={handleTouchClick(() =>
+                                      deleteProject(project.name),
+                                    )}
+                                    data-testid={`delete-project-${project.name}`}
                                   >
                                     <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
                                   </button>
@@ -678,7 +746,10 @@ function Sidebar({
                                     e.stopPropagation();
                                     startEditing(project);
                                   }}
-                                  onTouchEnd={handleTouchClick(() => startEditing(project))}
+                                  onTouchEnd={handleTouchClick(() =>
+                                    startEditing(project),
+                                  )}
+                                  data-testid={`edit-project-${project.name}`}
                                 >
                                   <Edit3 className="w-4 h-4 text-primary" />
                                 </button>
@@ -695,13 +766,13 @@ function Sidebar({
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Desktop Project Item */}
                     <Button
                       variant="ghost"
                       className={cn(
-                        "hidden md:flex w-full justify-between p-2 h-auto font-normal hover:bg-accent/50",
-                        isSelected && "bg-accent text-accent-foreground"
+                        'hidden md:flex w-full justify-between p-2 h-auto font-normal hover:bg-accent/50',
+                        isSelected && 'bg-accent text-accent-foreground',
                       )}
                       onClick={() => {
                         // Desktop behavior: select project and toggle
@@ -716,6 +787,7 @@ function Sidebar({
                         }
                         toggleProject(project.name);
                       })}
+                      data-testid={`project-item-${project.name}`}
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         {isExpanded ? (
@@ -734,28 +806,45 @@ function Sidebar({
                                 placeholder="Project name"
                                 autoFocus
                                 onKeyDown={(e) => {
-                                  if (e.key === 'Enter') saveProjectName(project.name);
+                                  if (e.key === 'Enter')
+                                    saveProjectName(project.name);
                                   if (e.key === 'Escape') cancelEditing();
                                 }}
                               />
-                              <div className="text-xs text-muted-foreground truncate" title={project.fullPath}>
+                              <div
+                                className="text-xs text-muted-foreground truncate"
+                                title={project.fullPath}
+                              >
                                 {project.fullPath}
                               </div>
                             </div>
                           ) : (
                             <div>
-                              <div className="text-sm font-semibold truncate text-foreground" title={project.displayName}>
+                              <div
+                                className="text-sm font-semibold truncate text-foreground"
+                                title={project.displayName}
+                              >
                                 {project.displayName}
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 {(() => {
-                                  const sessionCount = getAllSessions(project).length;
-                                  const hasMore = project.sessionMeta?.hasMore !== false;
-                                  return hasMore && sessionCount >= 5 ? `${sessionCount}+` : sessionCount;
+                                  const sessionCount =
+                                    getAllSessions(project).length;
+                                  const hasMore =
+                                    project.sessionMeta?.hasMore !== false;
+                                  return hasMore && sessionCount >= 5
+                                    ? `${sessionCount}+`
+                                    : sessionCount;
                                 })()}
                                 {project.fullPath !== project.displayName && (
-                                  <span className="ml-1 opacity-60" title={project.fullPath}>
-                                    • {project.fullPath.length > 25 ? '...' + project.fullPath.slice(-22) : project.fullPath}
+                                  <span
+                                    className="ml-1 opacity-60"
+                                    title={project.fullPath}
+                                  >
+                                    •{' '}
+                                    {project.fullPath.length > 25
+                                      ? '...' + project.fullPath.slice(-22)
+                                      : project.fullPath}
                                   </span>
                                 )}
                               </div>
@@ -763,7 +852,7 @@ function Sidebar({
                           )}
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-1 flex-shrink-0">
                         {editingProject === project.name ? (
                           <>
@@ -795,6 +884,7 @@ function Sidebar({
                                 startEditing(project);
                               }}
                               title="Rename project (F2)"
+                              data-testid={`edit-project-${project.name}`}
                             >
                               <Edit3 className="w-3 h-3" />
                             </div>
@@ -806,6 +896,7 @@ function Sidebar({
                                   deleteProject(project.name);
                                 }}
                                 title="Delete empty project (Delete)"
+                                data-testid={`delete-project-${project.name}`}
                               >
                                 <Trash2 className="w-3 h-3 text-red-600 dark:text-red-400" />
                               </div>
@@ -826,344 +917,481 @@ function Sidebar({
                     <div className="ml-3 space-y-1 border-l border-border pl-3">
                       {!initialSessionsLoaded.has(project.name) ? (
                         // Loading skeleton for sessions
-                        Array.from({ length: 3 }).map((_, i) => (
+                        Array.from({length: 3}).map((_, i) => (
                           <div key={i} className="p-2 rounded-md">
                             <div className="flex items-start gap-2">
                               <div className="w-3 h-3 bg-muted rounded-full animate-pulse mt-0.5" />
                               <div className="flex-1 space-y-1">
-                                <div className="h-3 bg-muted rounded animate-pulse" style={{ width: `${60 + i * 15}%` }} />
+                                <div
+                                  className="h-3 bg-muted rounded animate-pulse"
+                                  style={{width: `${60 + i * 15}%`}}
+                                />
                                 <div className="h-2 bg-muted rounded animate-pulse w-1/2" />
                               </div>
                             </div>
                           </div>
                         ))
-                      ) : getAllSessions(project).length === 0 && !loadingSessions[project.name] ? (
+                      ) : getAllSessions(project).length === 0 &&
+                        !loadingSessions[project.name] ? (
                         <div className="py-2 px-3 text-left">
-                          <p className="text-xs text-muted-foreground">No sessions yet</p>
+                          <p className="text-xs text-muted-foreground">
+                            No sessions yet
+                          </p>
                         </div>
                       ) : (
                         getAllSessions(project).map((session) => {
                           // Calculate if session is active (within last 10 minutes)
                           const sessionDate = new Date(session.lastActivity);
-                          const diffInMinutes = Math.floor((currentTime - sessionDate) / (1000 * 60));
+                          const diffInMinutes = Math.floor(
+                            (currentTime - sessionDate) / (1000 * 60),
+                          );
                           const isActive = diffInMinutes < 10;
-                          
+
                           return (
-                          <div key={session.id} className="group relative">
-                            {/* Active session indicator dot */}
-                            {isActive && (
-                              <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1">
-                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                              </div>
-                            )}
-                            {/* Mobile Session Item */}
-                            <div className="md:hidden">
-                              <div
-                                className={cn(
-                                  "p-2 mx-3 my-0.5 rounded-md bg-card border active:scale-[0.98] transition-all duration-150 relative",
-                                  selectedSession?.id === session.id ? "bg-primary/5 border-primary/20" :
-                                  isActive ? "border-green-500/30 bg-green-50/5 dark:bg-green-900/5" : "border-border/30"
-                                )}
-                                onClick={() => {
-                                  onProjectSelect(project);
-                                  onSessionSelect(session);
-                                }}
-                                onTouchEnd={handleTouchClick(() => {
-                                  onProjectSelect(project);
-                                  onSessionSelect(session);
-                                })}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <div className={cn(
-                                    "w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0",
-                                    selectedSession?.id === session.id ? "bg-primary/10" : 
-                                    diffInMinutes < 10 ? "bg-green-500/20" : "bg-muted/50"
-                                  )}>
-                                    <MessageSquare className={cn(
-                                      "w-3 h-3",
-                                      selectedSession?.id === session.id ? "text-primary" : 
-                                      diffInMinutes < 10 ? "text-green-600 dark:text-green-500" : "text-muted-foreground"
-                                    )} />
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <div className="text-xs font-medium truncate text-foreground">
-                                      {session.summary || 'New Session'}
-                                    </div>
-                                    <div className="flex items-center gap-1 mt-0.5">
-                                      <Clock className={cn(
-                                        "w-2.5 h-2.5",
-                                        isActive ? "text-green-600 dark:text-green-500" : "text-muted-foreground"
-                                      )} />
-                                      <span className={cn(
-                                        "text-xs",
-                                        isActive ? "text-green-600 dark:text-green-500 font-medium" : "text-muted-foreground"
-                                      )}>
-                                        {formatTimeAgo(session.lastActivity, currentTime)}
-                                      </span>
-                                      {session.messageCount > 0 && (
-                                        <Badge variant="secondary" className="text-xs px-1 py-0 ml-auto">
-                                          {session.messageCount}
-                                        </Badge>
+                            <div key={session.id} className="group relative">
+                              {/* Active session indicator dot */}
+                              {isActive && (
+                                <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                </div>
+                              )}
+                              {/* Mobile Session Item */}
+                              <div className="md:hidden">
+                                <div
+                                  className={cn(
+                                    'p-2 mx-3 my-0.5 rounded-md bg-card border active:scale-[0.98] transition-all duration-150 relative',
+                                    selectedSession?.id === session.id
+                                      ? 'bg-primary/5 border-primary/20'
+                                      : isActive
+                                        ? 'border-green-500/30 bg-green-50/5 dark:bg-green-900/5'
+                                        : 'border-border/30',
+                                  )}
+                                  onClick={() => {
+                                    onProjectSelect(project);
+                                    onSessionSelect(session);
+                                  }}
+                                  onTouchEnd={handleTouchClick(() => {
+                                    onProjectSelect(project);
+                                    onSessionSelect(session);
+                                  })}
+                                  data-testid={`session-item-${session.id}`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className={cn(
+                                        'w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0',
+                                        selectedSession?.id === session.id
+                                          ? 'bg-primary/10'
+                                          : diffInMinutes < 10
+                                            ? 'bg-green-500/20'
+                                            : 'bg-muted/50',
                                       )}
+                                    >
+                                      <MessageSquare
+                                        className={cn(
+                                          'w-3 h-3',
+                                          selectedSession?.id === session.id
+                                            ? 'text-primary'
+                                            : diffInMinutes < 10
+                                              ? 'text-green-600 dark:text-green-500'
+                                              : 'text-muted-foreground',
+                                        )}
+                                      />
                                     </div>
-                                  </div>
-                                  {/* Mobile action buttons */}
-                                  <div className="flex items-center gap-1 ml-1">
-                                    {editingSession === session.id ? (
-                                      <>
-                                        <input
-                                          type="text"
-                                          value={editingSessionName}
-                                          onChange={(e) => setEditingSessionName(e.target.value)}
-                                          onKeyDown={(e) => {
-                                            e.stopPropagation();
-                                            if (e.key === 'Enter') {
-                                              updateSessionSummary(project.name, session.id, editingSessionName);
-                                            } else if (e.key === 'Escape') {
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-xs font-medium truncate text-foreground">
+                                        {session.summary || 'New Session'}
+                                      </div>
+                                      <div className="flex items-center gap-1 mt-0.5">
+                                        <Clock
+                                          className={cn(
+                                            'w-2.5 h-2.5',
+                                            isActive
+                                              ? 'text-green-600 dark:text-green-500'
+                                              : 'text-muted-foreground',
+                                          )}
+                                        />
+                                        <span
+                                          className={cn(
+                                            'text-xs',
+                                            isActive
+                                              ? 'text-green-600 dark:text-green-500 font-medium'
+                                              : 'text-muted-foreground',
+                                          )}
+                                        >
+                                          {formatTimeAgo(
+                                            session.lastActivity,
+                                            currentTime,
+                                          )}
+                                        </span>
+                                        {session.messageCount > 0 && (
+                                          <Badge
+                                            variant="secondary"
+                                            className="text-xs px-1 py-0 ml-auto"
+                                          >
+                                            {session.messageCount}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                    {/* Mobile action buttons */}
+                                    <div className="flex items-center gap-1 ml-1">
+                                      {editingSession === session.id ? (
+                                        <>
+                                          <input
+                                            type="text"
+                                            value={editingSessionName}
+                                            onChange={(e) =>
+                                              setEditingSessionName(
+                                                e.target.value,
+                                              )
+                                            }
+                                            onKeyDown={(e) => {
+                                              e.stopPropagation();
+                                              if (e.key === 'Enter') {
+                                                updateSessionSummary(
+                                                  project.name,
+                                                  session.id,
+                                                  editingSessionName,
+                                                );
+                                              } else if (e.key === 'Escape') {
+                                                setEditingSession(null);
+                                                setEditingSessionName('');
+                                              }
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="w-24 px-2 py-1 text-xs border border-border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                                            autoFocus
+                                          />
+                                          <button
+                                            className="w-5 h-5 rounded-md bg-green-50 dark:bg-green-900/20 flex items-center justify-center active:scale-95 transition-transform"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              updateSessionSummary(
+                                                project.name,
+                                                session.id,
+                                                editingSessionName,
+                                              );
+                                            }}
+                                            onTouchEnd={handleTouchClick(() =>
+                                              updateSessionSummary(
+                                                project.name,
+                                                session.id,
+                                                editingSessionName,
+                                              ),
+                                            )}
+                                          >
+                                            <Check className="w-2.5 h-2.5 text-green-600 dark:text-green-400" />
+                                          </button>
+                                          <button
+                                            className="w-5 h-5 rounded-md bg-gray-50 dark:bg-gray-900/20 flex items-center justify-center active:scale-95 transition-transform"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
                                               setEditingSession(null);
                                               setEditingSessionName('');
+                                            }}
+                                            onTouchEnd={handleTouchClick(() => {
+                                              setEditingSession(null);
+                                              setEditingSessionName('');
+                                            })}
+                                          >
+                                            <X className="w-2.5 h-2.5 text-gray-600 dark:text-gray-400" />
+                                          </button>
+                                        </>
+                                      ) : (
+                                        <>
+                                          {/* Generate summary button */}
+                                          <button
+                                            className="w-5 h-5 rounded-md bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center active:scale-95 transition-transform opacity-70"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              generateSessionSummary(
+                                                project.name,
+                                                session.id,
+                                              );
+                                            }}
+                                            onTouchEnd={handleTouchClick(() =>
+                                              generateSessionSummary(
+                                                project.name,
+                                                session.id,
+                                              ),
+                                            )}
+                                            disabled={
+                                              generatingSummary[
+                                                `${project.name}-${session.id}`
+                                              ]
                                             }
-                                          }}
-                                          onClick={(e) => e.stopPropagation()}
-                                          className="w-24 px-2 py-1 text-xs border border-border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-                                          autoFocus
-                                        />
-                                        <button
-                                          className="w-5 h-5 rounded-md bg-green-50 dark:bg-green-900/20 flex items-center justify-center active:scale-95 transition-transform"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            updateSessionSummary(project.name, session.id, editingSessionName);
-                                          }}
-                                          onTouchEnd={handleTouchClick(() => updateSessionSummary(project.name, session.id, editingSessionName))}
-                                        >
-                                          <Check className="w-2.5 h-2.5 text-green-600 dark:text-green-400" />
-                                        </button>
-                                        <button
-                                          className="w-5 h-5 rounded-md bg-gray-50 dark:bg-gray-900/20 flex items-center justify-center active:scale-95 transition-transform"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setEditingSession(null);
-                                            setEditingSessionName('');
-                                          }}
-                                          onTouchEnd={handleTouchClick(() => {
-                                            setEditingSession(null);
-                                            setEditingSessionName('');
-                                          })}
-                                        >
-                                          <X className="w-2.5 h-2.5 text-gray-600 dark:text-gray-400" />
-                                        </button>
-                                      </>
-                                    ) : (
-                                      <>
-                                        {/* Generate summary button */}
-                                        <button
-                                          className="w-5 h-5 rounded-md bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center active:scale-95 transition-transform opacity-70"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            generateSessionSummary(project.name, session.id);
-                                          }}
-                                          onTouchEnd={handleTouchClick(() => generateSessionSummary(project.name, session.id))}
-                                          disabled={generatingSummary[`${project.name}-${session.id}`]}
-                                          title="Generate AI summary"
-                                        >
-                                          {generatingSummary[`${project.name}-${session.id}`] ? (
-                                            <div className="w-2.5 h-2.5 animate-spin rounded-full border border-blue-600 dark:border-blue-400 border-t-transparent" />
-                                          ) : (
-                                            <Sparkles className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400" />
-                                          )}
-                                        </button>
-                                        {/* Edit button */}
-                                        <button
-                                          className="w-5 h-5 rounded-md bg-gray-50 dark:bg-gray-900/20 flex items-center justify-center active:scale-95 transition-transform opacity-70"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setEditingSession(session.id);
-                                            setEditingSessionName(session.summary || 'New Session');
-                                          }}
-                                          onTouchEnd={handleTouchClick(() => {
-                                            setEditingSession(session.id);
-                                            setEditingSessionName(session.summary || 'New Session');
-                                          })}
-                                          title="Edit session name"
-                                        >
-                                          <Edit2 className="w-2.5 h-2.5 text-gray-600 dark:text-gray-400" />
-                                        </button>
-                                        {/* Delete button */}
-                                        <button
-                                          className="w-5 h-5 rounded-md bg-red-50 dark:bg-red-900/20 flex items-center justify-center active:scale-95 transition-transform opacity-70"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            deleteSession(project.name, session.id);
-                                          }}
-                                          onTouchEnd={handleTouchClick(() => deleteSession(project.name, session.id))}
-                                          title="Delete session"
-                                        >
-                                          <Trash2 className="w-2.5 h-2.5 text-red-600 dark:text-red-400" />
-                                        </button>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Desktop Session Item */}
-                            <div className="hidden md:block">
-                              <Button
-                                variant="ghost"
-                                className={cn(
-                                  "w-full justify-start p-2 h-auto font-normal text-left hover:bg-accent/50 transition-colors duration-200",
-                                  selectedSession?.id === session.id ? "bg-accent text-accent-foreground" :
-                                  isActive ? "bg-green-50/50 dark:bg-green-900/10" : ""
-                                )}
-                                onClick={() => onSessionSelect(session)}
-                                onTouchEnd={handleTouchClick(() => onSessionSelect(session))}
-                              >
-                                <div className="flex items-start gap-2 min-w-0 w-full">
-                                  <MessageSquare className={cn(
-                                    "w-3 h-3 mt-0.5 flex-shrink-0",
-                                    isActive ? "text-green-600 dark:text-green-500" : "text-muted-foreground"
-                                  )} />
-                                  <div className="min-w-0 flex-1">
-                                    <div className="text-xs font-medium truncate text-foreground">
-                                      {session.summary || 'New Session'}
-                                    </div>
-                                    <div className="flex items-center gap-1 mt-0.5">
-                                      <Clock className={cn(
-                                        "w-2.5 h-2.5",
-                                        isActive ? "text-green-600 dark:text-green-500" : "text-muted-foreground"
-                                      )} />
-                                      <span className={cn(
-                                        "text-xs",
-                                        isActive ? "text-green-600 dark:text-green-500 font-medium" : "text-muted-foreground"
-                                      )}>
-                                        {formatTimeAgo(session.lastActivity, currentTime)}
-                                      </span>
-                                      {session.messageCount > 0 && (
-                                        <Badge variant="secondary" className="text-xs px-1 py-0 ml-auto">
-                                          {session.messageCount}
-                                        </Badge>
+                                            title="Generate AI summary"
+                                            data-testid={`generate-summary-${session.id}`}
+                                          >
+                                            {generatingSummary[
+                                              `${project.name}-${session.id}`
+                                            ] ? (
+                                              <div className="w-2.5 h-2.5 animate-spin rounded-full border border-blue-600 dark:border-blue-400 border-t-transparent" />
+                                            ) : (
+                                              <Sparkles className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400" />
+                                            )}
+                                          </button>
+                                          {/* Edit button */}
+                                          <button
+                                            className="w-5 h-5 rounded-md bg-gray-50 dark:bg-gray-900/20 flex items-center justify-center active:scale-95 transition-transform opacity-70"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setEditingSession(session.id);
+                                              setEditingSessionName(
+                                                session.summary ||
+                                                  'New Session',
+                                              );
+                                            }}
+                                            onTouchEnd={handleTouchClick(() => {
+                                              setEditingSession(session.id);
+                                              setEditingSessionName(
+                                                session.summary ||
+                                                  'New Session',
+                                              );
+                                            })}
+                                            title="Edit session name"
+                                            data-testid={`edit-session-${session.id}`}
+                                          >
+                                            <Edit2 className="w-2.5 h-2.5 text-gray-600 dark:text-gray-400" />
+                                          </button>
+                                          {/* Delete button */}
+                                          <button
+                                            className="w-5 h-5 rounded-md bg-red-50 dark:bg-red-900/20 flex items-center justify-center active:scale-95 transition-transform opacity-70"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              deleteSession(
+                                                project.name,
+                                                session.id,
+                                              );
+                                            }}
+                                            onTouchEnd={handleTouchClick(() =>
+                                              deleteSession(
+                                                project.name,
+                                                session.id,
+                                              ),
+                                            )}
+                                            title="Delete session"
+                                            data-testid={`delete-session-${session.id}`}
+                                          >
+                                            <Trash2 className="w-2.5 h-2.5 text-red-600 dark:text-red-400" />
+                                          </button>
+                                        </>
                                       )}
                                     </div>
                                   </div>
                                 </div>
-                              </Button>
-                              {/* Desktop hover buttons */}
-                              <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                                {editingSession === session.id ? (
-                                  <>
-                                    <input
-                                      type="text"
-                                      value={editingSessionName}
-                                      onChange={(e) => setEditingSessionName(e.target.value)}
-                                      onKeyDown={(e) => {
-                                        e.stopPropagation();
-                                        if (e.key === 'Enter') {
-                                          updateSessionSummary(project.name, session.id, editingSessionName);
-                                        } else if (e.key === 'Escape') {
+                              </div>
+
+                              {/* Desktop Session Item */}
+                              <div className="hidden md:block">
+                                <Button
+                                  variant="ghost"
+                                  className={cn(
+                                    'w-full justify-start p-2 h-auto font-normal text-left hover:bg-accent/50 transition-colors duration-200',
+                                    selectedSession?.id === session.id
+                                      ? 'bg-accent text-accent-foreground'
+                                      : isActive
+                                        ? 'bg-green-50/50 dark:bg-green-900/10'
+                                        : '',
+                                  )}
+                                  onClick={() => onSessionSelect(session)}
+                                  onTouchEnd={handleTouchClick(() =>
+                                    onSessionSelect(session),
+                                  )}
+                                  data-testid={`session-item-${session.id}`}
+                                >
+                                  <div className="flex items-start gap-2 min-w-0 w-full">
+                                    <MessageSquare
+                                      className={cn(
+                                        'w-3 h-3 mt-0.5 flex-shrink-0',
+                                        isActive
+                                          ? 'text-green-600 dark:text-green-500'
+                                          : 'text-muted-foreground',
+                                      )}
+                                    />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-xs font-medium truncate text-foreground">
+                                        {session.summary || 'New Session'}
+                                      </div>
+                                      <div className="flex items-center gap-1 mt-0.5">
+                                        <Clock
+                                          className={cn(
+                                            'w-2.5 h-2.5',
+                                            isActive
+                                              ? 'text-green-600 dark:text-green-500'
+                                              : 'text-muted-foreground',
+                                          )}
+                                        />
+                                        <span
+                                          className={cn(
+                                            'text-xs',
+                                            isActive
+                                              ? 'text-green-600 dark:text-green-500 font-medium'
+                                              : 'text-muted-foreground',
+                                          )}
+                                        >
+                                          {formatTimeAgo(
+                                            session.lastActivity,
+                                            currentTime,
+                                          )}
+                                        </span>
+                                        {session.messageCount > 0 && (
+                                          <Badge
+                                            variant="secondary"
+                                            className="text-xs px-1 py-0 ml-auto"
+                                          >
+                                            {session.messageCount}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </Button>
+                                {/* Desktop hover buttons */}
+                                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                                  {editingSession === session.id ? (
+                                    <>
+                                      <input
+                                        type="text"
+                                        value={editingSessionName}
+                                        onChange={(e) =>
+                                          setEditingSessionName(e.target.value)
+                                        }
+                                        onKeyDown={(e) => {
+                                          e.stopPropagation();
+                                          if (e.key === 'Enter') {
+                                            updateSessionSummary(
+                                              project.name,
+                                              session.id,
+                                              editingSessionName,
+                                            );
+                                          } else if (e.key === 'Escape') {
+                                            setEditingSession(null);
+                                            setEditingSessionName('');
+                                          }
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="w-32 px-2 py-1 text-xs border border-border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                                        autoFocus
+                                      />
+                                      <button
+                                        className="w-6 h-6 bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40 rounded flex items-center justify-center"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          updateSessionSummary(
+                                            project.name,
+                                            session.id,
+                                            editingSessionName,
+                                          );
+                                        }}
+                                        title="Save"
+                                      >
+                                        <Check className="w-3 h-3 text-green-600 dark:text-green-400" />
+                                      </button>
+                                      <button
+                                        className="w-6 h-6 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900/20 dark:hover:bg-gray-900/40 rounded flex items-center justify-center"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
                                           setEditingSession(null);
                                           setEditingSessionName('');
+                                        }}
+                                        title="Cancel"
+                                      >
+                                        <X className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      {/* Generate summary button */}
+                                      <button
+                                        className="w-6 h-6 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 rounded flex items-center justify-center"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          generateSessionSummary(
+                                            project.name,
+                                            session.id,
+                                          );
+                                        }}
+                                        title="Generate AI summary for this session"
+                                        disabled={
+                                          generatingSummary[
+                                            `${project.name}-${session.id}`
+                                          ]
                                         }
-                                      }}
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="w-32 px-2 py-1 text-xs border border-border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-                                      autoFocus
-                                    />
-                                    <button
-                                      className="w-6 h-6 bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40 rounded flex items-center justify-center"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        updateSessionSummary(project.name, session.id, editingSessionName);
-                                      }}
-                                      title="Save"
-                                    >
-                                      <Check className="w-3 h-3 text-green-600 dark:text-green-400" />
-                                    </button>
-                                    <button
-                                      className="w-6 h-6 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900/20 dark:hover:bg-gray-900/40 rounded flex items-center justify-center"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setEditingSession(null);
-                                        setEditingSessionName('');
-                                      }}
-                                      title="Cancel"
-                                    >
-                                      <X className="w-3 h-3 text-gray-600 dark:text-gray-400" />
-                                    </button>
-                                  </>
-                                ) : (
-                                  <>
-                                    {/* Generate summary button */}
-                                    <button
-                                      className="w-6 h-6 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 rounded flex items-center justify-center"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        generateSessionSummary(project.name, session.id);
-                                      }}
-                                      title="Generate AI summary for this session"
-                                      disabled={generatingSummary[`${project.name}-${session.id}`]}
-                                    >
-                                      {generatingSummary[`${project.name}-${session.id}`] ? (
-                                        <div className="w-3 h-3 animate-spin rounded-full border border-blue-600 dark:border-blue-400 border-t-transparent" />
-                                      ) : (
-                                        <Sparkles className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                                      )}
-                                    </button>
-                                    {/* Edit button */}
-                                    <button
-                                      className="w-6 h-6 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900/20 dark:hover:bg-gray-900/40 rounded flex items-center justify-center"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setEditingSession(session.id);
-                                        setEditingSessionName(session.summary || 'New Session');
-                                      }}
-                                      title="Manually edit session name"
-                                    >
-                                      <Edit2 className="w-3 h-3 text-gray-600 dark:text-gray-400" />
-                                    </button>
-                                    {/* Delete button */}
-                                    <button
-                                      className="w-6 h-6 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 rounded flex items-center justify-center"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        deleteSession(project.name, session.id);
-                                      }}
-                                      title="Delete this session permanently"
-                                    >
-                                      <Trash2 className="w-3 h-3 text-red-600 dark:text-red-400" />
-                                    </button>
-                                  </>
-                                )}
+                                        data-testid={`generate-summary-${session.id}`}
+                                      >
+                                        {generatingSummary[
+                                          `${project.name}-${session.id}`
+                                        ] ? (
+                                          <div className="w-3 h-3 animate-spin rounded-full border border-blue-600 dark:border-blue-400 border-t-transparent" />
+                                        ) : (
+                                          <Sparkles className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                                        )}
+                                      </button>
+                                      {/* Edit button */}
+                                      <button
+                                        className="w-6 h-6 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900/20 dark:hover:bg-gray-900/40 rounded flex items-center justify-center"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditingSession(session.id);
+                                          setEditingSessionName(
+                                            session.summary || 'New Session',
+                                          );
+                                        }}
+                                        title="Manually edit session name"
+                                        data-testid={`edit-session-${session.id}`}
+                                      >
+                                        <Edit2 className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+                                      </button>
+                                      {/* Delete button */}
+                                      <button
+                                        className="w-6 h-6 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 rounded flex items-center justify-center"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          deleteSession(
+                                            project.name,
+                                            session.id,
+                                          );
+                                        }}
+                                        title="Delete this session permanently"
+                                        data-testid={`delete-session-${session.id}`}
+                                      >
+                                        <Trash2 className="w-3 h-3 text-red-600 dark:text-red-400" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
                           );
                         })
                       )}
-                      
+
                       {/* Show More Sessions Button */}
-                      {getAllSessions(project).length > 0 && project.sessionMeta?.hasMore !== false && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full justify-center gap-2 mt-2 text-muted-foreground"
-                          onClick={() => loadMoreSessions(project)}
-                          disabled={loadingSessions[project.name]}
-                        >
-                          {loadingSessions[project.name] ? (
-                            <>
-                              <div className="w-3 h-3 animate-spin rounded-full border border-muted-foreground border-t-transparent" />
-                              Loading...
-                            </>
-                          ) : (
-                            <>
-                              <ChevronDown className="w-3 h-3" />
-                              Show more sessions
-                            </>
-                          )}
-                        </Button>
-                      )}
-                      
+                      {getAllSessions(project).length > 0 &&
+                        project.sessionMeta?.hasMore !== false && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full justify-center gap-2 mt-2 text-muted-foreground"
+                            onClick={() => loadMoreSessions(project)}
+                            disabled={loadingSessions[project.name]}
+                          >
+                            {loadingSessions[project.name] ? (
+                              <>
+                                <div className="w-3 h-3 animate-spin rounded-full border border-muted-foreground border-t-transparent" />
+                                Loading...
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="w-3 h-3" />
+                                Show more sessions
+                              </>
+                            )}
+                          </Button>
+                        )}
+
                       {/* New Session Button */}
                       <div className="md:hidden px-3 pb-2">
                         <button
@@ -1172,17 +1400,19 @@ function Sidebar({
                             onProjectSelect(project);
                             onNewSession(project);
                           }}
+                          data-testid={`new-session-${project.name}`}
                         >
                           <Plus className="w-3 h-3" />
                           New Session
                         </button>
                       </div>
-                      
+
                       <Button
                         variant="default"
                         size="sm"
                         className="hidden md:flex w-full justify-start gap-2 mt-1 h-8 text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground transition-colors"
                         onClick={() => onNewSession(project)}
+                        data-testid={`new-session-${project.name}`}
                       >
                         <Plus className="w-3 h-3" />
                         New Session
@@ -1195,7 +1425,7 @@ function Sidebar({
           )}
         </div>
       </ScrollArea>
-      
+
       {/* Settings Section */}
       <div className="md:p-2 md:border-t md:border-border flex-shrink-0">
         {/* Mobile Settings */}
@@ -1203,19 +1433,23 @@ function Sidebar({
           <button
             className="w-full h-14 bg-muted/50 hover:bg-muted/70 rounded-2xl flex items-center justify-start gap-4 px-4 active:scale-[0.98] transition-all duration-150"
             onClick={onShowSettings}
+            data-testid="settings-button"
           >
             <div className="w-10 h-10 rounded-2xl bg-background/80 flex items-center justify-center">
               <Settings className="w-5 h-5 text-muted-foreground" />
             </div>
-            <span className="text-lg font-medium text-foreground">Settings</span>
+            <span className="text-lg font-medium text-foreground">
+              Settings
+            </span>
           </button>
         </div>
-        
+
         {/* Desktop Settings */}
         <Button
           variant="ghost"
           className="hidden md:flex w-full justify-start gap-2 p-2 h-auto font-normal text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-200"
           onClick={onShowSettings}
+          data-testid="settings-button"
         >
           <Settings className="w-3 h-3" />
           <span className="text-xs">Tools Settings</span>

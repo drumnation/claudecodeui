@@ -1,3 +1,5 @@
+Of course. Here is the updated `CLAUDE.md` file with the v4 monorepo tooling rules.
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -5,468 +7,507 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ### Development
+
 ```bash
 # Start development servers (frontend on :8766, backend on :8765, with ngrok)
-npm run dev
+pnpm run dev
 
 # Start individual components
-npm run server:dev    # Backend only (port 8765)
-npm run client:dev    # Frontend only (port 8766)
-npm run ngrok         # Ngrok tunnel for remote access
+pnpm run server:dev    # Backend only (port 8765)
+pnpm run client:dev    # Frontend only (port 8766)
+pnpm run ngrok         # Ngrok tunnel for remote access
 
 # Production
-npm run build         # Build frontend
-npm run start         # Build and start production server
-npm run prod          # Production mode with PM2
+pnpm run build         # Build frontend
+pnpm run start         # Build and start production server
+pnpm run prod          # Production mode with PM2
 
 # Utilities
-npm run clean:dist    # Clean build artifacts
+pnpm run clean:dist    # Clean build artifacts
 ```
 
 ### Environment Setup
-- Copy `.env.example` to `.env`
-- Default ports: Frontend (8766), Backend API (8765)
-- Optional: Set `OPENAI_API_KEY` for session summaries (fallback from Claude CLI)
+
+  - Copy `.env.example` to `.env`
+  - Default ports: Frontend (8766), Backend API (8765)
+  - Optional: Set `OPENAI_API_KEY` for session summaries (fallback from Claude CLI)
 
 ## Architecture
 
 ### System Overview
+
 This is a web UI for Claude Code CLI with three main components:
 
-1. **Frontend (React/Vite)**: Single-page app with routing for sessions
-2. **Backend (Express/WebSocket)**: API server handling Claude CLI integration
-3. **Claude CLI Integration**: Spawned processes for each chat session
+1.  **Frontend (React/Vite)**: Single-page app with routing for sessions
+2.  **Backend (Express/WebSocket)**: API server handling Claude CLI integration
+3.  **Claude CLI Integration**: Spawned processes for each chat session
 
 ### Key Architectural Patterns
 
 #### WebSocket Communication
-- **Chat WebSocket** (`/ws`): Handles Claude CLI interactions, project updates, and server management
-- **Shell WebSocket** (`/shell`): Terminal emulation for direct Claude CLI access
-- Real-time project updates via file system watcher (chokidar)
+
+  - **Chat WebSocket** (`/ws`): Handles Claude CLI interactions, project updates, and server management
+  - **Shell WebSocket** (`/shell`): Terminal emulation for direct Claude CLI access
+  - Real-time project updates via file system watcher (chokidar)
 
 #### Session Protection System
+
 Located in `App.jsx`, this prevents project updates from interrupting active conversations:
-- Tracks active sessions in a Set
-- Marks sessions active when user sends message
-- Pauses project updates during conversations
-- Handles transition from temporary to real session IDs
+
+  - Tracks active sessions in a Set
+  - Marks sessions active when user sends message
+  - Pauses project updates during conversations
+  - Handles transition from temporary to real session IDs
 
 #### Project Management
-- Projects discovered from `~/.claude/projects/`
-- JSONL files parsed for session history
-- Lazy loading of sessions (5 at a time with pagination)
-- Session summaries generated automatically or manually
+
+  - Projects discovered from `~/.claude/projects/`
+  - JSONL files parsed for session history
+  - Lazy loading of sessions (5 at a time with pagination)
+  - Session summaries generated automatically or manually
 
 #### Tools Security Model
-- All Claude Code tools disabled by default
-- Settings stored in localStorage
-- Three modes: allowed tools, disallowed tools, or skip permissions
-- Passed to Claude CLI via command-line flags
+
+  - All Claude Code tools disabled by default
+  - Settings stored in localStorage
+  - Three modes: allowed tools, disallowed tools, or skip permissions
+  - Passed to Claude CLI via command-line flags
 
 ### Critical Files & Their Roles
 
 #### Backend Integration Points
-- `server/claude-cli.js`: Claude CLI process spawning and message handling
-- `server/projects.js`: JSONL parsing and session management
-- `server/serverManager.js`: Development server lifecycle (npm scripts)
-- `server/slash-commands.js`: Claude CLI command discovery
+
+  - `server/claude-cli.js`: Claude CLI process spawning and message handling
+  - `server/projects.js`: JSONL parsing and session management
+  - `server/serverManager.js`: Development server lifecycle (npm scripts)
+  - `server/slash-commands.js`: Claude CLI command discovery
 
 #### Frontend State Management
-- `App.jsx`: Main routing, session protection, WebSocket message handling
-- `MainContent.jsx`: Tab management, active content display
-- `ChatInterface.jsx`: Message display, input handling, tool rendering
-- `utils/websocket.js`: WebSocket connection management
+
+  - `App.jsx`: Main routing, session protection, WebSocket message handling
+  - `MainContent.jsx`: Tab management, active content display
+  - `ChatInterface.jsx`: Message display, input handling, tool rendering
+  - `utils/websocket.js`: WebSocket connection management
 
 #### Component Organization
-- Components use `.jsx` files with accompanying `.logic.js` for business logic
-- Shared UI components in `components/ui/` (button, input, badge, scroll-area)
-- Complex components split into subcomponents (e.g., `ChatInterface/components/`)
+
+  - Components use `.jsx` files with accompanying `.logic.js` for business logic
+  - Shared UI components in `components/ui/` (button, input, badge, scroll-area)
+  - Complex components split into subcomponents (e.g., `ChatInterface/components/`)
 
 ### Message Flow
-1. User input → ChatInterface → WebSocket message
-2. Backend spawns Claude CLI with appropriate flags
-3. Stream JSON output parsed and forwarded to frontend
-4. Frontend renders messages, tool uses, and responses
-5. Session protection prevents interruption during active chats
+
+1.  User input → ChatInterface → WebSocket message
+2.  Backend spawns Claude CLI with appropriate flags
+3.  Stream JSON output parsed and forwarded to frontend
+4.  Frontend renders messages, tool uses, and responses
+5.  Session protection prevents interruption during active chats
 
 ### File System Integration
-- File tree browser limited to project directory
-- Read/write capabilities through Express endpoints
-- Binary file serving for images
-- Automatic backups on file save
+
+  - File tree browser limited to project directory
+  - Read/write capabilities through Express endpoints
+  - Binary file serving for images
+  - Automatic backups on file save
 
 ### Development Server Integration
-- Discovers npm scripts from package.json
-- Manages server lifecycle per project
-- Streams logs to preview panel
-- Automatic port detection and iframe preview
+
+  - Discovers npm scripts from package.json
+  - Manages server lifecycle per project
+  - Streams logs to preview panel
+  - Automatic port detection and iframe preview
 
 ## Important Implementation Details
 
 ### Session ID Handling
-- Temporary IDs (`new-session-*`) used before Claude CLI assigns real ID
-- Real session ID captured from `session-created` event
-- Graceful transition maintains UI state
+
+  - Temporary IDs (`new-session-*`) used before Claude CLI assigns real ID
+  - Real session ID captured from `session-created` event
+  - Graceful transition maintains UI state
 
 ### Project Path Encoding
-- Paths encoded as dashes in URL (e.g., `/Users/foo` → `-Users-foo`)
-- Metadata.json provides actual path mapping
-- Fallback logic attempts intelligent path reconstruction
+
+  - Paths encoded as dashes in URL (e.g., `/Users/foo` → `-Users-foo`)
+  - Metadata.json provides actual path mapping
+  - Fallback logic attempts intelligent path reconstruction
 
 ### Summary Generation
-- First user message used as fallback summary
-- Filters out system messages containing "Caveat:"
-- Manual edits marked to prevent automatic updates
-- Continuous updates every N messages (configurable)
+
+  - First user message used as fallback summary
+  - Filters out system messages containing "Caveat:"
+  - Manual edits marked to prevent automatic updates
+  - Continuous updates every N messages (configurable)
 
 ### Mobile Responsiveness
-- Breakpoint at 768px
-- Bottom navigation for mobile
-- Collapsible sidebar with overlay
-- Touch-friendly interactions
+
+  - Breakpoint at 768px
+  - Bottom navigation for mobile
+  - Collapsible sidebar with overlay
+  - Touch-friendly interactions
 
 ## Common Issues & Solutions
 
 ### Sessions Showing "Unknown"
-- Check JSONL parsing in `server/projects.js`
-- Ensure timestamps are properly set (`createdAt`, `updatedAt`)
-- Verify session summary generation logic
+
+  - Check JSONL parsing in `server/projects.js`
+  - Ensure timestamps are properly set (`createdAt`, `updatedAt`)
+  - Verify session summary generation logic
 
 ### WebSocket Reconnection
-- Auto-reconnect after 3 seconds
-- Connection state tracked in `useWebSocket` hook
-- Messages queued if connection drops
+
+  - Auto-reconnect after 3 seconds
+  - Connection state tracked in `useWebSocket` hook
+  - Messages queued if connection drops
 
 ### Tool Permissions
-- Tools settings in `ToolsSettings.jsx`
-- Stored in localStorage as `claudeToolsSettings`
-- Applied via CLI flags in `claude-cli.js`
 
-## Monorepo Structure and Configuration (v3) — pnpm + Turbo + ESM + @kit/testing
+  - Tools settings in `ToolsSettings.jsx`
+  - Stored in localStorage as `claudeToolsSettings`
+  - Applied via CLI flags in `claude-cli.js`
+
+-----
+
+# Monorepo Structure and Configuration (v4)
 
 ## ⚠️ CRITICAL STRUCTURAL UNDERSTANDING
 
-This rule contains ESSENTIAL information about how the monorepo is structured.
-It must be understood for ALL operations in the codebase.
+This document contains ESSENTIAL information about how the monorepo is structured and the development philosophy behind it. It must be understood for ALL operations in the codebase.
 
-IMPORTANT PRINCIPLES:
-- Configuration is SHARED from central packages - DO NOT duplicate or override
-- Package naming follows a strict pattern - DO NOT deviate
-- Testing, linting, and building use shared tooling - DO NOT reinvent
-- TypeScript configuration is ESM-first with optional dual CJS support
+### Core Principles
 
-## 📂 Folder Purposes
+1.  **ESM-Only:** We exclusively use ES Modules. CommonJS (`require`, `module.exports`) is not used. This simplifies our tooling and aligns with the modern JavaScript ecosystem.
+2.  **No Build Step for Libraries:** Packages in `/packages` are not "built" into a `dist` folder. We export TypeScript source files (`.ts`, `.tsx`) directly. A runtime transpiler (like `tsx`) handles this for us, enabling instantaneous hot-reloading and simpler debugging.
+3.  **Configuration is SHARED:** All tooling configuration (ESLint, Prettier, TypeScript, Testing) is centralized in the `/tooling` directory and consumed by all other workspaces. **DO NOT** create duplicate or one-off configurations.
+4.  **Strict Naming & Structure:** Packages and folder structures follow a strict, predictable pattern. **DO NOT** deviate from it.
+5.  **Agent Coordination First:** Before running any command, always check the `_errors/` and `_logs/` directories managed by `@kit/brain-monitor` to prevent redundant work.
+
+### Devil's Advocate: Why No CommonJS?
+
+You're right to want to keep things simple with ESM-only. But for the sake of completeness, here's the trade-off:
+
+  * **Pros (Our Approach):** Massively simplified build process (or lack thereof), single module system to reason about, aligns with web standards, and enables cleaner, more modern syntax like top-level `await`.
+  * **Cons:** Dropping CJS means older Node.js environments or tools that *only* support `require()` cannot consume our packages natively. Since we control the entire stack within this monorepo and all our applications are ESM-compatible, this is a trade-off we gladly accept for the significant boost in developer experience and simplicity.
+
+-----
+
+## 📂 Monorepo Layout
 
 ```txt
-/apps      Executable apps that consume packages
-/packages  Libraries exported to apps
-/tooling   Shared tooling (eslint, prettier, testing, tsconfig, etc.)
+/apps           Executable applications (e.g., servers, web frontends)
+/packages       Shared libraries consumed by apps or other packages
+/tooling        Shared tooling and configuration (`@kit/*`)
+/_errors        Real-time validation failure reports (via @kit/brain-monitor)
+/_logs          Real-time server logs (via @kit/brain-monitor)
 ```
 
-🏷 Naming Patterns
+### 🏷 Naming Patterns
+
+Packages must be scoped to align with their location and purpose.
 
 ```txt
-/apps      @[app-name]/*
-/packages  @[app-name]/*
-/tooling   @kit/*   ← reserved for shared tooling
+/apps           @[app-name]
+/packages       @[app-name]/[package-name]
+/tooling        @kit/*
 ```
 
-## 🛠 TypeScript Configuration
+-----
 
-### Shared Base Configurations in `@kit/tsconfig`
+## 📦 Package Configuration (The "No Build" Way)
 
-We provide three base configurations:
+This is the most critical change from `v3`. Library packages in `/packages` **do not have a build step**.
 
-1. **base.json** - Core TypeScript settings with strict type checking
-2. **node.json** - Node.js specific settings (extends base.json)
-3. **react.json** - React-specific settings (extends base.json)
+### `package.json` Template for a Library
 
-```json
-// In package.json of @kit/tsconfig
-{
-  "exports": {
-    "./base": "./base.json",
-    "./node": "./node.json",
-    "./react": "./react.json",
-    ".": "./base.json"
-  }
-}
-```
-
-### Per-Package Configuration
-
-Each package should extend from the appropriate base configuration and add minimal overrides:
-
-```json
-// For Node.js packages
-{
-  "extends": "@kit/tsconfig/node",
-  "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist"
-  },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
-}
-
-// For React packages
-{
-  "extends": "@kit/tsconfig/react",
-  "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist"
-  },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
-}
-```
-
-### ESM Configuration
-
-For ESM packages with dual ESM/CJS output:
-
-1. Create a base tsconfig.json for ESM output
-2. Create a tsconfig.cjs.json for CommonJS output
-
-```json
-// tsconfig.cjs.json
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "module": "CommonJS",
-    "moduleResolution": "Node",
-    "outDir": "dist/cjs"
-  }
-}
-```
-
-## 📦 Package Configuration
-
-### ESM-First Approach
+This is the standard template for any new or converted library in `/packages`.
 
 ```json
 {
   "name": "@[app-name]/[package-name]",
+  "version": "1.0.0",
+  "private": true,
   "type": "module",
   "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/cjs/index.d.ts",
-        "default": "./dist/cjs/index.js"
-      }
-    }
+    // Points directly to the TypeScript source file
+    ".": "./src/index.ts",
+    // Allows importing sub-modules directly
+    "./*": "./src/*.ts"
   },
-  "main": "./dist/cjs/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts"
-}
-```
-
-### Script Configuration
-
-```json
-{
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "files": [
+    "src"
+  ],
   "scripts": {
-    "clean": "rimraf dist node_modules/.cache",
-    "format": "prettier --check \"**/*.{ts,tsx}\"",
-    "lint": "eslint .",
+    "clean": "rimraf node_modules .turbo",
+    "format": "prettier --check \"**/*.{ts,tsx,md}\"",
+    "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
-    "build": "pnpm build:clean && pnpm build:esm && pnpm build:cjs",
-    "build:clean": "rimraf dist",
-    "build:esm": "tsc",
-    "build:cjs": "tsc --project tsconfig.cjs.json",
-    
-    /* ---- TEST SCRIPTS ---- */
-    "test":              "turbo run test --filter={packageName}",
-    "test:unit":         "vitest run --config @kit/testing/unit",
-    "test:integration":  "vitest run --config @kit/testing/integration",
-    "test:e2e":          "vitest run --config @kit/testing/e2e",
-    "test:e2e:browser":  "playwright test --config @kit/testing/playwright"
-  }
-}
-```
-
-### Important ESM Rules
-
-1. In TypeScript files, always use the `.js` extension in import paths, even when importing TypeScript files:
-
-```typescript
-// Correct for ESM
-import { something } from './utils/something.js';
-
-// Incorrect for ESM
-import { something } from './utils/something';
-```
-
-2. Always use bracket notation to access properties from `Record<string, unknown>` or environment variables:
-
-```typescript
-// Correct
-const value = options['propertyName'];
-if (process.env['NODE_ENV'] === 'development') { ... }
-
-// Incorrect - will cause TypeScript errors
-const value = options.propertyName;
-if (process.env.NODE_ENV === 'development') { ... }
-```
-
-## 🛠 Creating (or converting) a Library
-
-1. If the library lives in ./apps/*
-
-package.json
-
-```json
-{
-  "name": "@[app-name]/[package-name]",
-  "scripts": {
-    "clean": "git clean -xdf .turbo node_modules",
-    "format": "prettier --check \"**/*.{ts,tsx}\"",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-
-    /* ---- TEST SCRIPTS ---- */
-    "test":              "turbo run test --filter={packageName}",
-    "test:unit":         "vitest run --config @kit/testing/unit",
-    "test:integration":  "vitest run --config @kit/testing/integration",
-    "test:e2e":          "vitest run --config @kit/testing/e2e",
-    "test:e2e:browser":  "playwright test --config @kit/testing/playwright"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@kit/env-loader": "workspace:*"
   },
   "devDependencies": {
-    "@kit/tsconfig":        "workspace:*",
-    "@kit/eslint-config":   "workspace:*",
+    "@kit/eslint-config": "workspace:*",
     "@kit/prettier-config": "workspace:*",
-    "@kit/testing":         "workspace:*"
+    "@kit/testing": "workspace:*",
+    "@kit/tsconfig": "workspace:*"
   },
   "eslintConfig": {
     "root": true,
     "extends": [
-      "@kit/eslint-config/base",
-      "@kit/eslint-config/react",   // remove if not React
-      "@kit/eslint-config/sort"
+      "@kit/eslint-config/base"
     ]
   },
   "prettier": "@kit/prettier-config"
 }
 ```
 
-Replace any unused test:* script with a no-op (echo 'n/a' && exit 0) if that scope doesn't apply.
+### `tsconfig.json` for a Library
 
-2. If the library lives in ./packages/* (ESM with dual output)
+Note the absence of `"outDir"` and `"declaration"`. We are not compiling to a separate directory.
 
 ```json
 {
-  "name": "@[app-name]/[package-name]",
-  "type": "module",
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/cjs/index.d.ts",
-        "default": "./dist/cjs/index.js"
-      }
-    }
-  },
-  "main": "./dist/cjs/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "extends": "@kit/tsconfig/node", // or "@kit/tsconfig/react"
+  "include": ["src"],
+  "exclude": ["node_modules"]
+}
+```
+
+-----
+
+## 🚀 Root `package.json` & Turbo Pipeline
+
+The root `package.json` contains scripts that run across the entire monorepo using Turborepo. The `turbo.json` file configures the dependency graph and caching for these tasks.
+
+### Root `package.json`
+
+```json
+{
+  "name": "your-monorepo-name",
+  "private": true,
   "scripts": {
-    "clean": "rimraf dist node_modules/.cache",
-    "format": "prettier --check \"**/*.{ts,tsx}\"",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "build": "pnpm build:clean && pnpm build:esm && pnpm build:cjs",
-    "build:clean": "rimraf dist",
-    "build:esm": "tsc",
-    "build:cjs": "tsc --project tsconfig.cjs.json"
-  }
-}
-```
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "clean": "turbo run clean",
+    "format": "turbo run format",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
 
-🪄 Shared tsconfig.json
+    "test": "turbo run test",
+    "test:watch": "turbo run test:watch",
+    "test:unit": "turbo run test:unit",
+    "test:integration": "turbo run test:integration",
+    "test:e2e": "turbo run test:e2e",
+    "test:storybook": "turbo run test:storybook",
+    "test:e2e:browser": "turbo run test:e2e:browser",
 
-```json
-{
-  "extends": "@kit/tsconfig/node", // or "@kit/tsconfig/react" for React packages
-  "compilerOptions": {
-    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
-    "rootDir": "src",
-    "outDir": "dist"
+    "brain:validate": "turbo run validate",
+    "brain:logs": "pnpm --filter=@kit/brain-monitor run logs",
+    "brain:typecheck-failures": "pnpm --filter=@kit/brain-monitor run typecheck-failures",
+    "brain:test-failures": "pnpm --filter=@kit/brain-monitor run test-failures",
+    "brain:lint-failures": "pnpm --filter=@kit/brain-monitor run lint-failures",
+    "brain:format-failures": "pnpm --filter=@kit/brain-monitor run format-failures"
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+  "devDependencies": {
+    "turbo": "latest",
+    "tsx": "latest",
+    "typescript": "latest"
+  },
+  "packageManager": "pnpm@9.x.x"
 }
 ```
 
-🏗 Root turbo.json
+### Root `turbo.json`
+
+This pipeline is configured for our "no-build" library strategy and includes the agentic validation tasks.
 
 ```json
 {
   "$schema": "https://turbo.build/schema.json",
   "pipeline": {
-    "build": { "outputs": ["dist/**"] },
-
-    "test":             { "dependsOn": ["^build"], "outputs": [] },
-    "test:unit":        { "outputs": [] },
-    "test:integration": { "outputs": [] },
-    "test:e2e":         { "outputs": [] },
-    "test:e2e:browser": { "outputs": [] }
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "cache": true
+    },
+    "typecheck": {
+      "cache": true
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "cache": true
+    },
+    "test:watch": {
+      "cache": false,
+      "persistent": true
+    },
+    "validate": {
+      "dependsOn": ["lint", "typecheck", "test"],
+      "cache": true
+    },
+    "clean": {
+      "cache": false
+    }
   }
 }
 ```
 
-🧪 @kit/testing Exports
+  * **`build`**: Only applies to `apps`. `dist/**` and `.next/**` are specified as outputs for caching. Libraries have no `build` script, so Turbo ignores them for this task.
+  * **`dev` / `test:watch`**: Marked as non-cacheable and persistent for long-running processes.
+  * **`lint` / `typecheck` / `test`**: These tasks are fully cacheable. If the source files haven't changed, the results are pulled from the cache instantly.
+  * **`validate`**: This is the master task for `@kit/brain-monitor`. It depends on all other validation tasks completing first.
 
-| Export                              | Runner     | Purpose                        |
-| ----- | ---- | --- |
-| `@kit/testing/unit`                 | Vitest     | Unit tests                     |
-| `@kit/testing/integration`          | Vitest     | Multi-module integration tests |
-| `@kit/testing/e2e`                  | Vitest     | Backend / API E2E tests        |
-| `@kit/testing/playwright`           | Playwright | Browser E2E flows              |
-| `@kit/testing/playwright-backend`\* | Playwright | Optional non-UI E2E            |
+-----
 
+## 🧪 Unified Testing – `@kit/testing`
 
-* Only needed if you prefer Playwright for backend flows; Vitest e2e remains default.
+The `@kit/testing` package provides a unified, modern, and highly modular testing framework for the entire monorepo. It uses a lazy-loaded API to improve performance.
 
-📘 pnpm-workspace.yaml
+### Available Configurations & Modern API
 
-```yaml
-packages:
-  - "apps/*"
-  - "packages/*"
-  - "tooling/*"
+Instead of importing a static config object, you now call an async function that returns a configuration. This is faster and more flexible.
+
+| Legacy Export (v3)            | Modern API (v4)                         | Purpose                               |
+| --------------------------------- | --------------------------------------------- | ------------------------------------- |
+| `unitConfig`                      | `await configs.vitest.unit()`                 | Unit tests (Vitest + JSDOM)           |
+| `integrationConfig`               | `await configs.vitest.integration()`          | Integration tests (Vitest + Node)     |
+| `e2eConfig`                       | `await configs.vitest.e2e()`                  | Backend/API E2E tests (Vitest)        |
+| `storybookConfig`                 | `await configs.vitest.storybook()`            | Storybook component tests (Vitest)    |
+| `playwrightConfig`                | `await configs.playwright.browser()`          | Browser E2E tests (Playwright)        |
+| `playwrightBackendConfig`         | `await configs.playwright.api()`              | Backend/API tests (Playwright)        |
+| `storybookE2EConfig`              | `await configs.playwright.storybook()`        | Storybook E2E tests (Playwright)      |
+| `testRunnerConfig`                | `await configs.storybook.testRunner()`        | For `@storybook/test-runner`          |
+
+### Example `vitest.config.ts` (Modern API)
+
+```typescript
+// vitest.config.ts
+import { mergeConfig } from 'vitest/config';
+import { configs, presets } from '@kit/testing';
+
+// Load the base configuration asynchronously
+const baseConfig = await configs.vitest.unit();
+
+// Merge with custom overrides using presets
+export default mergeConfig(baseConfig, {
+  test: {
+    // Use a stricter coverage preset
+    coverage: presets.coverage.strict,
+    // Use a longer timeout preset
+    ...presets.timeouts.medium,
+  }
+});
 ```
 
-✅ Quick Start
+For the full API, migration steps, and available presets, see the detailed README in `tooling/testing/README.md`.
 
-- pnpm install
+-----
 
-- Add/convert libraries following the folder rules above.
+## 🧠 Agent Coordination – `@kit/brain-monitor`
 
-- Run pnpm turbo run test at the repo root, or individual test:* scripts inside a package.
+To prevent multiple AI agents from performing the same time-consuming tasks (like running tests or type-checking) and to provide a centralized place for debugging, we use `@kit/brain-monitor`.
 
----
+**MANDATORY BEHAVIOR:** Before running any validation or server command, **ALWAYS check the `_errors/` and `_logs/` directories first.**
 
-These shared configurations give you:
+### Workflow
 
-* **Clear TDD guidance** (agent-requested).  
-* **Autonomous file-structure enforcement**.  
-* **Universal functional-testing principles**.  
-* **Turn-key monorepo setup** with Vitest + Playwright wired in.
-* **ESM-first approach** with dual ESM/CJS support for compatibility.
+1.  **Check for Existing Errors:**
 
-## 🚨 Warning Signs - Stop and Reconsider if:
+    ```bash
+    # See if type-checking has already failed
+    cat _errors/errors.typecheck-failures.md
 
-- You're about to create a duplicate configuration file that exists in a shared package
-- You're planning to modify package.json without maintaining workspace dependencies
-- You're creating a new package without following the monorepo structure
-- You're introducing a new testing or linting approach without using shared configs
-- You're using dot notation with dynamic objects or environment variables 
+    # See if any tests are failing
+    cat _errors/errors.test-failures.md
+    ```
+
+2.  **Run Validation (Only if Needed):** If the reports are stale or empty, run the validation.
+
+    ```bash
+    # Run all validations and generate reports
+    pnpm brain:validate
+
+    # Or run just one
+    pnpm brain:test-failures
+    ```
+
+3.  **Debug Servers:** Check logs before restarting a server.
+
+    ```bash
+    # Watch the API server log in real-time
+    tail -f _logs/financial-api.log
+
+    # Or start all dev servers with logging enabled
+    pnpm dev
+    ```
+
+This workflow saves time and compute resources, and provides a clear task list for fixing issues. For full CLI details, see the README in `tooling/brain-monitor/README.md`.
+
+-----
+
+## 🔑 Environment Variables – `@kit/env-loader`
+
+The `@kit/env-loader` package provides a standardized way to load and access environment variables across all applications and packages.
+
+### Installation & Setup
+
+It should be added as a dependency to any package that needs access to environment variables.
+
+```bash
+pnpm add @kit/env-loader
+```
+
+### Loading Order
+
+The loader searches for `.env` files in a hierarchical order, with earlier locations taking precedence:
+
+1.  **`monorepo-root/.env`**: Global variables shared across all apps.
+2.  **`apps/my-app/.env`**: Local variables that override the global ones for a specific app.
+3.  `process.env`: System-level environment variables (highest priority).
+
+### Usage Example (Node.js Backend)
+
+At the entry point of your application (`server.ts`, `index.ts`), load the environment.
+
+```typescript
+// In apps/backend/src/server.ts
+import { loadEnvironment, requireEnv, getIntEnv } from '@kit/env-loader/node';
+
+const result = loadEnvironment({
+  appName: 'backend-api',
+  required: ['DATABASE_URL', 'API_KEY']
+});
+
+if (!result.success) {
+  console.error('FATAL: Missing required environment variables:', result.missingRequired);
+  process.exit(1);
+}
+
+const PORT = getIntEnv('PORT', 8080);
+const API_KEY = requireEnv('API_KEY'); // Throws an error if not found
+```
+
+### Usage Example (Browser Frontend)
+
+In browser-based apps (e.g., Vite/React), the bundler exposes the variables. You only need the helper functions. **Remember to prefix public variables** (e.g., `VITE_`).
+
+```typescript
+// In apps/frontend/src/api/client.ts
+import { getEnv, requireEnv } from '@kit/env-loader/browser';
+
+const API_URL = getEnv('VITE_API_URL', 'http://localhost:8080');
+const PUBLIC_KEY = requireEnv('VITE_STRIPE_PUBLIC_KEY');
+```
+
+This package does not require any `turbo.json` configuration as it runs at runtime within your application code. For more details, see `tooling/env-loader/README.md`.
+> include docs/automation/CRITICAL-Error-Task-Lists.md

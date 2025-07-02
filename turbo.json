@@ -1,21 +1,35 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "pipeline": {
+  "tasks": {
     "build": { 
+      "dependsOn": ["^build"],
       "outputs": ["dist/**"] 
     },
     "dev": {
       "cache": false,
       "persistent": true
     },
+    "start": {
+      "dependsOn": ["build"],
+      "cache": false
+    },
     "clean": {
       "cache": false
     },
-    "lint": {},
-    "typecheck": {},
-    "format": {},
+    "lint": {
+      "outputs": [],
+      "cache": true
+    },
+    "typecheck": {
+      "outputs": [],
+      "cache": true
+    },
+    "format": {
+      "outputs": [],
+      "cache": false
+    },
     "test": { 
-      "dependsOn": ["^build"], 
+      "dependsOn": ["^build", "test:unit", "test:integration", "test:e2e"],
       "outputs": [] 
     },
     "test:unit": { 
@@ -29,6 +43,10 @@
     },
     "test:e2e:browser": { 
       "outputs": [] 
+    },
+    "test:coverage": {
+      "outputs": ["coverage/**"],
+      "cache": true
     }
   }
 }

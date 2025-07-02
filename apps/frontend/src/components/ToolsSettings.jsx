@@ -1,13 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { ScrollArea } from './ui/scroll-area';
-import { Badge } from './ui/badge';
-import { X, Plus, Settings, Shield, AlertTriangle, Moon, Sun } from 'lucide-react';
-import { useTheme } from '../contexts/ThemeContext';
+import React, {useState, useEffect} from 'react';
+import {Button} from './ui/button';
+import {Input} from './ui/input';
+import {ScrollArea} from './ui/scroll-area';
+import {Badge} from './ui/badge';
+import {
+  X,
+  Plus,
+  Settings,
+  Shield,
+  AlertTriangle,
+  Moon,
+  Sun,
+} from 'lucide-react';
+import {useTheme} from '../contexts/ThemeContext';
 
-function ToolsSettings({ isOpen, onClose }) {
-  const { isDarkMode, toggleDarkMode } = useTheme();
+function ToolsSettings({isOpen, onClose}) {
+  const {isDarkMode, toggleDarkMode} = useTheme();
   const [allowedTools, setAllowedTools] = useState([]);
   const [disallowedTools, setDisallowedTools] = useState([]);
   const [newAllowedTool, setNewAllowedTool] = useState('');
@@ -31,7 +39,7 @@ function ToolsSettings({ isOpen, onClose }) {
     'TodoWrite',
     'TodoRead',
     'WebFetch',
-    'WebSearch'
+    'WebSearch',
   ];
 
   useEffect(() => {
@@ -42,10 +50,9 @@ function ToolsSettings({ isOpen, onClose }) {
 
   const loadSettings = () => {
     try {
-      
       // Load from localStorage
       const savedSettings = localStorage.getItem('claude-tools-settings');
-      
+
       if (savedSettings) {
         const settings = JSON.parse(savedSettings);
         setAllowedTools(settings.allowedTools || []);
@@ -69,21 +76,20 @@ function ToolsSettings({ isOpen, onClose }) {
   const saveSettings = () => {
     setIsSaving(true);
     setSaveStatus(null);
-    
+
     try {
       const settings = {
         allowedTools,
         disallowedTools,
         skipPermissions,
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
       };
-      
-      
+
       // Save to localStorage
       localStorage.setItem('claude-tools-settings', JSON.stringify(settings));
-      
+
       setSaveStatus('success');
-      
+
       setTimeout(() => {
         onClose();
       }, 1000);
@@ -103,7 +109,7 @@ function ToolsSettings({ isOpen, onClose }) {
   };
 
   const removeAllowedTool = (tool) => {
-    setAllowedTools(allowedTools.filter(t => t !== tool));
+    setAllowedTools(allowedTools.filter((t) => t !== tool));
   };
 
   const addDisallowedTool = (tool) => {
@@ -114,7 +120,7 @@ function ToolsSettings({ isOpen, onClose }) {
   };
 
   const removeDisallowedTool = (tool) => {
-    setDisallowedTools(disallowedTools.filter(t => t !== tool));
+    setDisallowedTools(disallowedTools.filter((t) => t !== tool));
   };
 
   if (!isOpen) return null;
@@ -134,6 +140,7 @@ function ToolsSettings({ isOpen, onClose }) {
             size="sm"
             onClick={onClose}
             className="text-muted-foreground hover:text-foreground touch-manipulation"
+            data-testid="close-tools-settings"
           >
             <X className="w-5 h-5" />
           </Button>
@@ -141,11 +148,14 @@ function ToolsSettings({ isOpen, onClose }) {
 
         <div className="flex-1 overflow-y-auto">
           <div className="p-4 md:p-6 space-y-6 md:space-y-8 pb-safe-area-inset-bottom">
-            
             {/* Theme Settings */}
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                {isDarkMode ? <Moon className="w-5 h-5 text-blue-500" /> : <Sun className="w-5 h-5 text-yellow-500" />}
+                {isDarkMode ? (
+                  <Moon className="w-5 h-5 text-blue-500" />
+                ) : (
+                  <Sun className="w-5 h-5 text-yellow-500" />
+                )}
                 <h3 className="text-lg font-medium text-foreground">
                   Appearance
                 </h3>
@@ -153,9 +163,7 @@ function ToolsSettings({ isOpen, onClose }) {
               <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-medium text-foreground">
-                      Dark Mode
-                    </div>
+                    <div className="font-medium text-foreground">Dark Mode</div>
                     <div className="text-sm text-muted-foreground">
                       Toggle between light and dark themes
                     </div>
@@ -183,7 +191,7 @@ function ToolsSettings({ isOpen, onClose }) {
                 </div>
               </div>
             </div>
-            
+
             {/* Skip Permissions */}
             <div className="space-y-4">
               <div className="flex items-center gap-3">
@@ -199,6 +207,7 @@ function ToolsSettings({ isOpen, onClose }) {
                     checked={skipPermissions}
                     onChange={(e) => setSkipPermissions(e.target.checked)}
                     className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                    data-testid="skip-permissions-checkbox"
                   />
                   <div>
                     <div className="font-medium text-orange-900 dark:text-orange-100">
@@ -221,9 +230,10 @@ function ToolsSettings({ isOpen, onClose }) {
                 </h3>
               </div>
               <p className="text-sm text-muted-foreground">
-                Tools that are automatically allowed without prompting for permission
+                Tools that are automatically allowed without prompting for
+                permission
               </p>
-              
+
               <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                   value={newAllowedTool}
@@ -235,13 +245,15 @@ function ToolsSettings({ isOpen, onClose }) {
                     }
                   }}
                   className="flex-1 h-10 touch-manipulation"
-                  style={{ fontSize: '16px' }}
+                  style={{fontSize: '16px'}}
+                  data-testid="allowed-tool-input"
                 />
                 <Button
                   onClick={() => addAllowedTool(newAllowedTool)}
                   disabled={!newAllowedTool}
                   size="sm"
                   className="h-10 px-4 touch-manipulation"
+                  data-testid="add-allowed-tool-button"
                 >
                   <Plus className="w-4 h-4 mr-2 sm:mr-0" />
                   <span className="sm:hidden">Add Tool</span>
@@ -254,7 +266,7 @@ function ToolsSettings({ isOpen, onClose }) {
                   Quick add common tools:
                 </p>
                 <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
-                  {commonTools.map(tool => (
+                  {commonTools.map((tool) => (
                     <Button
                       key={tool}
                       variant="outline"
@@ -270,8 +282,12 @@ function ToolsSettings({ isOpen, onClose }) {
               </div>
 
               <div className="space-y-2">
-                {allowedTools.map(tool => (
-                  <div key={tool} className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                {allowedTools.map((tool) => (
+                  <div
+                    key={tool}
+                    className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3"
+                    data-testid={`allowed-tool-${tool}`}
+                  >
                     <span className="font-mono text-sm text-green-800 dark:text-green-200">
                       {tool}
                     </span>
@@ -302,9 +318,10 @@ function ToolsSettings({ isOpen, onClose }) {
                 </h3>
               </div>
               <p className="text-sm text-muted-foreground">
-                Tools that are automatically blocked without prompting for permission
+                Tools that are automatically blocked without prompting for
+                permission
               </p>
-              
+
               <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                   value={newDisallowedTool}
@@ -316,13 +333,15 @@ function ToolsSettings({ isOpen, onClose }) {
                     }
                   }}
                   className="flex-1 h-10 touch-manipulation"
-                  style={{ fontSize: '16px' }}
+                  style={{fontSize: '16px'}}
+                  data-testid="disallowed-tool-input"
                 />
                 <Button
                   onClick={() => addDisallowedTool(newDisallowedTool)}
                   disabled={!newDisallowedTool}
                   size="sm"
                   className="h-10 px-4 touch-manipulation"
+                  data-testid="add-disallowed-tool-button"
                 >
                   <Plus className="w-4 h-4 mr-2 sm:mr-0" />
                   <span className="sm:hidden">Add Tool</span>
@@ -330,8 +349,12 @@ function ToolsSettings({ isOpen, onClose }) {
               </div>
 
               <div className="space-y-2">
-                {disallowedTools.map(tool => (
-                  <div key={tool} className="flex items-center justify-between bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                {disallowedTools.map((tool) => (
+                  <div
+                    key={tool}
+                    className="flex items-center justify-between bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3"
+                    data-testid={`disallowed-tool-${tool}`}
+                  >
                     <span className="font-mono text-sm text-red-800 dark:text-red-200">
                       {tool}
                     </span>
@@ -359,11 +382,36 @@ function ToolsSettings({ isOpen, onClose }) {
                 Tool Pattern Examples:
               </h4>
               <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                <li><code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">"Bash(git log:*)"</code> - Allow all git log commands</li>
-                <li><code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">"Bash(git diff:*)"</code> - Allow all git diff commands</li>
-                <li><code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">"Write"</code> - Allow all Write tool usage</li>
-                <li><code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">"Read"</code> - Allow all Read tool usage</li>
-                <li><code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">"Bash(rm:*)"</code> - Block all rm commands (dangerous)</li>
+                <li>
+                  <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">
+                    "Bash(git log:*)"
+                  </code>{' '}
+                  - Allow all git log commands
+                </li>
+                <li>
+                  <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">
+                    "Bash(git diff:*)"
+                  </code>{' '}
+                  - Allow all git diff commands
+                </li>
+                <li>
+                  <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">
+                    "Write"
+                  </code>{' '}
+                  - Allow all Write tool usage
+                </li>
+                <li>
+                  <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">
+                    "Read"
+                  </code>{' '}
+                  - Allow all Read tool usage
+                </li>
+                <li>
+                  <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">
+                    "Bash(rm:*)"
+                  </code>{' '}
+                  - Block all rm commands (dangerous)
+                </li>
               </ul>
             </div>
           </div>
@@ -373,34 +421,52 @@ function ToolsSettings({ isOpen, onClose }) {
           <div className="flex items-center justify-center sm:justify-start gap-2 order-2 sm:order-1">
             {saveStatus === 'success' && (
               <div className="text-green-600 dark:text-green-400 text-sm flex items-center gap-1">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                <svg
+                  className="w-4 h-4"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
                 </svg>
                 Settings saved successfully!
               </div>
             )}
             {saveStatus === 'error' && (
               <div className="text-red-600 dark:text-red-400 text-sm flex items-center gap-1">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                <svg
+                  className="w-4 h-4"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
                 </svg>
                 Failed to save settings
               </div>
             )}
           </div>
           <div className="flex items-center gap-3 order-1 sm:order-2">
-            <Button 
-              variant="outline" 
-              onClick={onClose} 
+            <Button
+              variant="outline"
+              onClick={onClose}
               disabled={isSaving}
               className="flex-1 sm:flex-none h-10 touch-manipulation"
+              data-testid="cancel-tools-settings"
             >
               Cancel
             </Button>
-            <Button 
-              onClick={saveSettings} 
+            <Button
+              onClick={saveSettings}
               disabled={isSaving}
               className="flex-1 sm:flex-none h-10 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 touch-manipulation"
+              data-testid="save-tools-settings"
             >
               {isSaving ? (
                 <div className="flex items-center gap-2">
