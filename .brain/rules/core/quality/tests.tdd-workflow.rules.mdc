@@ -1,0 +1,255 @@
+---
+description: Guide for creating new tests following Test-Driven Development practices.   Provides clear direction on test type selection, file creation, and the TDD workflow. whenToUse:   - Starting a new feature   - Adding tests to an untested feature   - Fixing bugs without existing tests   - Setting up test infrastructure for a new package
+globs: 
+alwaysApply: false
+---
+# TDD Workflow for New Features and Tests
+
+## 🤖 AI Verification First Approach
+
+**Core Principle**: Write tests that enable AI to reliably verify that functionality actually works for users.
+
+**Key Question**: *"If this test passes, will AI know the feature works for real users?"*
+
+## 🚦 Step-by-Step TDD Workflow
+
+### 1. Choose Test Type Based on AI Verification Value
+Ask: **"Which test best proves this behavior to an AI?"**
+
+**Decision Framework**:
+- **Critical User Workflow?** → **Browser E2E** (Highest AI verification value)
+- **API or Business Logic?** → **Backend E2E** (Very High AI verification value)  
+- **Feature Integration?** → **Integration** (High AI verification value)
+- **Pure Function/Utility?** → **Unit** (Low AI verification value)
+
+**AI Verification Value by Test Type**:
+- **Browser E2E** — Complete user journey validation (AI can trust workflow works)
+- **Backend E2E** — Full workflow without browser (AI can trust API/business logic works)
+- **Integration** — Multiple modules + real dependencies (AI can trust feature components work together)
+- **Unit** — Pure function/isolated class (AI cannot trust overall functionality from this alone)
+
+### 2. Scaffold the File (📁 + 📄)  
+Use this table to build the path & filename:
+
+| Test Type        | Path template (relative to package root) | File name pattern                     | Runner      | AI Verification Value |
+|------------------|-------------------------------------------|---------------------------------------|-------------|----------------------|
+| Unit             | `<same-dir-as-source>`                    | `<sourceName>.unit.test.ts(x)`        | Vitest      | Low                  |
+| Integration      | `testing/integration/`                    | `<module>.integration.test.ts(x)`     | Vitest      | High                 |
+| Backend E2E      | `testing/e2e/`                            | `<scenario>.backend.e2e.test.ts`      | Vitest      | Very High            |
+| Browser E2E      | `testing/e2e/`                            | `<scenario>.browser.e2e.ts`           | Playwright  | Very High            |
+
+Then create an **empty failing test** (e.g. `test.todo('…')`).
+
+### 3. Red (Write Failing Test)
+Write the failing assertion that expresses **user-observable behavior**:
+
+#### ✅ AI Verification Test Examples
+
+**Browser E2E (Highest Value)**:
+```javascript
+test('user can complete purchase and receive confirmation', async () => {
+  // This test enables AI to verify the entire purchase workflow works
+  const user = await createTestUser();
+  const product = await createTestProduct();
+  
+  await page.goto('/login');
+  await login(user);
+  await addProductToCart(product);
+  await proceedToCheckout();
+  await fillPaymentDetails();
+  await submitOrder();
+  
+  // AI can trust: if this passes, purchase workflow works for users
+  await expect(page.locator('[data-testid="order-confirmation"]')).toBeVisible();
+  await expect(page.locator('[data-testid="order-number"]')).toContainText(/ORD-\d+/);
+});
+```
+
+**Backend E2E (Very High Value)**:
+```javascript
+test('user registration creates account and sends welcome email', async () => {
+  // This test enables AI to verify registration functionality works end-to-end
+  const userData = { email: 'test@example.com', password: 'SecurePass123!' };
+  
+  const response = await api.post('/auth/register', userData);
+  
+  // AI can trust: if this passes, registration works completely
+  expect(response.status).toBe(201);
+  expect(response.data.user.id).toBeDefined();
+  
+  // Verify user was actually created in database
+  const dbUser = await User.findByEmail(userData.email);
+  expect(dbUser).toBeDefined();
+  
+  // Verify welcome email was sent
+  const sentEmails = await getTestEmails();
+  expect(sentEmails).toContainEqual(
+    expect.objectContaining({
+      to: userData.email,
+      subject: expect.stringContaining('Welcome')
+    })
+  );
+});
+```
+
+**Integration Test (High Value)**:
+```javascript
+test('payment service processes transactions with real gateway', async () => {
+  // This test enables AI to verify payment processing works with real dependencies
+  const order = await createTestOrder({ total: 100.00 });
+  
+  const result = await paymentService.processPayment({
+    orderId: order.id,
+    amount: order.total,
+    paymentMethod: 'test-card'
+  });
+  
+  // AI can trust: if this passes, payment processing works with real systems
+  expect(result.success).toBe(true);
+  expect(result.transactionId).toBeDefined();
+  
+  // Verify database was updated
+  const updatedOrder = await Order.findById(order.id);
+  expect(updatedOrder.status).toBe('paid');
+});
+```
+
+#### ❌ Avoid Low AI Verification Value Tests
+
+```javascript
+// ❌ LOW VALUE: Tests implementation, not functionality
+test('password validation function returns correct boolean', () => {
+  expect(validatePassword('weak')).toBe(false);
+  expect(validatePassword('Strong123!')).toBe(true);
+  // AI cannot trust: if this passes, actual registration might still be broken
+});
+
+// ❌ LOW VALUE: Over-mocked, no real verification
+test('user service calls repository with correct parameters', () => {
+  const mockRepo = jest.fn();
+  const service = new UserService(mockRepo);
+  service.createUser({ name: 'John' });
+  expect(mockRepo).toHaveBeenCalledWith({ name: 'John' });
+  // AI cannot trust: mocks work, but real functionality unknown
+});
+```
+
+### 4. Green (Implement Minimal Code)
+Implement minimal code to pass the new test:
+- Focus on making the **end-to-end workflow** work
+- Don't over-engineer individual components
+- **AI Goal**: Ensure the test passes by making the feature actually work for users
+
+### 5. Refactor (Clean Up While Keeping Tests Green)
+Clean up design & code smells while keeping tests green:
+- Improve variable/function naming
+- Extract repeated code into helper functions
+- Simplify logic where possible
+- **AI Goal**: Maintain confidence that feature works while improving code quality
+
+### 6. Repeat until Feature Complete
+Continue the Red-Green-Refactor cycle until the feature is fully implemented.
+
+**AI Verification Focus**: Prioritize tests that verify complete user scenarios over isolated component tests.
+
+## 🎯 AI-First Test Selection Strategy
+
+### When to Write Each Test Type
+
+#### **Start with High AI Verification Value Tests**
+1. **Browser E2E**: For features with UI interaction
+   - User registration/login flows
+   - Purchase/checkout processes
+   - Complex form workflows
+   - Navigation and routing
+
+2. **Backend E2E**: For API and business logic
+   - Authentication flows
+   - Data processing workflows
+   - Integration with external services
+   - Business rule validation
+
+3. **Integration**: For feature components
+   - Service layer interactions
+   - Database operations
+   - Multi-module workflows
+
+#### **Add Unit Tests Sparingly**
+- Complex algorithms or business rules
+- Input validation logic
+- Utility functions with edge cases
+- **Only after** higher-value tests are in place
+
+### Test Progression Example
+
+```javascript
+// 1. Start with Browser E2E (Highest AI Value)
+test('user can register, login, and access dashboard', async () => {
+  // Complete user workflow test
+});
+
+// 2. Add Backend E2E (Very High AI Value)  
+test('registration API creates user and sends verification email', async () => {
+  // API workflow test
+});
+
+// 3. Add Integration Tests (High AI Value)
+test('auth service validates credentials with real database', async () => {
+  // Service integration test
+});
+
+// 4. Add Unit Tests Only If Needed (Low AI Value)
+test('password strength validator handles edge cases', () => {
+  // Complex logic test - only if algorithm is complex
+});
+```
+
+## ⚠️ Agent Execution Guidelines
+
+**For AI agents running tests**: Always use non-interactive commands:
+
+```bash
+# ✅ Agent-safe test execution
+pnpm test:run                           # Non-interactive test run
+pnpm test:ci                            # CI mode
+npx vitest run                          # Force run mode
+npx playwright test                     # Playwright default non-interactive
+
+# ❌ Avoid interactive modes
+pnpm test                               # May enter watch mode
+npx vitest                              # Defaults to watch mode
+```
+
+## ✅ Definition of Done
+
+### AI Verification Checklist
+- [ ] **Primary test type chosen** based on AI verification value (E2E > Integration > Unit)
+- [ ] **Test verifies user-observable behavior**, not implementation details  
+- [ ] **Minimal mocking** in critical paths - uses real systems where possible
+- [ ] **Clear success criteria** - passing test means feature works for users
+- [ ] **Complete workflow coverage** - test covers end-to-end user scenario
+
+### Technical Checklist
+- [ ] The chosen test type is documented in the test header
+- [ ] At least one meaningful failing test became green  
+- [ ] All existing tests (unit / integration / e2e) pass
+- [ ] No unused mocks; external behavior validated
+- [ ] Code & tests pushed with a descriptive commit message
+
+## 🤖 AI Development Success Indicators
+
+**Goal**: Tests enable AI to confidently verify functionality works
+
+**Indicators**:
+- ✅ **AI can run tests and trust results**: Passing tests mean features work for users
+- ✅ **Clear feedback loop**: Failed tests indicate actual broken functionality
+- ✅ **End-to-end coverage**: Critical user workflows have test coverage
+- ✅ **Minimal false positives**: Tests don't pass when features are broken
+- ✅ **Development velocity**: AI can iterate confidently based on test feedback
+
+## 📚 Reference Testing Resources
+
+For detailed guidance on testing frameworks, runner configuration, and advanced testing patterns, see:
+- `tests.structure-and-standards.rules.mdc` - Complete testing standards with AI verification principles
+- `@kit/testing` - Test runner configurations and utilities
+- `packages/brain-sync-prompts/prompts/testing/creation/write-ai-verification-tests.prompt.md` - Detailed AI verification test patterns

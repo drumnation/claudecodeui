@@ -1,0 +1,1 @@
+Explain your current code's logic, step-by-step, as if you were teaching it to someone else. This 'rubber duck debugging' can often reveal hidden flaws. 

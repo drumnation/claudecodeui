@@ -1,0 +1,135 @@
+{
+  "name": "@kit/testing",
+  "version": "2.0.0",
+  "description": "Unified testing configuration with intelligent orchestration and coverage enforcement",
+  "keywords": [
+    "testing",
+    "vitest",
+    "playwright",
+    "storybook",
+    "coverage",
+    "monorepo",
+    "test-runner",
+    "e2e",
+    "unit-testing",
+    "integration-testing"
+  ],
+  "homepage": "https://github.com/yourorg/monorepo/tree/main/tooling/testing",
+  "bugs": {
+    "url": "https://github.com/yourorg/monorepo/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourorg/monorepo.git",
+    "directory": "tooling/testing"
+  },
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./unit": {
+      "types": "./src/unit.d.ts",
+      "default": "./src/unit.ts"
+    },
+    "./integration": {
+      "types": "./src/integration.d.ts",
+      "default": "./src/integration.ts"
+    },
+    "./e2e": {
+      "types": "./src/e2e.d.ts",
+      "default": "./src/e2e.ts"
+    },
+    "./storybook": {
+      "types": "./src/storybook.d.ts",
+      "default": "./src/storybook.ts"
+    },
+    "./storybook/*": {
+      "types": "./src/storybook/*.d.ts",
+      "default": "./src/storybook/*.ts"
+    },
+    "./playwright": {
+      "types": "./src/playwright/index.d.ts",
+      "default": "./src/playwright/index.ts"
+    },
+    "./playwright-backend": {
+      "types": "./src/playwright-backend/index.d.ts",
+      "default": "./src/playwright-backend/index.ts"
+    },
+    "./storybook-e2e": {
+      "types": "./src/storybook-e2e/index.d.ts",
+      "default": "./src/storybook-e2e/index.ts"
+    },
+    "./storybook-e2e/*": {
+      "types": "./src/storybook-e2e/*.d.ts",
+      "default": "./src/storybook-e2e/*.ts"
+    },
+    "./test-runner": {
+      "types": "./src/storybook/test-runner.d.ts",
+      "default": "./src/storybook/test-runner.ts"
+    },
+    "./vscode": {
+      "types": "./src/vscode.d.ts",
+      "default": "./src/vscode.ts"
+    },
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "clean": "git clean -xdf .turbo node_modules",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --check \"**/*.{ts,tsx}\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "tsx ./src/runners/recursive.ts unit",
+    "test:integration": "tsx ./src/runners/recursive.ts integration",
+    "test:e2e": "tsx ./src/runners/recursive.ts e2e",
+    "test:storybook": "tsx ./src/runners/recursive.ts storybook",
+    "test:storybook-run": "test-storybook --coverage",
+    "test:playwright": "playwright test --config ./src/configs/playwright/browser.ts",
+    "test:playwright-backend": "playwright test --config ./src/configs/playwright/api.ts",
+    "test:playwright-storybook": "playwright test --config ./src/configs/playwright/storybook.ts",
+    "test:ci": "tsx ./src/runners/ci.ts",
+    "test:ci:sequential": "npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:storybook && npm run test:playwright && npm run test:storybook-run && npm run test:playwright-storybook",
+    "coverage:merge": "nyc merge ./coverage ./coverage/merged/coverage.json && nyc report",
+    "coverage:report": "nyc report --reporter=html --reporter=text --reporter=lcov"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.53.2",
+    "@storybook/addon-interactions": "^8.5.0",
+    "@storybook/react": "^8.5.0",
+    "@storybook/test": "^8.5.0",
+    "@storybook/test-runner": "^0.22.0",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.6.0",
+    "@vitest/ui": "^3.2.4",
+    "axe-playwright": "^2.0.3",
+    "vitest": "^3.2.4"
+  },
+  "devDependencies": {
+    "@kit/eslint-config": "workspace:*",
+    "@kit/prettier-config": "workspace:*",
+    "@kit/tsconfig": "workspace:*",
+    "@types/node": "^22.5.0",
+    "@types/react": "^18.3.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@vscode/test-cli": "^0.0.9",
+    "cross-env": "^7.0.3",
+    "nyc": "^17.0.0",
+    "playwright-coverage": "^0.0.1-security",
+    "react": "^18.3.0"
+  },
+  "peerDependencies": {
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3"
+  },
+  "eslintConfig": {
+    "root": true,
+    "extends": [
+      "@kit/eslint-config/base"
+    ]
+  },
+  "prettier": "@kit/prettier-config"
+}

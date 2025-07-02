@@ -1,0 +1,246 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Monorepo README & Changelog Management
+
+<!-- ==================== METADATA ==================== -->
+whenToUse:
+  - Creating a new package or app in the monorepo
+  - Making changes to any existing package
+  - Releasing a new version of any package
+  - Adding features, fixing bugs, or making breaking changes
+  - Updating workspace configuration or dependencies
+description: >
+  Comprehensive standards for monorepo documentation lifecycle: package READMEs, changelogs, 
+  and versioning. Ensures consistent documentation and versioning across all workspace packages.
+# =====================================================
+
+## Related Rules:
+# - Required foundation: monorepo-library-setup.rules.mdc (base monorepo structure)
+# - Broader documentation: monorepo-documentation-strategy.rules.mdc (general docs)
+# - Consider with: monorepo-contributing.rules.mdc (for open source projects)
+
+## 1. Documentation File Validation (MANDATORY)
+
+Every package in the monorepo MUST maintain these fundamental files:
+
+| File | Purpose | Required Sections |
+|------|---------|-------------------|
+| `README.md` | Package description, installation, usage | Overview, Installation, Usage, API (if applicable) |
+| `CHANGELOG.md` | Version history, release notes | Unreleased, Previous Versions |
+| `package.json` | Package metadata, dependencies | name, version (must follow SemVer) |
+
+### Automated Validation
+
+When working with any package, the agent MUST:
+
+1. Check for the existence of all required files
+2. If any file is missing, automatically create it using the templates in section 6
+3. Report the creation: "Created missing [filename] for [package]"
+4. Never consider a task complete until all packages modified have valid documentation
+
+## 2. README.md Requirements
+
+### Content Structure
+
+Every package README must include:
+
+1. **Title and Description** - Clear explanation of package purpose
+2. **Installation** - How to install/use within the monorepo
+3. **Usage Examples** - Code snippets showing common use cases
+4. **API Documentation** - For libraries/shared components
+5. **Dependencies** - Key external or internal dependencies
+
+### README Update Triggers
+
+Update the README whenever:
+
+- Adding new features or API methods
+- Changing usage patterns or requirements
+- Modifying supported options/configuration
+- Revising dependencies
+- Making breaking changes
+
+## 3. CHANGELOG.md Requirements
+
+### Format Standard
+
+Follow the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format:
+
+```md
+# Changelog
+
+All notable changes to this package will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- New feature X
+
+### Changed
+- Updated dependency Y
+
+## [1.0.0] - YYYY-MM-DD
+
+### Added
+- Initial release
+```
+
+### Entry Categories
+
+Group changes into these categories:
+
+- **Added** - New features
+- **Changed** - Changes to existing functionality
+- **Deprecated** - Features that will be removed
+- **Removed** - Features that were removed
+- **Fixed** - Bug fixes
+- **Security** - Vulnerability fixes
+
+### Changelog Update Process
+
+1. Always add changes to `[Unreleased]` section first
+2. When releasing a version, rename `[Unreleased]` to `[x.y.z] - YYYY-MM-DD`
+3. Add a new empty `[Unreleased]` section at the top
+4. Include links to version comparison when possible
+
+## 4. Versioning Standards
+
+### Semantic Versioning
+
+All packages MUST follow [SemVer 2.0.0](https://semver.org/):
+
+- **MAJOR** (`x.0.0`) - Incompatible API changes
+- **MINOR** (`0.x.0`) - Backwards-compatible functionality
+- **PATCH** (`0.0.x`) - Backwards-compatible bug fixes
+
+### Version Synchronization
+
+Ensure version numbers are synchronized between:
+- CHANGELOG.md entries
+- package.json "version" field
+- Any version references in README.md
+
+## 5. Automated Documentation Workflow
+
+### When Making Package Changes
+
+1. **Detect Modified Packages** - Identify which workspace packages were modified
+2. **Update Changelogs** - Add entries to `[Unreleased]` in each modified package
+3. **Check READMEs** - Update if the changes affect usage, API, or behavior
+4. **Ensure Consistency** - Verify all documentation is aligned with changes
+
+### When Releasing Versions
+
+1. **Prepare Version** - Move `[Unreleased]` changes to new version section
+2. **Update package.json** - Bump version field according to SemVer rules
+3. **Update README** - Update any version references or version-specific docs
+4. **Commit Format** - `chore(package-name): release x.y.z`
+
+## 6. File Templates for New Packages
+
+### README.md Template
+
+```md
+# Package Name
+
+Brief description of what this package does and its purpose in the monorepo.
+
+## Installation
+
+This package is part of the monorepo and can be used by adding it to your project dependencies:
+
+```json
+"dependencies": {
+  "@project/package-name": "workspace:*"
+}
+```
+
+## Usage
+
+```typescript
+import { Something } from '@project/package-name';
+
+// Usage example
+const result = Something.doThing();
+```
+
+## API
+
+### `functionName(param1, param2)`
+
+Description of what the function does.
+
+**Parameters:**
+- `param1` (type): Description
+- `param2` (type): Description
+
+**Returns:**
+- (returnType): Description
+
+## Dependencies
+
+- List key dependencies here
+```
+
+### CHANGELOG.md Template
+
+```md
+# Changelog
+
+All notable changes to this package will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- Initial implementation
+```
+
+## 7. Root README.md Management
+
+The root-level README.md serves as the entry point to the entire monorepo and must be updated whenever:
+
+1. **New Package Added** - Add to workspace package list with description
+2. **Architecture Changes** - Update diagrams or descriptions of project structure
+3. **Dev Workflow Changes** - Update commands or procedures for development
+4. **Dependency Updates** - Document major dependency version changes
+
+### Root README Structure
+
+```md
+# Project Name
+
+Brief project overview and purpose.
+
+## Packages
+
+| Package | Description | Version |
+|---------|-------------|---------|
+| [@project/package-a](./packages/package-a) | Description of package A | 1.2.0 |
+| [@project/package-b](./packages/package-b) | Description of package B | 0.5.1 |
+
+## Development
+
+Installation and development workflow instructions.
+
+## Architecture
+
+High-level architecture description or diagrams.
+```
+
+## 8. Pre-Completion Checklist
+
+Before marking any task complete, verify:
+
+- [ ] All modified packages have updated changelog entries
+- [ ] Version numbers are consistent across changelog and package.json
+- [ ] READMEs reflect any API or usage changes
+- [ ] Root README is updated if new packages were added

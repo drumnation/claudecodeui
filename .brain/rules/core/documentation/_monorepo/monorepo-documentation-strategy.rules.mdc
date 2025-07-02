@@ -1,0 +1,198 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Monorepo Documentation Strategy
+
+<!-- ==================== METADATA ==================== -->
+ruleType: always
+description: >
+  Comprehensive documentation strategy for monorepo projects covering location, format,
+  maintenance, and cross-referencing standards.
+whenToUse:
+  - Creating new documentation
+  - Updating existing documentation
+  - After completing any feature or refactor
+  - When adding new packages or apps to the monorepo
+# =====================================================
+
+## 📂 Documentation Location Hierarchy
+
+The monorepo uses a hierarchical documentation approach to ensure domain knowledge is stored at the appropriate scope level.
+
+### 1. Package/App-Level Documentation
+- **Primary Location:** Inside each package or app in a `docs/` subfolder
+  ```
+  packages/ui/docs/            # UI package-specific docs
+  apps/web/docs/               # Web app-specific docs
+  ```
+- **Purpose:** Package-specific implementation details, API usage, internal patterns
+
+### 2. Feature-Level Documentation
+- **Location:** `/docs/features/[feature-name]/`
+- **Purpose:** Documentation for features that span multiple packages
+
+### 3. Global Documentation
+- **Location:**
+  ```
+  /docs/architecture/          # System-wide architecture
+  /docs/concepts/              # Shared concepts and patterns
+  /docs/architecture/adr/      # Architecture Decision Records
+  ```
+- **Purpose:** Project-wide knowledge and design decisions
+
+### Documentation Placement Decision Matrix
+
+| Documentation Type | Placement Location |
+|--------------------|-------------------|
+| Feature spanning multiple packages | `/docs/features/[feature-name]/` |
+| Implementation in shared workspace package | `packages/[pkg]/docs/` |
+| Package-level setup or design notes | `packages/[pkg]/README.md` or `packages/[pkg]/docs/` |
+| App-specific implementation details | `apps/[app]/docs/` (if present) or `/docs/apps/[app]/` |
+| Architectural decisions | `/docs/architecture/adr/` |
+
+## 📄 Documentation Creation Standards
+
+### File Naming
+Use kebab-case filenames that reflect the topic clearly:
+- `auth-token-refresh-flow.md`
+- `data-fetching-patterns.md`
+- `button-component-api.md`
+
+### YAML Frontmatter (Required)
+
+All documentation files must include YAML frontmatter with the following fields:
+
+```yaml
+---
+title: "API Caching Pattern"
+description: "Explains the custom caching strategy used in `@api` for SSR and client hydration."
+keywords:
+  - api
+  - caching
+  - SWR
+  - react-query
+  - ssr
+  - hydration
+related_features: ["dashboard-data-pipeline"]
+related_concepts: ["react-query-vs-swr"]
+related_adr: ["001-cache-layer-decision"]
+last_updated: "YYYY-MM-DD"  # Always use ISO 8601 format
+---
+```
+
+### Document Structure
+
+1. **Introduction** (immediately after frontmatter)
+   - 2-4 sentence summary of the document's purpose
+   - Provides context for search and RAG indexing
+
+2. **Content Sections**
+   - Use clear H2/H3 headers with relevant keywords
+   - Short, atomic sections are preferred over long narratives
+   - Include code examples where appropriate
+   - Use tables for comparisons or options
+
+3. **Cross-References**
+   - Link to related documentation as appropriate
+   - Use standardized cross-linking (see section below)
+
+4. **Conclusion**
+   - Summary of key points
+   - Next steps or related topics to explore
+
+## 🔄 Documentation Maintenance
+
+### Index File Updates
+
+Update relevant `.index.md` files when creating or modifying documentation:
+
+- `docs/features/features.index.md`
+- `docs/concepts/concepts.index.md`
+- `docs/architecture/adr.index.md`
+- `docs/packages/[pkg]/[pkg].index.md` (if applicable)
+
+For each document, add an entry with format:
+```markdown
+- [[Document Title]](./document-filename.md): Brief description.
+```
+
+### Avoiding Duplication
+
+Before creating new documentation:
+1. Check index files for similar topics
+2. Search for existing documentation with similar keywords
+3. If similar documentation exists, consider updating or expanding it instead
+
+### Documentation Review
+
+After significant changes:
+1. Update the `last_updated` field in the frontmatter
+2. Verify that all cross-links still work
+3. Check that examples remain current
+4. Ensure all index files are updated
+
+## 🔗 Cross-Linking Standards
+
+### Relative Path Links
+Use relative paths when linking between documents in the same package or nearby:
+```markdown
+[Authentication Flow](mdc:../../shared/docs/auth-flow.md)
+```
+
+### Agent-Readable References
+Use @ notation when referencing documentation for agent processing:
+```markdown
+@docs/packages/ui/index.md
+```
+
+### External Links
+For external resources, include the full URL and consider adding a timestamp:
+```markdown
+[React Query Documentation](mdc:https:/tanstack.com/query/latest) (as of 2025-04)
+```
+
+## 📚 Documentation Types
+
+### README.md Files
+- **Purpose:** Quick start, installation, primary usage examples
+- **Location:** Root of each package, app, and the monorepo
+
+### API Documentation
+- **Purpose:** Detailed interface specifications, usage guidelines
+- **Location:** `packages/[pkg]/docs/api/`
+
+### Architecture Decision Records (ADRs)
+- **Purpose:** Document significant architectural decisions
+- **Location:** `/docs/architecture/adr/`
+- **Format:** Follow standard ADR template with:
+  - Title and date
+  - Status (proposed, accepted, superseded)
+  - Context
+  - Decision
+  - Consequences
+
+### Guides and Tutorials
+- **Purpose:** Step-by-step instructions for common tasks
+- **Location:** `packages/[pkg]/docs/guides/` or `/docs/guides/`
+
+## 🔍 Documentation Lookup Priority
+
+When searching for relevant documentation:
+
+1. **First,** look for `docs/` within the current package or app
+2. **Then,** check shared or global documentation areas
+3. **Use** `.index.md` files to guide lookup
+4. **Never** assume knowledge lives only in root-level documentation
+
+## ✅ Documentation Completeness Checklist
+
+- [ ] Appropriate location based on scope
+- [ ] Complete YAML frontmatter
+- [ ] Clear introduction and purpose statement
+- [ ] Well-structured content with descriptive headings
+- [ ] Code examples (if applicable)
+- [ ] Cross-links to related documentation
+- [ ] Updated index files
+- [ ] Last updated timestamp is current

@@ -1,0 +1,79 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Rule: Auto-generate and maintain PROJECT_GUIDELINES.md (Monorepo Edition)
+
+## 📌 Purpose  
+Maintain a living `PROJECT_GUIDELINES.md` at the root of the repo to document shared architectural patterns, naming conventions, tooling standards, and workspace coordination **across a multi-package monorepo** using `pnpm` and `turborepo`.
+
+---
+
+## 🔁 When to Trigger This Rule
+
+Update or regenerate the guidelines **after completing tasks involving**:
+
+- ✅ Addition or major restructure of any app or package in `apps/` or `packages/`
+- ✅ Changes to naming, folder structure, or design conventions
+- ✅ Shifts in architectural strategy (e.g. new shared libraries, layering changes)
+- ✅ Toolchain updates (e.g. switching from Vite to Webpack, adding tRPC)
+- ✅ New deployment workflows or CI/CD integration
+- ✅ Updates to lint, format, test, or build config across packages
+
+---
+
+## 📖 What to Include
+
+### 1. 🧱 Tech Stack & Architecture
+- Overall tech stack (frontend frameworks, backend services, DB, queues, cloud)
+- Nx/Turbo structure, caching strategies
+- Why we use `pnpm workspaces` and `turbo`
+- Diagram or table of internal packages and responsibilities
+
+### 2. 📂 Folder & Package Structure
+```txt
+/apps/
+  public-site/    → Marketing site
+  dashboard/      → Internal admin panel
+
+/packages/
+  ui/             → Shared design system
+  api/            → Type definitions + API utils
+  auth/           → Auth wrappers & providers
+```
+- Description of each workspace and its responsibility
+- Separation of concerns between apps and shared packages
+
+### 3. 🧾 Naming & Syntax Standards
+- File and folder naming conventions (`kebab-case`, `PascalCase` for components)
+- Function naming rules (`getX`, `useY`)
+- Type aliases vs interfaces
+- Props organization and interfaces per component
+- Component filename conventions (e.g., `Button.tsx` + `Button.stories.tsx` + `Button.test.tsx`)
+
+### 4. 🧩 Component & Style Standards
+- Hooks-only components (no class components)
+- Styled-components, Tailwind, or Mantine usage
+- Atomic Design practices
+- Wrapping third-party UI in local design system components
+- When and how to isolate or memoize components
+
+### 5. 🧪 Quality Practices
+- Testing approach (TDD, functional validation tests)
+- Linting and formatting strategy (`eslint`, `prettier`, rulesets used)
+- Lint plugins or per-package overrides
+- Commit conventions (optional link to CONTRIBUTING.md)
+
+### 6. 🚀 Deployment Strategy
+- CI/CD approach (e.g., `turbo run build --filter` pattern)
+- Preview vs production flows (e.g., Vercel previews)
+- How sub-packages are published (internal-only or npm)
+
+---
+
+## 🧼 Format Requirements
+- Markdown with clear headings and bullet points
+- Use collapsible sections (if rendered in GitHub or docs site)
+- Code samples and paths in fenced blocks (```ts, ```bash, etc.)
+- Link out to related files (`README.md`, `CONTRIBUTING.md`, `ONBOARDING.md`)

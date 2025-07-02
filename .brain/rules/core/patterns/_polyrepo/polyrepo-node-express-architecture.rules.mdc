@@ -1,0 +1,248 @@
+---
+description: Use this ruleset when building or modifying TypeScript Express.js applications that follow functional programming patterns with a standard folder structure. Apply these rules to ensure consistent file naming, proper separation of concerns, pure functions over classes, and maintainable code organization for small to medium-sized Express servers.
+globs: 
+alwaysApply: false
+---
+## **Cursor Agent Rule: Modular Express Application Architecture & Enforcement**
+
+**Objective:** Maintain a highly modular, consistent, and maintainable TypeScript/Node.js/Express codebase, optimized for AI agent processing and developer productivity.
+
+**Core Principle:** Strict adherence to separation of concerns, functional programming patterns, standardized naming, and automated enforcement.
+
+### **1. Project Structure**
+
+* **Standard Express Application Structure:**
+  ```
+  my-express-app/
+  ├─ package.json
+  ├─ tsconfig.json
+  ├─ .env.example
+  ├─ src/
+  │   ├─ controllers/   # Route handlers (functional)
+  │   │   ├─ user.controller.ts
+  │   │   └─ auth.controller.ts
+  │   ├─ services/      # Business logic (pure functions)
+  │   │   ├─ user.service.ts
+  │   │   └─ auth.service.ts
+  │   ├─ repositories/  # Data access layer
+  │   │   ├─ user.repository.ts
+  │   │   └─ base.repository.ts
+  │   ├─ models/        # TypeScript types & validation schemas
+  │   │   ├─ user.model.ts
+  │   │   ├─ user.schema.ts  # Zod/Joi schemas
+  │   │   └─ types.ts
+  │   ├─ middlewares/   # Express middlewares
+  │   │   ├─ auth.middleware.ts
+  │   │   ├─ error.middleware.ts
+  │   │   └─ validation.middleware.ts
+  │   ├─ routes/        # Route definitions
+  │   │   ├─ user.routes.ts
+  │   │   ├─ auth.routes.ts
+  │   │   └─ index.ts
+  │   ├─ utils/         # Helper functions
+  │   │   ├─ logger.ts
+  │   │   ├─ errors.ts
+  │   │   └─ validators.ts
+  │   ├─ config/        # Configuration
+  │   │   └─ index.ts
+  │   ├─ app.ts         # Express app setup
+  │   └─ server.ts      # Server entry point
+  └─ tests/
+      ├─ unit/
+      └─ integration/
+  ```
+
+### **2. File Naming & Content Conventions**
+
+* **Filename Pattern:** Use `<resource>.<type>.ts`
+* **Functional Programming Rules:**
+  - **No Classes:** Use functions and object factories instead
+  - **Pure Functions:** Services should be pure functions when possible
+  - **Immutability:** Avoid mutating data, return new objects
+  - **Function Composition:** Build complex operations from simple functions
+
+* **File Responsibilities:**
+  - **Controllers:** Thin layer that handles HTTP concerns
+    ```typescript
+    // user.controller.ts
+    export const getUser = async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const user = await userService.findById(req.params.id);
+        res.json(user);
+      } catch (error) {
+        next(error);
+      }
+    };
+    ```
+  
+  - **Services:** Pure business logic functions
+    ```typescript
+    // user.service.ts
+    export const findById = async (id: string): Promise<User> => {
+      const user = await userRepository.findById(id);
+      if (!user) throw new NotFoundError('User not found');
+      return user;
+    };
+    ```
+  
+  - **Repositories:** Data access functions
+    ```typescript
+    // user.repository.ts
+    export const findById = async (id: string): Promise<User | null> => {
+      return await db.user.findUnique({ where: { id } });
+    };
+    ```
+
+### **3. Size & Complexity Limits**
+
+* **Max File Length:** 300 lines
+* **Max Function Length:** 50 lines
+* **Max Functions per File:** 10-15 related functions
+* **Cyclomatic Complexity:** ≤ 8
+* **Action:** Extract into smaller, composable functions
+
+### **4. Dependency Management**
+
+* **Functional Dependency Injection:**
+  - Use higher-order functions for injection
+  - Create factory functions that accept dependencies
+  - Example:
+    ```typescript
+    // services/user.service.ts
+    export const createUserService = (repository: UserRepository) => ({
+      findById: async (id: string) => {
+        const user = await repository.findById(id);
+        if (!user) throw new NotFoundError('User not found');
+        return user;
+      },
+      // other methods...
+    });
+    
+    // In app setup
+    const userService = createUserService(userRepository);
+    ```
+
+* **Import Organization:**
+  - Group imports: external libs, internal modules, types
+  - Use named exports/imports exclusively
+  - Configure path aliases for cleaner imports
+
+### **5. Error Handling & Logging**
+
+* **Custom Error Types:**
+  ```typescript
+  // utils/errors.ts
+  export const createError = (name: string, statusCode: number) => {
+    return (message: string) => {
+      const error = new Error(message);
+      error.name = name;
+      (error as any).statusCode = statusCode;
+      return error;
+    };
+  };
+  
+  export const NotFoundError = createError('NotFoundError', 404);
+  export const ValidationError = createError('ValidationError', 400);
+  ```
+
+* **Centralized Error Handler:** Single error middleware
+* **Structured Logging:** Use winston or pino
+* **No console.log:** Enforce via ESLint
+
+### **6. Validation**
+
+* **Schema-Based Validation:** Use Zod (functional-friendly)
+  ```typescript
+  // models/user.schema.ts
+  import { z } from 'zod';
+  
+  export const createUserSchema = z.object({
+    email: z.string().email(),
+    password: z.string().min(8),
+    name: z.string().min(2)
+  });
+  
+  export type CreateUserDto = z.infer<typeof createUserSchema>;
+  ```
+
+* **Validation Middleware:**
+  ```typescript
+  export const validate = (schema: ZodSchema) => 
+    (req: Request, res: Response, next: NextFunction) => {
+      try {
+        schema.parse(req.body);
+        next();
+      } catch (error) {
+        next(new ValidationError(error.message));
+      }
+    };
+  ```
+
+### **7. Testing**
+
+* **Test Structure:** Mirror source structure in tests/
+* **Unit Tests:** Test pure functions in isolation
+* **Integration Tests:** Test API endpoints
+* **Mocking:** Use functional mocks, not class mocks
+* **Coverage Target:** 80%+ for services and utils
+
+### **8. Code Organization Best Practices**
+
+* **Barrel Exports:** Each folder should have an index.ts
+  ```typescript
+  // services/index.ts
+  export * from './user.service';
+  export * from './auth.service';
+  ```
+
+* **Shared Code:** Put truly reusable code in utils/
+* **Feature Grouping:** For larger apps, consider grouping by feature:
+  ```
+  src/
+  └─ features/
+      ├─ users/
+      │   ├─ user.controller.ts
+      │   ├─ user.service.ts
+      │   ├─ user.repository.ts
+      │   └─ user.routes.ts
+      └─ auth/
+          ├─ auth.controller.ts
+          ├─ auth.service.ts
+          └─ auth.routes.ts
+  ```
+
+### **9. Configuration**
+
+* **Single Config File:**
+  ```typescript
+  // config/index.ts
+  export const config = {
+    port: parseInt(process.env.PORT || '3000'),
+    database: {
+      url: process.env.DATABASE_URL || '',
+    },
+    jwt: {
+      secret: process.env.JWT_SECRET || '',
+      expiresIn: '24h',
+    },
+  } as const;
+  ```
+
+* **Type Safety:** Use TypeScript const assertions
+* **Validation:** Validate required env vars on startup
+
+### **10. Development Guidelines**
+
+* **Functional Patterns to Use:**
+  - Pipe/compose for function composition
+  - Map/filter/reduce over loops
+  - Async/await over callbacks
+  - Spread operator for immutability
+
+* **Patterns to Avoid:**
+  - Classes (except for Error types)
+  - Mutations of parameters
+  - Global mutable state
+  - Circular dependencies
+
+**Agent Instructions:** When writing code, always prefer functional patterns. Create small, composable functions. Use dependency injection via function parameters or higher-order functions, not classes. Keep the codebase simple and avoid premature abstractions. Start with the standard structure and only add complexity when needed.

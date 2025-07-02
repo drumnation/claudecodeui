@@ -1,0 +1,1 @@
+Introduce a counter to track the number of loop iterations. If it exceeds a reasonable threshold (e.g., 1000, based on your intended task), halt the loop and output the state of all relevant variables at that point. Analyze this snapshot to understand why the loop isn't terminating naturally.

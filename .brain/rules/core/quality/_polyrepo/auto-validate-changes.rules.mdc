@@ -1,0 +1,224 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+**Purpose**: Establish a complete validation loop that verifies code quality, type safety, and functional correctness after every meaningful change through automated testing, type checking, and linting.
+
+## Core Principle
+Comprehensive validation is the source of truth for code readiness. The agent must validate all work through the complete toolchain before considering any task complete.
+
+## Validation Scope
+
+### When to Trigger Validation
+**Always trigger after:**
+- Feature implementation or modification
+- Bug fixes
+- Code refactoring (structural changes)
+- Dependency updates affecting runtime behavior
+- Configuration changes affecting application logic
+- Branch merges or external code integration
+- Before commits, handoffs, or pull requests
+
+**Skip validation for:**
+- Documentation-only changes
+- Comment additions/modifications
+- Asset additions (images, fonts) without code impact
+
+## Implementation Strategy
+
+### 1. Multi-Stage Validation Pipeline
+Execute in sequence, stopping on first failure:
+
+#### Stage 1: Type Safety Validation
+**Command discovery (try in order):**
+```bash
+pnpm run typecheck
+pnpm run type-check  
+pnpm exec tsc --noEmit
+npx tsc --noEmit
+```
+
+**Monorepo scoping:**
+```bash
+pnpm run typecheck --filter=@workspace/package-name
+nx typecheck package-name
+turbo typecheck --filter=package-name
+```
+
+#### Stage 2: Code Quality Validation
+**Command discovery (try in order):**
+```bash
+pnpm run lint
+pnpm run lint:fix
+pnpm exec eslint . --fix
+npx eslint . --fix
+```
+
+**Prefer auto-fix enabled commands** when available.
+
+#### Stage 3: Functional Validation
+**Command discovery (try in order):**
+```bash
+pnpm run test
+pnpm run test:unit
+pnpm exec vitest
+pnpm exec jest
+npm test
+```
+
+**Optimized test execution:**
+- **File-specific**: `pnpm test -- src/components/Button.test.ts`
+- **Pattern-based**: `pnpm test -- --grep "authentication"`
+- **Package-specific**: `pnpm test packages/ui`
+- **Changed files only**: Use `--changed` or `--related` flags when available
+
+### 2. Environment Detection
+
+#### Repository Type Detection
+```bash
+# Monorepo indicators
+- package.json with "workspaces"
+- pnpm-workspace.yaml
+- nx.json, turbo.json
+- lerna.json
+
+# Polyrepo indicators  
+- Single package.json at root
+- No workspace configuration
+```
+
+#### Framework Detection
+```bash
+# TypeScript setup
+- tsconfig.json presence
+- typescript in dependencies
+- .ts/.tsx files
+
+# Test framework
+- vitest.config.*, jest.config.*
+- Test directories: __tests__, tests/, spec/
+- Package.json test script
+
+# Linting setup
+- .eslintrc.*, eslint.config.*
+- eslint in dependencies
+```
+
+### 3. Failure Response Protocol
+
+**On any validation failure:**
+1. **HALT** all further development work
+2. **REPORT** the specific failure with context
+3. **CATEGORIZE** the failure:
+   - **Type errors**: Fix type mismatches, missing types
+   - **Lint errors**: Apply auto-fixes, manual corrections for complex issues
+   - **Test failures**: Follow test-specific failure protocol (see below)
+   - **Configuration issues**: Missing tools, broken setup
+
+#### Test Failure Sub-Protocol
+- **Code regression**: Fix the broken functionality
+- **Test needs update**: Verify intent with user, then update test
+- **Flaky/brittle test**: Document issue, consider test improvement
+- **Environmental**: Check dependencies, setup, or configuration
+
+### 4. Success Reporting
+```
+✅ Full validation passed (Xms total)
+  - 🔍 typecheck: ✅ (Yms)  
+  - 🧹 lint: ✅ (Zms) - [N fixes applied]
+  - 🧪 test: ✅ (Ams) - [M tests, coverage: X%]
+📊 Ready for: [commit|review|deployment]
+```
+
+### 5. Missing Tool Handling
+
+**When validation tools are missing:**
+1. **Log warning**: `⚠️ Missing [typecheck|lint|test] validation for [affected-area]`
+2. **Suggest setup**:
+   ```json
+   // Recommended package.json additions
+   {
+     "scripts": {
+       "typecheck": "tsc --noEmit",
+       "lint": "eslint . --fix",
+       "test": "vitest"
+     }
+   }
+   ```
+3. **Continue with explicit acknowledgment** of unvalidated state
+4. **Recommend establishing missing validation** for future work
+
+## Advanced Configuration
+
+### Performance Optimization
+- **Parallel execution**: Run independent validations concurrently when safe
+- **Incremental validation**: Use `--changed`, `--since`, or file-specific targeting
+- **Smart caching**: Leverage tool-native caching (ESLint cache, TypeScript incremental)
+- **Timeout management**: Set reasonable limits (typecheck: 2min, lint: 1min, tests: 10min)
+
+### Workspace Intelligence
+**Monorepo optimizations:**
+- Auto-detect affected packages from file changes
+- Use workspace-aware commands (`--filter`, `--scope`)
+- Respect package dependencies for validation order
+- Skip unchanged packages when possible
+
+**Polyrepo simplifications:**
+- Use direct root-level commands
+- Single-package optimization paths
+- Simplified reporting for single-context validation
+
+### Integration Awareness
+- **Pre-commit hooks**: Complement existing git hooks, don't duplicate
+- **CI/CD alignment**: Use same commands as pipeline configuration
+- **IDE integration**: Respect existing watchers and editor integrations
+- **Development vs. CI**: Adjust validation depth based on context
+
+## Error Recovery & Rollback
+
+### Recovery Strategy
+**When immediate fix isn't clear:**
+1. **Preserve state**: Stash changes with descriptive message
+2. **Revert to known-good**: Return to last validated state
+3. **Incremental retry**: Apply changes in smaller steps
+4. **Document blockers**: Report specific issues for user review
+
+### Auto-fix Capabilities
+**Safe auto-fixes (apply automatically):**
+- ESLint auto-fixable rules
+- Prettier formatting
+- Simple import organization
+
+**Manual fixes (report for user):**
+- Complex type errors
+- Logic-breaking lint rules
+- Test assertion failures
+- Architecture-level issues
+
+## Monitoring & Continuous Improvement
+
+### Performance Tracking
+- Validation execution time trends
+- Tool-specific performance bottlenecks
+- Success/failure rate monitoring
+- Impact on development velocity
+
+### Quality Metrics
+- Type error frequency and categories
+- Lint rule violation patterns
+- Test coverage trends
+- Tool configuration drift detection
+
+### Proactive Maintenance
+- Suggest missing validation tools
+- Recommend performance optimizations
+- Identify configuration inconsistencies
+- Flag outdated tool versions
+
+## Best Practices
+- **Fail fast**: Stop on first validation failure to prevent error accumulation
+- **Clear reporting**: Provide actionable feedback for each failure type
+- **Tool consistency**: Use same validation commands as CI/CD pipeline
+- **Incremental adoption**: Support projects with partial validation setups
+- **Performance consciousness**: Balance thoroughness with development speed

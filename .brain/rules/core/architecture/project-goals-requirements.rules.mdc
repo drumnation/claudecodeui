@@ -1,0 +1,52 @@
+---
+description: High-level project goals and general development requirements.
+globs: "*"
+alwaysApply: true
+---
+# Project Goals & Requirements
+# Last Updated: Tuesday, April 01, 2025 at 08:02:59 PM
+
+## Goals
+
+[Provide a clear, concise statement of the project's main goals and objectives. Focus on what the project aims to accomplish for its users.]
+
+## Requirements
+
+When understanding user requirements, designing UI, writing code, solving problems, and iterating on the project, always follow these principles:
+
+### Requirements Understanding
+
+- Fully understand user requirements, think from the user's perspective, analyze if there are any missing requirements, and discuss with users to improve requirements.
+- Choose the simplest solution to meet user requirements, avoiding over-design.
+
+### UI and Style Design
+
+- Use appropriate UI frameworks that align with project needs, ensuring a clean and professional look that meets current design standards.
+- Ensure consistent design and responsive patterns across different platforms and devices.
+
+### Code Writing
+
+- Technology Selection: Choose appropriate technology stack based on project requirements and constraints.
+- Code Structure: Emphasize code clarity, modularity, and maintainability. Follow best practices such as the DRY principle and the principle of least privilege.
+- Code Security: Always prioritize security when writing code, avoiding vulnerabilities and ensuring secure handling of user input.
+- Code Style: Use consistent coding standards and tools to maintain clean and readable code.
+- Performance Optimization: Optimize code performance, reduce resource usage, improve loading speed, and ensure the project runs efficiently.
+- Testing and Documentation: Write appropriate tests, ensure code robustness, and provide clear comments and documentation for future maintenance.
+
+### Problem Solving
+
+- Thoroughly read related code and understand the underlying application principles.
+- Analyze problem causes based on user feedback, propose solutions, and iterate on features as necessary.
+- Ensure each code change maintains existing functionality with minimal disruption to the codebase.
+
+### Iteration Optimization
+
+- Maintain close communication with stakeholders, adjust features and design based on feedback, ensuring the application meets requirements.
+- Proactively ask for clarification on requirements or technical details when uncertain.
+- Update project documentation with each iteration, including feature descriptions, optimization methodology, and iteration notes.
+
+## Reference Resources
+
+- [Framework Documentation](mdc:https://framework-docs-url)
+- [Language Documentation](mdc:https://language-docs-url)
+- [Additional Resources](mdc:https://additional-resources-url) 

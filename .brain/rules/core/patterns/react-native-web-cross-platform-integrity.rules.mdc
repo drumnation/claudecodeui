@@ -1,0 +1,67 @@
+---
+description: 
+globs: apps/ofw-messaging-rnw/**/*
+alwaysApply: false
+---
+**Agentic Ruleset: React Native Web Cross-Platform Integrity**
+
+**Core Principle:** The primary directive is to maintain functional and visual consistency across all target platforms (iOS, Android, Web) unless a platform-specific deviation is explicitly required and documented. Every action must be evaluated against its potential impact on *all* platforms.
+
+**Rules:**
+
+1.  **Dependency Management:**
+    * **Rule 1.1 (Compatibility First):** Before adding *any* new dependency (library, package), rigorously verify its compatibility with React Native *and* React Native Web.
+        * **Action:** Check the library's official documentation for explicit `react-native-web` support.
+        * **Action:** Search the library's repository (GitHub issues/pull requests) for mentions of `react-native-web` or web compatibility issues/successes.
+        * **Action:** Consult community resources (e.g., directories of compatible libraries, forums) if official documentation is unclear.
+    * **Rule 1.2 (Prefer Universal Libraries):** Prioritize libraries designed explicitly for cross-platform use with React Native Web (e.g., many libraries within the Expo ecosystem, libraries that clearly state web support).
+    * **Rule 1.3 (Evaluate Alternatives):** If a desired library lacks web compatibility, actively search for alternative libraries that fulfill the same purpose and *are* compatible. Do not install an incompatible library without a clear, documented plan for web-specific handling (see Rule 2.3).
+    * **Rule 1.4 (Dependency Justification):** Document the chosen library, its verified compatibility status across platforms, and the reason for its selection within the project's documentation or commit messages.
+
+2.  **Code Implementation:**
+    * **Rule 2.1 (Use Platform Abstractions):** Always prefer React Native's built-in components (`View`, `Text`, `StyleSheet`, `Image`, etc.) and APIs (`Platform`, `Dimensions`, `Appearance`, etc.) as they provide the primary layer of cross-platform abstraction. Avoid direct web APIs (like `window`, `document`, direct DOM manipulation) unless absolutely necessary and isolated using platform-specific logic (Rule 2.2/2.3).
+    * **Rule 2.2 (Platform-Specific Files):** For significant platform-specific logic or entire component implementations, use platform-specific file extensions (`.native.js`, `.web.js`, `.ios.js`, `.android.js`). The bundler (Metro/Webpack) will automatically pick the correct file. Use `.native.js` for code shared between iOS and Android but different from web.
+    * **Rule 2.3 (Conditional Logic - `Platform.select`):** For minor inline differences (e.g., small style adjustments, configuration values), use the `Platform.OS` check or `Platform.select()` API. Keep its use minimal and localized to avoid cluttering code.
+        ```javascript
+        import { Platform, StyleSheet } from 'react-native';
+
+        const styles = StyleSheet.create({
+          container: {
+            padding: Platform.OS === 'web' ? 20 : 10,
+            backgroundColor: Platform.select({
+              ios: 'silver',
+              android: 'lightgrey',
+              web: 'whitesmoke',
+              default: 'grey', // Optional fallback
+            }),
+          },
+        });
+        ```
+    * **Rule 2.4 (Abstract Platform Differences):** If a feature requires significantly different underlying APIs (e.g., complex file access, specific hardware interaction), create a custom hook or component that exposes a unified API to the rest of the application, hiding the platform-specific implementations within files using Rule 2.2 or conditional logic via Rule 2.3.
+    * **Rule 2.5 (AsyncStorage):** Be mindful that `AsyncStorage` might have different underlying implementations or polyfills on the web. Use libraries designed to abstract this or test thoroughly.
+
+3.  **Styling:**
+    * **Rule 3.1 (Use `StyleSheet.create`):** Define styles primarily using React Native's `StyleSheet.create` API. `react-native-web` translates these styles to CSS.
+    * **Rule 3.2 (Test Visuals Everywhere):** Visual inconsistencies are common. Always visually verify UI elements and layouts on iOS simulators, Android emulators, and multiple web browsers after making styling changes.
+    * **Rule 3.3 (Avoid Web-Only CSS Properties):** Do not use CSS properties directly in `StyleSheet` objects that have no equivalent or different behavior in React Native mobile (e.g., certain pseudo-selectors, complex grid/flexbox properties not supported by Yoga). If web-specific styles are unavoidable, isolate them using Rule 2.2 or 2.3.
+    * **Rule 3.4 (Units and Layout):** Stick to unitless numbers for dimensions and positions where possible (interpreted as density-independent pixels on native, pixels on web). Rely on Flexbox for layout as it's the core layout engine for React Native and well-supported by `react-native-web`.
+
+4.  **Testing and Validation:**
+    * **Rule 4.1 (Mandatory Multi-Platform Testing):** Every feature, bug fix, or significant refactor *must* be tested on:
+        * An iOS simulator/device.
+        * An Android emulator/device.
+        * At least two major web browsers (e.g., Chrome, Firefox, Safari).
+    * **Rule 4.2 (Component Testing):** Utilize testing libraries (like React Native Testing Library) that allow rendering and interaction testing in a platform-agnostic way where possible. Add specific test suites if component behavior diverges significantly across platforms.
+    * **Rule 4.3 (E2E Testing):** If using End-to-End testing frameworks, ensure they can target native builds (e.g., Detox, Maestro) and web builds (e.g., Cypress, Playwright) or use a framework designed for cross-platform E2E testing if available.
+
+5.  **Configuration & Environment:**
+    * **Rule 5.1 (Bundler Configuration):** Understand that Metro (native) and Webpack (web, typically) have different configurations. Ensure build/bundler settings (e.g., aliases, environment variables) are correctly configured for *all* target platforms. Use tools like Expo CLI which often manage much of this complexity.
+    * **Rule 5.2 (Environment Variables):** Use environment variables (`.env` files managed appropriately for each platform build) for platform-specific configurations like API endpoints or keys if they differ.
+
+**Enforcement:**
+
+* **Code Reviews:** Code reviews must explicitly check for adherence to these rules, particularly dependency additions and platform-specific code implementations. Reviewers should test changes on at least one platform different from the submitter's primary test environment.
+* **Automated Checks:** Implement linting rules (ESLint) to discourage direct DOM usage or platform-unsafe APIs where possible.
+* **CI/CD Pipeline:** If possible, configure the CI/CD pipeline to run tests on native and web environments (e.g., using simulators/emulators and browser testing services).
+
+By strictly adhering to this ruleset, the agent aims to minimize regressions and ensure a stable, maintainable, and consistent user experience across the React Native mobile and web landscapes.

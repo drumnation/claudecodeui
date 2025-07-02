@@ -1,0 +1,85 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Rule: Auto-generate and maintain CONTRIBUTING.md (Monorepo Edition)
+
+## Purpose  
+Ensure the root `CONTRIBUTING.md` clearly reflects **monorepo-wide setup, standards, and contribution practices**, while providing guidance for sub-package contributions when needed.
+
+## When to Trigger This Rule  
+The `CONTRIBUTING.md` should be updated automatically whenever any of the following occur:
+
+- ✅ New **workspace package** added to `apps/` or `packages/`
+- ✅ Changes to **development workflows** (e.g. running apps, tests, storybook, etc.)
+- ✅ Updates to **branching strategy**, pull request flow, or code review process
+- ✅ Modifications to **core dev tools** (e.g. TypeScript config, ESLint, Prettier, Vitest, Storybook, etc.)
+- ✅ Addition of shared conventions (e.g., atomic components, wrap 3rd party UI, test philosophy)
+
+## Required Content (Root `CONTRIBUTING.md`)
+
+1. ### ✅ Project Setup
+   - How to install dependencies with `pnpm`
+   - How to bootstrap the workspace (e.g., `pnpm install && pnpm turbo run build`)
+   - Local environment setup (`.env`, Docker/Colima, etc.)
+   - Optional: Include `direnv`, Postgres setup, or Minikube if used
+
+2. ### ✅ Monorepo Structure
+   - Explain the `apps/`, `packages/`, and shared `configs/` folders
+   - Clarify **isolated testing/development per package** (e.g., how to run just `@project/ui`)
+
+3. ### ✅ Development Standards
+   - Git commit conventions (e.g. Conventional Commits)
+   - Code formatting rules (Prettier)
+   - Linting instructions and standards (ESLint config)
+   - Test-first / TDD expectations
+   - Use of atomic design, snapshot testing, and component isolation (e.g. via Storybook)
+
+4. ### ✅ Dev Commands
+   Provide workspace-aware examples:
+   ```bash
+   # Build entire monorepo
+   pnpm turbo run build
+
+   # Run tests for a specific package
+   pnpm turbo run test --filter=@project/ui
+
+   # Run Storybook for shared UI
+   pnpm --filter=@project/ui storybook
+   ```
+
+5. ### ✅ Pull Request Guidelines
+   - Describe expected PR size and formatting
+   - Checklist of what to verify before opening a PR:
+     - ✅ Tests passing
+     - ✅ Lint/format clean
+     - ✅ Changelog and README updated if needed
+   - Encourage linking to feature/task plan in `.brain/`
+
+## Optional: Per-Package CONTRIBUTING.md
+
+If a package requires a **different setup, environment, or test strategy**, a minimal `CONTRIBUTING.md` should be placed in that package folder linking to the root file:
+
+```md
+# Contributing to @project/ui
+
+See the [root CONTRIBUTING.md](../../CONTRIBUTING.md) for monorepo-wide setup.
+
+## Local Dev
+```bash
+cd packages/ui
+pnpm storybook
+```
+
+## Visual Testing
+```bash
+pnpm turbo run test --filter=@project/ui
+```
+```
+
+## Format
+- Markdown format
+- Use fenced code blocks for all commands
+- Organize with concise section headers (`##`, `###`)
+- Include links to relevant `.brain/` rules if available

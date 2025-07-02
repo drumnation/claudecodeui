@@ -1,0 +1,67 @@
+{
+  "name": "@kit/brain-monitor",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "bin": {
+    "brain-monitor": "./bin/brain-monitor.js"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./src/index.ts",
+        "default": "./src/index.ts"
+      }
+    },
+    "./browser": {
+      "import": {
+        "types": "./src/browser/index.ts",
+        "default": "./src/browser/index.ts"
+      }
+    },
+    "./server": {
+      "import": {
+        "types": "./src/server/index.ts",
+        "default": "./src/server/index.ts"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rimraf dist node_modules/.cache *.tsbuildinfo",
+    "format": "prettier --check \"**/*.{ts,tsx}\"",
+    "lint": "eslint .",
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run --config ../../tooling/testing/src/unit.js",
+    "test:unit": "vitest run --config ../../tooling/testing/src/unit.js",
+    "test:integration": "echo 'n/a' && exit 0",
+    "test:e2e": "echo 'n/a' && exit 0"
+  },
+  "dependencies": {
+    "yargs": "^17.7.2",
+    "chalk": "^5.3.0",
+    "globby": "^13.2.2",
+    "tsx": "^4.7.0",
+    "glob": "^10.3.10",
+    "js-yaml": "^4.1.0",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "@kit/tsconfig": "workspace:*",
+    "@kit/eslint-config": "workspace:*",
+    "@kit/testing": "workspace:*",
+    "@types/yargs": "^17.0.32",
+    "@types/express": "^4.17.21",
+    "@types/js-yaml": "^4.0.9",
+    "typescript": "^5.3.3",
+    "rimraf": "^5.0.5",
+    "jiti": "^2.0.0"
+  },
+  "peerDependencies": {
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.2.4",
+    "@types/node": "^22.14.1"
+  }
+}

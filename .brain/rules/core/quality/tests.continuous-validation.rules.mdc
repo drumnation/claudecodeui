@@ -1,0 +1,155 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+**Purpose**: Establish a self-validating development loop where every meaningful change is immediately verified through automated testing, ensuring code quality and preventing regression accumulation.
+
+## Core Principle
+Tests are the source of truth for functional correctness. The agent must validate all work through the existing test suite before considering any task complete.
+
+## Scope Definition
+
+### When to Trigger Validation
+**Always trigger after:**
+- Feature implementation or modification
+- Bug fixes
+- Code refactoring (structural changes)
+- Dependency updates that affect runtime behavior
+- Configuration changes affecting application logic
+- Branch merges or external code integration
+
+**Skip validation for:**
+- Documentation-only changes
+- Comment additions/modifications
+- Formatting/linting fixes that don't change logic
+- Asset additions (images, fonts) without code impact
+
+### Change Detection
+Use git status or file modification timestamps to determine if code changes occurred since last validation.
+
+## Implementation Strategy
+
+### 1. Test Runner Discovery
+```bash
+# Priority order for detection:
+1. Check package.json scripts: "test", "test:unit", "test:integration"
+2. Look for config files: vitest.config.*, jest.config.*, playwright.config.*
+3. Scan for test directories: __tests__, tests/, spec/
+4. Check for CI configuration hints in .github/workflows/ or .gitlab-ci.yml
+```
+
+### 2. Execution Strategy
+**Default approach:**
+```bash
+npm run test  # or pnpm/yarn equivalent
+```
+
+**Optimized scoping:**
+- **Single file changes**: Run tests for that specific file/module
+- **Package in monorepo**: Use workspace-specific test commands
+- **Feature area**: Use test tags or patterns when available
+- **Time constraints**: Run fast tests first, defer slower integration tests
+
+**Example filtering:**
+```bash
+# File-specific
+npm test -- src/components/Button.test.ts
+
+# Pattern-based
+npm test -- --grep "authentication"
+
+# Package-specific (monorepo)
+npm test packages/ui
+```
+
+### 3. Failure Response Protocol
+
+**On test failure:**
+1. **STOP** all further development work
+2. **ANALYZE** the failure:
+   - **Code regression**: Fix the broken functionality
+   - **Test needs update**: Verify intent with user, then update test
+   - **Flaky/brittle test**: Document issue, consider test improvement
+   - **Environmental**: Check dependencies, setup, or configuration
+
+3. **RESOLVE** before proceeding:
+   - Never suppress or ignore failing tests
+   - Never auto-update tests without understanding the change
+   - Document the resolution approach in commit message
+
+### 4. Success Logging
+```
+✅ Validation passed: [X] tests, [Y]ms - [action-description] at [timestamp]
+📊 Coverage delta: [change if available]
+```
+
+### 5. No-Test Scenarios
+**When no relevant tests exist:**
+1. Log warning: `⚠️  No tests found to validate changes in [affected-area]`
+2. Suggest creating basic functionality tests
+3. Reference test-writing guidelines if available
+4. Continue with explicit acknowledgment of unvalidated state
+
+## Advanced Configuration
+
+### Performance Optimization
+- **Fast feedback**: Run unit tests before integration tests
+- **Parallel execution**: Use test runner's parallel capabilities when safe
+- **Smart selection**: Run tests related to changed files when tooling supports it
+- **Timeout limits**: Set reasonable limits for test execution (suggest 5-10 minutes for full suite)
+
+### Context Awareness
+- **TDD mode**: When implementing failing tests first, expect and handle intentional failures
+- **Feature flags**: Skip tests for disabled features when appropriate
+- **Environment specific**: Adjust test selection based on development vs. CI environment
+
+### Integration Points
+- **Pre-commit hooks**: Complement, don't duplicate existing git hooks
+- **CI/CD coordination**: Log validation results that CI can reference
+- **IDE integration**: Respect existing test watchers and editor integrations
+
+## Error Handling & Recovery
+
+### Failure Categories & Responses
+1. **Test execution failure** (can't run tests):
+   - Check environment setup
+   - Verify dependencies
+   - Report infrastructure issue
+
+2. **Test assertion failure** (tests run but fail):
+   - Follow failure response protocol above
+   - Maintain git state for easy rollback
+
+3. **Timeout or resource issues**:
+   - Try scoped test run
+   - Report performance concern
+   - Continue with warning if critical path
+
+### Rollback Strategy
+If immediate fix isn't clear:
+1. Stash or commit current changes with clear marker
+2. Revert to last known-good state
+3. Re-analyze the change approach
+4. Document the issue for user review
+
+## Monitoring & Feedback
+
+### Success Metrics
+Track and report:
+- Test execution time trends
+- Failure frequency and categories
+- Coverage changes
+- Test suite health indicators
+
+### Continuous Improvement
+- Suggest test gaps when patterns emerge
+- Recommend performance optimizations
+- Identify and flag brittle tests
+- Monitor for test suite maintenance needs
+
+## Usage Notes
+- This rule works best with `test.tdd-workflow.rules.mdc` for test quality
+- Integrates with version control workflows and CI/CD systems
+- Designed for both individual development and team collaboration
+- Balances thoroughness with development velocity

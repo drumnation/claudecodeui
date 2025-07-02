@@ -1,0 +1,1 @@
+Is the logic you are trying to implement reflected in the code's structure and naming? Refactor to clearly delineate sections and clarify the purpose of variables and functions if it could help identify where expectations diverge from code's actual behavior. 

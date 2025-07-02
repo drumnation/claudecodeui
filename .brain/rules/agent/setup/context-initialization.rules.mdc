@@ -1,0 +1,18 @@
+---
+description: Core project initialization steps and workflow.
+globs: "*"
+alwaysApply: true
+---
+# Context Initialization Workflow
+# Last Updated: xxxx-xx-xx xx:xx:xx xx
+
+## ! Initialize context for the project like this:
+
+1. Read and review `.brain/directory-structure.md` for the directory structure
+2. ALWAYS READ `.brain/coding-standards.md` for Best Practices
+3. Check `.brain/[agent]/b-features/[current-feature]` for tasks -- ALWAYS update this file with progress, marking x's in the checkboxes after every task completion, do not wait until later.
+4. ALWAYS update the CHANGELOG.md after any significant changes are made, then bump the version number according to semantic versioning rules in the @package.json
+
+## !! Important (General)
+
+1. Use `x` as the package manager. 

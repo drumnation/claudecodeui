@@ -1,0 +1,11 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+  - 'tooling/*'
+  - 'tooling/logger'
+
+ignoredBuiltDependencies:
+  - '@anthropic-ai/claude-code'
+  - esbuild
+  - node-pty
+  - sharp

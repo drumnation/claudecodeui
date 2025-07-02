@@ -1,0 +1,764 @@
+# User Stories Catalog for Claude Code UI
+# This file contains all user stories for automated AI-driven testing
+# Each story represents an atomic user action that should be testable
+
+# Project Management Stories
+---
+id: US_PROJECT_CREATE
+role: Project user
+action: Create a new project
+goal: Start working on a new codebase with Claude
+acceptance:
+  - New project button is visible and clickable
+  - File dialog opens for project selection
+  - Selected project appears in sidebar
+  - Project metadata is loaded correctly
+tags: [project-management, smoke, core]
+
+---
+id: US_PROJECT_SELECT
+role: Project user
+action: Select an existing project from the sidebar
+goal: Switch to work on a different project
+acceptance:
+  - Project list shows available projects
+  - Clicking project name switches active project
+  - Sessions for selected project are displayed
+  - Current project is highlighted
+tags: [project-management, smoke, core]
+
+---
+id: US_PROJECT_RENAME
+role: Project user
+action: Rename a project
+goal: Change the display name of a project
+acceptance:
+  - Edit button appears on hover
+  - Clicking edit button enables inline editing
+  - Name can be modified and saved
+  - New name persists after refresh
+tags: [project-management, regression]
+
+---
+id: US_PROJECT_DELETE
+role: Project user
+action: Delete a project
+goal: Remove an unwanted project from the list
+acceptance:
+  - Delete button appears on hover
+  - Confirmation dialog is shown
+  - Project is removed from list after confirmation
+  - Associated sessions are also removed
+tags: [project-management, destructive]
+
+---
+id: US_PROJECT_REFRESH
+role: Project user
+action: Refresh the project list
+goal: See newly created projects or sync changes
+acceptance:
+  - Refresh button is visible in sidebar
+  - Clicking refresh updates the project list
+  - Loading indicator shown during refresh
+  - New projects appear in the list
+tags: [project-management, regression]
+
+---
+id: US_PROJECT_VIEW_METADATA
+role: Project user
+action: View project metadata
+goal: See project details like path and creation date
+acceptance:
+  - Project metadata section is visible
+  - Shows project path correctly
+  - Shows creation and update timestamps
+  - Displays session count
+tags: [project-management, regression]
+
+# Session Management Stories
+---
+id: US_SESSION_CREATE
+role: Project user
+action: Create a new chat session
+goal: Start a new conversation with Claude
+acceptance:
+  - New session button is visible for active project
+  - Clicking creates a new session immediately
+  - New session appears in session list
+  - Chat interface opens for new session
+tags: [session-management, smoke, core]
+
+---
+id: US_SESSION_SELECT
+role: Project user
+action: Select an existing session
+goal: Continue a previous conversation
+acceptance:
+  - Session list shows under active project
+  - Sessions display summary or first message
+  - Clicking session loads chat history
+  - Selected session is highlighted
+tags: [session-management, smoke, core]
+
+---
+id: US_SESSION_DELETE
+role: Project user
+action: Delete a session
+goal: Remove an old or unwanted conversation
+acceptance:
+  - Delete button appears on session hover
+  - Confirmation dialog is shown
+  - Session is removed from list after confirmation
+  - If active session, UI returns to empty state
+tags: [session-management, destructive]
+
+---
+id: US_SESSION_EDIT_SUMMARY
+role: Project user
+action: Edit session summary
+goal: Add or modify a descriptive summary for the session
+acceptance:
+  - Edit button visible on session item
+  - Clicking enables inline text editing
+  - Summary can be typed and saved
+  - Updated summary persists and displays
+tags: [session-management, regression]
+
+---
+id: US_SESSION_GENERATE_SUMMARY
+role: Project user
+action: Generate AI summary for session
+goal: Automatically create a descriptive summary
+acceptance:
+  - Generate summary button is visible
+  - Clicking triggers AI summary generation
+  - Loading state shown during generation
+  - Generated summary appears and can be edited
+tags: [session-management, integration]
+
+---
+id: US_SESSION_VIEW_HISTORY
+role: Project user
+action: View session history
+goal: See all messages in a conversation
+acceptance:
+  - Session loads with complete message history
+  - Messages display in chronological order
+  - User and assistant messages are differentiated
+  - Auto-scrolls to latest message
+tags: [session-management, smoke, core]
+
+# Chat Interface Stories
+---
+id: US_CHAT_SEND_MESSAGE
+role: Project user
+action: Send a text message to Claude
+goal: Ask a question or give instructions
+acceptance:
+  - Chat input field is visible and focused
+  - Text can be typed into the input
+  - Enter key or send button submits message
+  - Message appears in chat history
+  - Claude responds to the message
+tags: [chat, smoke, core]
+
+---
+id: US_CHAT_RECEIVE_RESPONSE
+role: Project user
+action: Receive and view Claude's response
+goal: Get assistance from the AI assistant
+acceptance:
+  - Loading indicator shown while Claude processes
+  - Response streams in progressively
+  - Formatted markdown is rendered correctly
+  - Code blocks have syntax highlighting
+tags: [chat, smoke, core]
+
+---
+id: US_CHAT_USE_SLASH_COMMAND
+role: Project user
+action: Use a slash command
+goal: Access quick actions via slash commands
+acceptance:
+  - Typing "/" triggers command autocomplete
+  - Available commands are listed
+  - Selecting command inserts it into input
+  - Command executes when message is sent
+tags: [chat, regression]
+
+---
+id: US_CHAT_REFERENCE_FILE
+role: Project user
+action: Reference a file using @ symbol
+goal: Include file context in the conversation
+acceptance:
+  - Typing "@" triggers file autocomplete
+  - File list shows project files
+  - Selecting file adds reference to input
+  - Referenced file content is included in context
+tags: [chat, regression]
+
+---
+id: US_CHAT_VOICE_INPUT
+role: Project user
+action: Use voice input with Whisper
+goal: Dictate messages instead of typing
+acceptance:
+  - Microphone button is visible
+  - Clicking mic starts recording
+  - Recording indicator shows active state
+  - Transcribed text appears in input field
+  - Can send transcribed message
+tags: [chat, integration, mobile]
+
+---
+id: US_CHAT_ABORT_RESPONSE
+role: Project user
+action: Abort an ongoing Claude response
+goal: Stop Claude from continuing to generate
+acceptance:
+  - Abort button appears during response generation
+  - Clicking abort stops the response
+  - Partial response is preserved
+  - Can send new message after abort
+tags: [chat, regression]
+
+---
+id: US_CHAT_SCROLL_HISTORY
+role: Project user
+action: Scroll through chat history
+goal: Review earlier parts of the conversation
+acceptance:
+  - Chat area is scrollable
+  - Can scroll up to see older messages
+  - Scroll position is maintained during new messages
+  - Scroll to bottom button appears when scrolled up
+tags: [chat, regression]
+
+---
+id: US_CHAT_VIEW_TOOL_USAGE
+role: Project user
+action: View tool usage details
+goal: See what tools Claude is using
+acceptance:
+  - Tool usage blocks appear in Claude's responses
+  - Tool name and parameters are visible
+  - Can toggle to show/hide detailed parameters
+  - Tool results are displayed
+tags: [chat, regression]
+
+---
+id: US_CHAT_HANDLE_ERROR
+role: Project user
+action: Handle chat error gracefully
+goal: Recover from connection or API errors
+acceptance:
+  - Error message displays clearly
+  - Retry option is available
+  - Can continue conversation after error
+  - Connection status indicator updates
+tags: [chat, error-handling]
+
+---
+id: US_CHAT_MULTILINE_INPUT
+role: Project user
+action: Enter multiline messages
+goal: Send longer, formatted messages
+acceptance:
+  - Shift+Enter creates new line in input
+  - Input area expands for multiple lines
+  - Formatting is preserved when sent
+  - Can paste multi-line content
+tags: [chat, regression]
+
+---
+id: US_CHAT_COPY_MESSAGE
+role: Project user
+action: Copy message content
+goal: Reuse message text elsewhere
+acceptance:
+  - Copy button appears on message hover
+  - Clicking copies message to clipboard
+  - Code blocks have separate copy buttons
+  - Copied indicator shows briefly
+tags: [chat, regression]
+
+# File Management Stories
+---
+id: US_FILE_BROWSE_TREE
+role: Project user
+action: Browse project file tree
+goal: Navigate and explore project structure
+acceptance:
+  - File tree displays in sidebar tab
+  - Shows directories and files hierarchically
+  - Icons indicate file types
+  - Current project root is shown
+tags: [file-management, smoke, core]
+
+---
+id: US_FILE_EXPAND_DIRECTORY
+role: Project user
+action: Expand and collapse directories
+goal: Navigate deeper into project structure
+acceptance:
+  - Directories show expand/collapse arrows
+  - Clicking arrow toggles directory state
+  - Child items appear when expanded
+  - State persists during session
+tags: [file-management, regression]
+
+---
+id: US_FILE_OPEN_EDITOR
+role: Project user
+action: Open file in editor
+goal: View and edit file contents
+acceptance:
+  - Clicking file name opens in editor tab
+  - File content loads and displays
+  - Syntax highlighting applied based on file type
+  - Editor tab shows file name
+tags: [file-management, smoke, core]
+
+---
+id: US_FILE_EDIT_SAVE
+role: Project user
+action: Edit and save a file
+goal: Make changes to project files
+acceptance:
+  - Editor allows text editing
+  - Save button becomes active on changes
+  - Ctrl/Cmd+S triggers save
+  - Success indicator shown after save
+  - File changes persist on disk
+tags: [file-management, smoke, core]
+
+---
+id: US_FILE_DOWNLOAD
+role: Project user
+action: Download a file
+goal: Save a local copy of a project file
+acceptance:
+  - Download button available for files
+  - Clicking triggers browser download
+  - File downloads with correct name
+  - Content matches server version
+tags: [file-management, regression]
+
+---
+id: US_FILE_VIEW_IMAGE
+role: Project user
+action: View image files
+goal: Preview images in the project
+acceptance:
+  - Image files show preview in editor
+  - Common formats supported (png, jpg, gif)
+  - Can zoom and pan large images
+  - Image metadata displayed
+tags: [file-management, regression]
+
+---
+id: US_FILE_CREATE_NEW
+role: Project user
+action: Create a new file
+goal: Add new files to the project
+acceptance:
+  - New file option in context menu
+  - Can specify file name and location
+  - File appears in tree after creation
+  - Opens in editor automatically
+tags: [file-management, regression]
+
+---
+id: US_FILE_DELETE
+role: Project user
+action: Delete a file
+goal: Remove unwanted files from project
+acceptance:
+  - Delete option in file context menu
+  - Confirmation dialog shown
+  - File removed from tree after confirmation
+  - Editor tab closes if file was open
+tags: [file-management, destructive]
+
+---
+id: US_FILE_SEARCH
+role: Project user
+action: Search for files by name
+goal: Quickly find specific files
+acceptance:
+  - Search input available in file tree
+  - Typing filters files in real-time
+  - Matching files highlighted
+  - Can navigate to search results
+tags: [file-management, regression]
+
+# Git Integration Stories
+---
+id: US_GIT_VIEW_STATUS
+role: Project user
+action: View git status
+goal: See which files have changes
+acceptance:
+  - Git tab shows file status list
+  - Modified files marked with M
+  - New files marked with N
+  - Deleted files marked with D
+  - Status updates automatically
+tags: [git, smoke, core]
+
+---
+id: US_GIT_VIEW_DIFF
+role: Project user
+action: View file diffs
+goal: See what changes were made
+acceptance:
+  - Clicking file shows diff view
+  - Added lines highlighted in green
+  - Removed lines highlighted in red
+  - Line numbers displayed
+  - Can navigate between changes
+tags: [git, smoke, core]
+
+---
+id: US_GIT_SELECT_FILES
+role: Project user
+action: Select files for staging
+goal: Choose which changes to commit
+acceptance:
+  - Checkboxes next to each file
+  - Can select/deselect individual files
+  - Select all option available
+  - Selected count displayed
+tags: [git, smoke, core]
+
+---
+id: US_GIT_WRITE_COMMIT
+role: Project user
+action: Write commit message
+goal: Describe the changes being committed
+acceptance:
+  - Commit message input field available
+  - Can type multi-line messages
+  - Character count displayed
+  - Conventional commit format supported
+tags: [git, smoke, core]
+
+---
+id: US_GIT_GENERATE_MESSAGE
+role: Project user
+action: Generate AI commit message
+goal: Get Claude to write commit message
+acceptance:
+  - Generate button next to message input
+  - Analyzes staged changes
+  - Suggests appropriate message
+  - Can edit generated message
+tags: [git, integration]
+
+---
+id: US_GIT_COMMIT_CHANGES
+role: Project user
+action: Commit staged changes
+goal: Save changes to git history
+acceptance:
+  - Commit button enabled when files selected
+  - Clicking commits staged changes
+  - Success message displayed
+  - Status refreshes after commit
+  - Commit appears in history
+tags: [git, smoke, core]
+
+---
+id: US_GIT_SWITCH_BRANCH
+role: Project user
+action: Switch git branches
+goal: Work on different feature branches
+acceptance:
+  - Branch selector shows current branch
+  - Dropdown lists available branches
+  - Can select different branch
+  - Working directory updates after switch
+  - File tree refreshes
+tags: [git, regression]
+
+---
+id: US_GIT_CREATE_BRANCH
+role: Project user
+action: Create new branch
+goal: Start work on a new feature
+acceptance:
+  - Create branch button available
+  - Can enter new branch name
+  - Branch created from current HEAD
+  - Automatically switches to new branch
+tags: [git, regression]
+
+---
+id: US_GIT_VIEW_HISTORY
+role: Project user
+action: View commit history
+goal: See previous commits and changes
+acceptance:
+  - History tab shows commit list
+  - Displays commit message and author
+  - Shows commit timestamp
+  - Can view commit details
+tags: [git, regression]
+
+# Shell/Terminal Stories
+---
+id: US_SHELL_OPEN_SESSION
+role: Project user
+action: Open shell session
+goal: Access command line for project
+acceptance:
+  - Shell tab available in UI
+  - Opens terminal for project directory
+  - Shows current working directory
+  - Displays shell prompt
+tags: [shell, smoke, core]
+
+---
+id: US_SHELL_EXECUTE_COMMAND
+role: Project user
+action: Execute shell commands
+goal: Run commands in project context
+acceptance:
+  - Can type commands at prompt
+  - Enter key executes command
+  - Command output displayed
+  - Error output shown in red
+  - Exit codes indicated
+tags: [shell, smoke, core]
+
+---
+id: US_SHELL_COPY_PASTE
+role: Project user
+action: Copy and paste in terminal
+goal: Reuse commands and output
+acceptance:
+  - Can select text with mouse
+  - Ctrl/Cmd+C copies selection
+  - Ctrl/Cmd+V pastes at cursor
+  - Right-click shows context menu
+tags: [shell, regression]
+
+---
+id: US_SHELL_RECONNECT
+role: Project user
+action: Reconnect disconnected shell
+goal: Restore shell session after disconnect
+acceptance:
+  - Disconnect indicator shown
+  - Reconnect button available
+  - Clicking restores session
+  - Previous output preserved
+tags: [shell, error-handling]
+
+---
+id: US_SHELL_CLEAR_OUTPUT
+role: Project user
+action: Clear terminal output
+goal: Clean up terminal display
+acceptance:
+  - Clear button or Ctrl+L works
+  - Terminal output is cleared
+  - Prompt remains at bottom
+  - History still accessible
+tags: [shell, regression]
+
+# Live Preview Stories
+---
+id: US_PREVIEW_START_SERVER
+role: Project user
+action: Start development server
+goal: Preview application while developing
+acceptance:
+  - Server controls visible in preview panel
+  - Start button begins server process
+  - Server output streams to console
+  - Preview URL displayed when ready
+tags: [preview, smoke, core]
+
+---
+id: US_PREVIEW_STOP_SERVER
+role: Project user
+action: Stop running server
+goal: Terminate development server
+acceptance:
+  - Stop button visible when server running
+  - Clicking stops server process
+  - Console shows termination message
+  - Preview iframe cleared
+tags: [preview, regression]
+
+---
+id: US_PREVIEW_SELECT_SCRIPT
+role: Project user
+action: Select npm script to run
+goal: Choose different dev commands
+acceptance:
+  - Dropdown shows available npm scripts
+  - Scripts from package.json listed
+  - Can select different script
+  - Selected script runs on start
+tags: [preview, regression]
+
+---
+id: US_PREVIEW_VIEW_LIVE
+role: Project user
+action: View live preview
+goal: See application running in browser
+acceptance:
+  - Iframe shows running application
+  - Updates reflect code changes
+  - Can interact with preview
+  - Responsive to window sizing
+tags: [preview, smoke, core]
+
+---
+id: US_PREVIEW_VIEW_LOGS
+role: Project user
+action: View server logs
+goal: Debug server issues
+acceptance:
+  - Console panel shows server output
+  - Logs stream in real-time
+  - Different log levels colored
+  - Can scroll through history
+tags: [preview, regression]
+
+---
+id: US_PREVIEW_OPEN_EXTERNAL
+role: Project user
+action: Open preview in browser
+goal: Test in full browser environment
+acceptance:
+  - External link button available
+  - Opens preview URL in new tab
+  - Same content as iframe
+  - Independent from IDE session
+tags: [preview, regression]
+
+# Settings & Configuration Stories
+---
+id: US_SETTINGS_OPEN_TOOLS
+role: Project user
+action: Open tools settings
+goal: Configure Claude's available tools
+acceptance:
+  - Settings button visible in UI
+  - Clicking opens settings modal
+  - Current settings displayed
+  - Can modify and save
+tags: [settings, regression]
+
+---
+id: US_SETTINGS_CONFIGURE_ALLOWED
+role: Project user
+action: Configure allowed tools
+goal: Enable specific tools for Claude
+acceptance:
+  - Allowed tools section visible
+  - Can add tool names
+  - Can remove tools from list
+  - Changes persist after save
+tags: [settings, regression]
+
+---
+id: US_SETTINGS_TOGGLE_PERMISSIONS
+role: Project user
+action: Toggle skip permissions
+goal: Disable tool permission prompts
+acceptance:
+  - Skip permissions toggle available
+  - Toggle state clearly indicated
+  - Affects Claude's behavior immediately
+  - Setting persists across sessions
+tags: [settings, regression]
+
+---
+id: US_SETTINGS_TOGGLE_THEME
+role: Project user
+action: Toggle dark/light theme
+goal: Change UI appearance
+acceptance:
+  - Theme toggle in settings
+  - Instantly switches theme
+  - All UI elements update
+  - Preference saved locally
+tags: [settings, regression]
+
+---
+id: US_SETTINGS_QUICK_SETTINGS
+role: Project user
+action: Adjust quick settings
+goal: Change common preferences quickly
+acceptance:
+  - Quick settings panel accessible
+  - Auto-scroll toggle available
+  - Font size adjustment works
+  - Settings apply immediately
+tags: [settings, regression]
+
+# Mobile/Responsive Stories
+---
+id: US_MOBILE_NAVIGATE
+role: Mobile user
+action: Navigate on mobile device
+goal: Use UI on small screens
+acceptance:
+  - UI adapts to mobile viewport
+  - Navigation accessible via hamburger
+  - Touch targets appropriately sized
+  - Scroll works smoothly
+tags: [mobile, smoke]
+
+---
+id: US_MOBILE_SIDEBAR
+role: Mobile user
+action: Use mobile sidebar overlay
+goal: Access projects on mobile
+acceptance:
+  - Sidebar opens as overlay
+  - Can dismiss with swipe or X
+  - Projects and sessions accessible
+  - Returns to main view after selection
+tags: [mobile, regression]
+
+---
+id: US_MOBILE_BOTTOM_NAV
+role: Mobile user
+action: Switch tabs via bottom nav
+goal: Navigate between features on mobile
+acceptance:
+  - Bottom navigation bar visible
+  - Icons for main features
+  - Tapping switches active view
+  - Current tab highlighted
+tags: [mobile, regression]
+
+---
+id: US_MOBILE_TOUCH_INTERACT
+role: Mobile user
+action: Use touch interactions
+goal: Interact naturally with touch
+acceptance:
+  - Tap to select works reliably
+  - Swipe gestures recognized
+  - Long press shows context menus
+  - Pinch to zoom in preview
+tags: [mobile, regression]
+
+---
+id: US_MOBILE_KEYBOARD
+role: Mobile user
+action: Use mobile keyboard
+goal: Type messages and code on mobile
+acceptance:
+  - Keyboard appears on input focus
+  - UI adjusts to avoid keyboard
+  - Can dismiss keyboard
+  - Autocorrect appropriate for context
+tags: [mobile, regression]

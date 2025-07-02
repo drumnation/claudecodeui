@@ -1,0 +1,13 @@
+{
+  "extends": "@kit/tsconfig/react",
+  "compilerOptions": {
+    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
+    "rootDir": "src",
+    "outDir": "dist",
+    "strict": false,
+    "checkJs": false,
+    "noImplicitAny": false
+  },
+  "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts", "**/*.test.js", "**/*.spec.js"]
+}

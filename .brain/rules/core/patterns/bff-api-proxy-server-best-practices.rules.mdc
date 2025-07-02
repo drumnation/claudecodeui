@@ -1,0 +1,116 @@
+---
+description: When tasked with building or modifying a Node.js/Express server that acts as a Backend-for-Frontend (BFF) or API proxy, particularly if the project involves interfacing with legacy APIs, using Puppeteer for tasks like authentication, or requires Docker containerization. This ruleset provides specific best practices for these scenarios, complementing the more general monorepo rules
+globs: 
+alwaysApply: false
+---
+## **Cursor Agent Rule: BFF/API Proxy Server Best Practices**
+
+**Objective:** Define specific best practices for building a Node.js/Express Backend-for-Frontend (BFF) or API Proxy server. This server acts as an intermediary between a modern frontend and a legacy backend API, incorporating Docker support and potentially using Puppeteer for complex authentication flows. This rule complements `/.cursor/rules/node-modular-monorepo-architecture-enforcement.rules.mdc`.
+
+**Scope:** Focuses on proxy logic, legacy integration, authentication handling (including Puppeteer), configuration, Dockerization, and specific infrastructure concerns not covered in the general monorepo ruleset.
+
+### **1\. Project Structure Additions (Complementing ruleset\_v1)**
+
+* **Module Naming:** Use descriptive names for modules handling proxy logic, e.g., /modules/legacyProxy/, /modules/authBridge/.  
+* **Proxy Logic Location:**  
+  * **Controllers (\*.controller.ts):** Receive frontend requests, perform initial validation (DTOs/Schemas), and delegate to proxy services.  
+  * **Services (\*.service.ts):** Contain the core proxy logic:  
+    * Mapping frontend request parameters to legacy API parameters.  
+    * Calling the legacy API client/repository.  
+    * Transforming legacy API responses into frontend-friendly formats (using DTOs).  
+    * Handling legacy API error mapping.  
+  * **Repositories/Clients (\*.repo.ts or \*.client.ts):** Abstract the actual HTTP calls to the legacy backend API. Use libraries like axios or node-fetch. Centralize base URL, timeout handling, and potentially basic retry logic here.  
+* **Puppeteer Integration:**  
+  * If Puppeteer is required, isolate its logic strictly. Consider placing it in:  
+    * A dedicated module: /modules/legacyAuthAutomation/ containing services (\*.service.ts) and potentially utils (\*.util.ts) specifically for browser automation tasks.  
+    * **Crucially:** Evaluate if Puppeteer tasks can run *outside* the main request lifecycle (e.g., a scheduled job fetching tokens periodically) to avoid blocking API requests and reduce server load. If real-time automation per user/session is unavoidable, design services carefully for efficiency and error handling.
+
+### **2\. Configuration Management**
+
+* **Environment Variables:** Use environment variables extensively for configuration. Leverage libraries like dotenv for local development.  
+  * LEGACY\_API\_BASE\_URL  
+  * LEGACY\_API\_TIMEOUT\_MS  
+  * LEGACY\_AUTH\_USERNAME / LEGACY\_AUTH\_PASSWORD (Use secure injection methods, e.g., Docker secrets, environment variables injected by the hosting platform, **not** hardcoded or in Git).  
+  * PUPPETEER\_EXECUTABLE\_PATH (If not using bundled Chromium).  
+  * FRONTEND\_CORS\_ORIGIN  
+* **Configuration Service:** Consider a dedicated configuration service or module (/shared/config/ or within /infra/) that validates and provides typed access to environment variables.
+
+### **3\. Proxying & Transformation Logic**
+
+* **Clear Mapping:** Explicitly map frontend routes/endpoints to legacy API endpoints within controller/service layers. Avoid generic catch-all proxies unless strictly necessary and carefully configured.  
+* **Data Transformation (DTOs):** Use Data Transfer Objects (\*.dto.ts) defined in your modules to represent the data structure expected by the frontend. Services are responsible for transforming the raw legacy API response into these DTOs. This decouples the frontend from legacy API quirks.  
+* **Error Mapping:** Implement robust error handling in the proxy service or client layer (\*.repo.ts/\*.client.ts). Catch errors from the legacy API (network errors, 4xx/5xx responses) and map them to standardized application errors (defined in shared/errors/ as per ruleset\_v1) with user-friendly messages or codes for the frontend. The global error handler (from ruleset\_v1) will then format the final response.
+
+### **4\. Authentication Handling**
+
+* **BFF-Frontend Auth:** Secure the BFF itself using standard methods (e.g., JWT, session cookies) appropriate for your frontend. Implement middleware (auth.middleware.ts) in /infra/http/ or /shared/middleware/ to protect BFF routes.  
+* **Legacy Auth Token Management:**  
+  * **Retrieval (Puppeteer):** If using Puppeteer:  
+    * Implement the browser automation logic within its dedicated service (legacyAuthAutomation.service.ts).  
+    * Handle Puppeteer errors gracefully (timeouts, element not found, login failures).  
+    * Ensure Puppeteer instances are properly launched and closed (browser.close()) to prevent resource leaks. Consider pooling or reusing instances if performance requires it, but be mindful of session state.  
+  * **Storage:** Determine the **scope** and **lifetime** of the legacy token.  
+    * **Global Token (rare):** If *one* token works for the entire BFF instance, fetch it on startup or periodically and store it securely in memory (e.g., in a configuration service or singleton auth service). Add logic for refresh/retry on expiry or failure.  
+    * **Per-User Token (common):** If each frontend user needs a corresponding legacy token, you need a secure storage mechanism mapping the frontend user's session/JWT to the legacy token (e.g., encrypted cache like Redis, secure session store). **Never store sensitive tokens in insecure frontend storage (localStorage).**  
+  * **Injection:** The legacy API client (\*.repo.ts/\*.client.ts) should receive the required legacy token (e.g., as a method argument, or resolved via DI from an auth service) to inject into outgoing requests (e.g., Authorization header).
+
+### **5\. Dockerization (Dockerfile)**
+
+* **Base Image:** Choose an appropriate official Node.js base image (e.g., node:18-slim, node:20-alpine). Consider image size vs. available tooling. Alpine images are smaller but may require more manual dependency installation.  
+* **Puppeteer Dependencies:** If using Puppeteer, the Docker image **must** include Chromium and its dependencies.  
+  * Use a base image that includes them (e.g., ghcr.io/puppeteer/puppeteer:latest).  
+  * Or, explicitly install dependencies in your Dockerfile based on Puppeteer's documentation (this varies by base image OS \- Debian vs. Alpine). Example for Debian-based:  
+    \# Install Puppeteer dependencies (example for Debian-based Node images)  
+    RUN apt-get update && apt-get install \-yq \--no-install-recommends \\  
+        ca-certificates \\  
+        fonts-liberation \\  
+        libasound2 \\  
+        libatk-bridge2.0-0 \\  
+        libatk1.0-0 \\  
+        libc6 \\  
+        libcairo2 \\  
+        libcups2 \\  
+        libdbus-1-3 \\  
+        libexpat1 \\  
+        libfontconfig1 \\  
+        libgbm1 \\  
+        libgcc1 \\  
+        libglib2.0-0 \\  
+        libgtk-3-0 \\  
+        libnspr4 \\  
+        libnss3 \\  
+        libpango-1.0-0 \\  
+        libpangocairo-1.0-0 \\  
+        libstdc++6 \\  
+        libx11-6 \\  
+        libx11-xcb1 \\  
+        libxcb1 \\  
+        libxcomposite1 \\  
+        libxcursor1 \\  
+        libxdamage1 \\  
+        libxext6 \\  
+        libxfixes3 \\  
+        libxi6 \\  
+        libxrandr2 \\  
+        libxrender1 \\  
+        libxss1 \\  
+        libxtst6 \\  
+        lsb-release \\  
+        wget \\  
+        xdg-utils \\  
+        && apt-get clean && rm \-rf /var/lib/apt/lists/\*
+
+* **Multi-Stage Builds:** Use multi-stage builds to keep the final image lean. One stage installs dependencies (including devDependencies for building), another copies only the built code and production dependencies (node\_modules).  
+* **User:** Run the application as a non-root user (USER node).  
+* **Health Checks:** Implement a HEALTHCHECK instruction in the Dockerfile pointing to a simple health check endpoint in your Express app (e.g., /healthz).  
+* **.dockerignore:** Use a .dockerignore file to exclude unnecessary files/directories (node\_modules, .git, \*.md, .env, dist, etc.) from the build context.  
+* **Production Dependencies:** Ensure npm ci \--omit=dev or pnpm install \--prod is used in the final stage.
+
+### **6\. Hosting Considerations**
+
+* **Resource Needs:** Be mindful that Puppeteer (running a full browser) is resource-intensive (CPU/RAM). Choose a hosting plan/instance type that can accommodate this, especially if automation runs frequently.  
+* **Headless Operation:** Ensure Puppeteer is configured to run in headless mode (headless: 'new' or headless: true) on the server.  
+* **CORS:** Configure CORS middleware (cors package) correctly in /infra/http/server.ts to allow requests only from your specific frontend domain(s) (use FRONTEND\_CORS\_ORIGIN environment variable).  
+* **Security:** Apply standard security best practices: use helmet middleware, rate limiting (express-rate-limit), validate all inputs, handle secrets securely.
+
+**Agent Instruction:** When building or modifying the BFF/API Proxy server, apply these rules in addition to cursor\_agent\_ruleset\_v1. Pay special attention to isolating legacy interactions, securely managing authentication tokens (especially if obtained via Puppeteer), correctly configuring Docker for Puppeteer dependencies, and implementing robust error mapping and data transformation. Evaluate the performance implications of Puppeteer usage.

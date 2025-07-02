@@ -1,0 +1,29 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# agent-self-report.rules.mdc
+
+## Purpose
+Agents must periodically output a concise self-report that summarizes their active task, goal, current rule context, and execution state. This improves traceability, user awareness, and multi-agent coordination.
+
+## Behavior
+- Output a report **after each major action** (e.g., completing a step, switching rules, finishing a prompt, receiving a new instruction).
+- Include the following fields:
+
+```markdown
+## 🤖 Agent Self-Report
+- **Active Rule**: [rule file name]
+- **Current Task**: [brief task name or file/folder]
+- **Session Goal**: [the high-level objective for this workflow/session]
+- **Context Usage**: [Low / Medium / High / Very High]
+- **Notes**: [Optional blockers, assumptions, or next action]
+```
+
+- The report must be **clearly labeled** and **output in a predictable format**.
+- Do not wait for a user request to output this — treat it as a proactive behavior.
+
+## Best Practices
+- Keep the self-report concise, relevant, and current.
+- Always update the rule name if switching to a different rule mid-task.

@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/logo.svg" alt="Claude Code UI" width="64" height="64">
+  <img src="apps/frontend/public/logo.svg" alt="Claude Code UI" width="64" height="64">
   <h1>Claude Code UI</h1>
 </div>
 
@@ -14,13 +14,13 @@ A desktop and mobile UI for [Claude Code](https://docs.anthropic.com/en/docs/cla
 <tr>
 <td align="center">
 <h3>Desktop View</h3>
-<img src="public/screenshots/desktop-main.png" alt="Desktop Interface" width="400">
+<img src="apps/frontend/public/screenshots/desktop-main.png" alt="Desktop Interface" width="400">
 <br>
 <em>Main interface showing project overview and chat</em>
 </td>
 <td align="center">
 <h3>Mobile Experience</h3>
-<img src="public/screenshots/mobile-chat.png" alt="Mobile Interface" width="250">
+<img src="apps/frontend/public/screenshots/mobile-chat.png" alt="Mobile Interface" width="250">
 <br>
 <em>Responsive mobile design with touch navigation</em>
 </td>
@@ -44,7 +44,8 @@ A desktop and mobile UI for [Claude Code](https://docs.anthropic.com/en/docs/cla
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) v16 or higher
+- [Node.js](https://nodejs.org/) v18 or higher
+- [pnpm](https://pnpm.io/) v9 or higher
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and configured
 
 ### Installation
@@ -57,7 +58,7 @@ cd claudecodeui
 
 2. **Install dependencies:**
 ```bash
-npm install
+pnpm install
 ```
 
 3. **Configure environment:**
@@ -69,12 +70,15 @@ cp .env.example .env
 4. **Start the application:**
 ```bash
 # Development mode (with hot reload)
-npm run dev
+pnpm run dev
 
+# Development with ngrok tunnel
+pnpm run dev:ngrok
 ```
 
 5. **Open your browser:**
-   - Development: `http://localhost:3001`
+   - Frontend: `http://localhost:8766`
+   - Backend API: `http://localhost:8767`
 
 ## Security & Tools Configuration
 
@@ -90,7 +94,7 @@ To use Claude Code's full functionality, you'll need to manually enable tools:
 
 <div align="center">
 
-![Tools Settings Modal](public/screenshots/tools-modal.png)
+![Tools Settings Modal](apps/frontend/public/screenshots/tools-modal.png)
 *Tools Settings interface - enable only what you need*
 
 </div>
@@ -134,25 +138,49 @@ The UI automatically discovers Claude Code projects from `~/.claude/projects/` a
 
 ## Architecture
 
+### Monorepo Structure
+
+```
+/
+├── apps/
+│   ├── frontend/          # React + Vite frontend app
+│   └── backend/           # Express + WebSocket backend
+├── packages/              # Shared libraries (future)
+├── tooling/               # Shared dev tools
+│   ├── eslint/           # ESLint configurations
+│   ├── prettier/         # Prettier configuration
+│   ├── testing/          # Test configurations
+│   └── typescript/       # TypeScript configs
+└── turbo.json            # Monorepo build orchestration
+```
+
 ### System Overview
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Frontend      │    │   Backend       │    │  Claude CLI     │
 │   (React/Vite)  │◄──►│ (Express/WS)    │◄──►│  Integration    │
+│ apps/frontend   │    │ apps/backend    │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-### Backend (Node.js + Express)
+### Backend (`apps/backend`)
 - **Express Server** - RESTful API with static file serving
 - **WebSocket Server** - Communication for chats and project refresh
 - **Claude CLI Integration** - Process spawning and management
 - **Session Management** - JSONL parsing and conversation persistence
 - **File System API** - Exposing file browser for projects
 
-### Frontend (React + Vite)
+### Frontend (`apps/frontend`)
 - **React 18** - Modern component architecture with hooks
 - **CodeMirror** - Advanced code editor with syntax highlighting
+- **Vite** - Fast development and optimized production builds
+- **Tailwind CSS** - Utility-first styling
+
+### Build System
+- **pnpm Workspaces** - Efficient dependency management
+- **Turbo** - Parallel builds and task orchestration
+- **Shared Tooling** - Centralized configs for consistency
 
 
 
@@ -165,13 +193,13 @@ We welcome contributions! Please follow these guidelines:
 #### Getting Started
 1. **Fork** the repository
 2. **Clone** your fork: `git clone <your-fork-url>`
-3. **Install** dependencies: `npm install`
+3. **Install** dependencies: `pnpm install`
 4. **Create** a feature branch: `git checkout -b feature/amazing-feature`
 
 #### Development Process
 1. **Make your changes** following the existing code style
 2. **Test thoroughly** - ensure all features work correctly
-3. **Run quality checks**: `npm run lint && npm run format`
+3. **Run quality checks**: `pnpm run lint && pnpm run format`
 4. **Commit** with descriptive messages following [Conventional Commits](https://conventionalcommits.org/)
 5. **Push** to your branch: `git push origin feature/amazing-feature`
 6. **Submit** a Pull Request with:
