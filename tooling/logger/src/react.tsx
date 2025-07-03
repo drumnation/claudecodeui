@@ -1,12 +1,18 @@
 /**
  * @kit/logger React Integration
- * 
+ *
  * Context and hooks for using the logger in React applications.
  */
 
-import React, { createContext, useContext, useMemo, useRef, ReactNode } from 'react';
-import { createLogger } from './browser.js';
-import type { Logger, LoggerOptions, LoggerMetadata } from './types.js';
+import React, {
+  createContext,
+  useContext,
+  useMemo,
+  useRef,
+  ReactNode,
+} from 'react';
+import {createLogger} from './browser.js';
+import type {Logger, LoggerOptions, LoggerMetadata} from './types.js';
 
 interface LoggerContextValue {
   logger: Logger;
@@ -20,14 +26,14 @@ interface LoggerProviderProps extends LoggerOptions {
 
 /**
  * Logger Provider
- * 
+ *
  * Creates and manages a logger instance for the React app.
  * Place at the root of your app to enable logging throughout.
- * 
+ *
  * @example
  * ```tsx
  * import { LoggerProvider } from '@kit/logger';
- * 
+ *
  * function App() {
  *   return (
  *     <LoggerProvider level="debug" isDevelopment={import.meta.env.DEV}>
@@ -37,37 +43,35 @@ interface LoggerProviderProps extends LoggerOptions {
  * }
  * ```
  */
-export function LoggerProvider({ children, ...options }: LoggerProviderProps) {
+export function LoggerProvider({children, ...options}: LoggerProviderProps) {
   // Create logger instance once and maintain it
   const loggerRef = useRef<Logger | null>(null);
-  
+
   if (!loggerRef.current) {
     loggerRef.current = createLogger(options);
   }
-  
+
   const value = useMemo(
-    () => ({ logger: loggerRef.current! }),
-    [] // Logger instance never changes
+    () => ({logger: loggerRef.current!}),
+    [], // Logger instance never changes
   );
-  
+
   return (
-    <LoggerContext.Provider value={value}>
-      {children}
-    </LoggerContext.Provider>
+    <LoggerContext.Provider value={value}>{children}</LoggerContext.Provider>
   );
 }
 
 /**
  * Use Logger Context
- * 
+ *
  * Access the root logger instance directly.
  * Useful when you need the full logger API.
- * 
+ *
  * @example
  * ```tsx
  * function MyComponent() {
  *   const { logger } = useLoggerContext();
- *   
+ *
  *   useEffect(() => {
  *     logger.debug('Component mounted');
  *   }, []);
@@ -76,33 +80,33 @@ export function LoggerProvider({ children, ...options }: LoggerProviderProps) {
  */
 export function useLoggerContext(): LoggerContextValue {
   const context = useContext(LoggerContext);
-  
+
   if (!context) {
     throw new Error(
       'useLoggerContext must be used within a LoggerProvider. ' +
-      'Wrap your app with <LoggerProvider> at the root.'
+        'Wrap your app with <LoggerProvider> at the root.',
     );
   }
-  
+
   return context;
 }
 
 /**
  * Use Logger Hook
- * 
+ *
  * Get a scoped logger for a specific component or module.
  * The scope helps identify where logs are coming from.
- * 
+ *
  * @example
  * ```tsx
  * function TodoList() {
  *   const logger = useLogger({ component: 'TodoList' });
- *   
+ *
  *   const handleAdd = (todo: Todo) => {
  *     logger.info('Adding todo', { id: todo.id, title: todo.title });
  *     // ... add logic
  *   };
- *   
+ *
  *   const handleError = (error: Error) => {
  *     logger.error('Failed to save todo', { error });
  *   };
@@ -110,23 +114,20 @@ export function useLoggerContext(): LoggerContextValue {
  * ```
  */
 export function useLogger(scope: LoggerMetadata): Logger {
-  const { logger } = useLoggerContext();
-  
+  const {logger} = useLoggerContext();
+
   // Memoize the scoped logger to avoid recreating it on every render
-  const scopedLogger = useMemo(
-    () => logger.child(scope),
-    [logger, scope]
-  );
-  
+  const scopedLogger = useMemo(() => logger.child(scope), [logger, scope]);
+
   return scopedLogger;
 }
 
 /**
  * Logger Boundary
- * 
+ *
  * Catches errors in child components and logs them.
  * Useful for debugging React error boundaries.
- * 
+ *
  * @example
  * ```tsx
  * <LoggerBoundary fallback={<ErrorFallback />}>
@@ -145,24 +146,27 @@ interface LoggerBoundaryState {
   error: Error | null;
 }
 
-export class LoggerBoundary extends React.Component<LoggerBoundaryProps, LoggerBoundaryState> {
+export class LoggerBoundary extends React.Component<
+  LoggerBoundaryProps,
+  LoggerBoundaryState
+> {
   private logger: Logger | null = null;
-  
+
   constructor(props: LoggerBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = {hasError: false, error: null};
   }
-  
+
   static getDerivedStateFromError(error: Error): LoggerBoundaryState {
-    return { hasError: true, error };
+    return {hasError: true, error};
   }
-  
+
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Get logger from context if available
     if (this.context && this.logger) {
       const scope = this.props.scope || 'ErrorBoundary';
-      const boundaryLogger = this.logger.child({ component: scope });
-      
+      const boundaryLogger = this.logger.child({component: scope});
+
       boundaryLogger.error('React error boundary caught error', {
         error: error.message,
         stack: error.stack,
@@ -170,12 +174,12 @@ export class LoggerBoundary extends React.Component<LoggerBoundaryProps, LoggerB
       });
     }
   }
-  
+
   render() {
     if (this.state.hasError) {
       return this.props.fallback || <div>Something went wrong.</div>;
     }
-    
+
     return this.props.children;
   }
 }
@@ -184,10 +188,10 @@ LoggerBoundary.contextType = LoggerContext;
 
 /**
  * Development Logger
- * 
+ *
  * Higher-order component that adds logging to component lifecycle.
  * Only active in development mode.
- * 
+ *
  * @example
  * ```tsx
  * export default withDevLogger(MyComponent, 'MyComponent');
@@ -195,27 +199,27 @@ LoggerBoundary.contextType = LoggerContext;
  */
 export function withDevLogger<P extends object>(
   Component: React.ComponentType<P>,
-  componentName: string
+  componentName: string,
 ): React.ComponentType<P> {
   if (process.env.NODE_ENV !== 'development') {
     return Component;
   }
-  
+
   return function LoggedComponent(props: P) {
-    const logger = useLogger({ scope: componentName });
-    
+    const logger = useLogger({scope: componentName});
+
     React.useEffect(() => {
-      logger.debug('Component mounted', { props });
-      
+      logger.debug('Component mounted', {props});
+
       return () => {
         logger.debug('Component unmounted');
       };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
-    
+
     React.useEffect(() => {
-      logger.debug('Component updated', { props });
+      logger.debug('Component updated', {props});
     });
-    
+
     return <Component {...props} />;
   };
 }

@@ -3,19 +3,19 @@
  * For unit testing individual components with their stories
  */
 
-import { composeStories, composeStory } from '@storybook/react';
-import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { Meta, StoryObj, ReactRenderer } from '@storybook/react';
-import type { ReactElement } from 'react';
+import {composeStories, composeStory} from '@storybook/react';
+import {render, screen, waitFor} from '@testing-library/react';
+import {describe, it, expect, beforeEach, vi} from 'vitest';
+import type {Meta, StoryObj, ReactRenderer} from '@storybook/react';
+import type {ReactElement} from 'react';
 import React from 'react';
 
 /**
  * Test a single story
  */
 export async function testStory<T>(
-  Story: StoryObj<T> & { render: () => ReactElement },
-  assertions: (screenUtils: typeof screen) => Promise<void> | void
+  Story: StoryObj<T> & {render: () => ReactElement},
+  assertions: (screenUtils: typeof screen) => Promise<void> | void,
 ) {
   const StoryComponent = Story.render || (() => null);
   render(<StoryComponent />);
@@ -26,11 +26,11 @@ export async function testStory<T>(
  * Test all stories in a component
  */
 export function testAllStories<T extends Record<string, any>>(
-  stories: T & { default?: Meta },
+  stories: T & {default?: Meta},
   options?: {
     skip?: string[];
     only?: string[];
-  }
+  },
 ) {
   const composedStories = composeStories(stories as any);
   const storyEntries = Object.entries(composedStories);
@@ -42,8 +42,8 @@ export function testAllStories<T extends Record<string, any>>(
 
       it(`renders ${name} story`, async () => {
         const StoryComponent = (Story as any).render || (() => null);
-        const { container } = render(React.createElement(StoryComponent));
-        
+        const {container} = render(React.createElement(StoryComponent));
+
         // Run play function if it exists
         if ((Story as any).play) {
           await (Story as any).play({
@@ -72,10 +72,14 @@ export const componentTest = {
   testPropVariations<P extends Record<string, any>>(
     Component: React.ComponentType<P>,
     baseProps: P,
-    variations: Array<{ name: string; props: Partial<P>; test: (screenUtils: typeof screen) => void }>
+    variations: Array<{
+      name: string;
+      props: Partial<P>;
+      test: (screenUtils: typeof screen) => void;
+    }>,
   ) {
     describe('Prop variations', () => {
-      variations.forEach(({ name, props, test }) => {
+      variations.forEach(({name, props, test}) => {
         it(name, () => {
           render(<Component {...baseProps} {...props} />);
           test(screen);
@@ -87,13 +91,13 @@ export const componentTest = {
   /**
    * Test component accessibility
    */
-  async testAccessibility(Story: StoryObj & { render: () => ReactElement }) {
+  async testAccessibility(Story: StoryObj & {render: () => ReactElement}) {
     const StoryComponent = Story.render || (() => null);
-    const { container } = render(React.createElement(StoryComponent));
-    
+    const {container} = render(React.createElement(StoryComponent));
+
     // Check for basic accessibility attributes
     const interactiveElements = container.querySelectorAll(
-      'button, a, input, select, textarea, [role="button"], [role="link"]'
+      'button, a, input, select, textarea, [role="button"], [role="link"]',
     );
 
     interactiveElements.forEach((element) => {
@@ -102,11 +106,11 @@ export const componentTest = {
       const hasAriaLabelledBy = element.hasAttribute('aria-labelledby');
       const hasTextContent = (element.textContent?.trim()?.length ?? 0) > 0;
       const isInput = ['INPUT', 'SELECT', 'TEXTAREA'].includes(element.tagName);
-      
+
       if (!isInput) {
         expect(
           hasAriaLabel || hasAriaLabelledBy || hasTextContent,
-          `Element ${element.tagName} should have accessible name`
+          `Element ${element.tagName} should have accessible name`,
         ).toBe(true);
       }
 
@@ -128,12 +132,14 @@ export const componentTest = {
       props: P;
       setup?: () => void;
       test: (screenUtils: typeof screen) => Promise<void> | void;
-    }>
+    }>,
   ) {
-    for (const { name, props, setup, test } of states) {
+    for (const {name, props, setup, test} of states) {
       it(`handles ${name} state`, async () => {
         setup?.();
-        render(React.createElement(Component as React.ComponentType<any>, props));
+        render(
+          React.createElement(Component as React.ComponentType<any>, props),
+        );
         await test(screen);
       });
     }
@@ -149,13 +155,13 @@ export const componentTest = {
       name: string;
       trigger: (screenUtils: typeof screen) => Promise<void>;
       assertion: (props: P) => void;
-    }>
+    }>,
   ) {
     describe('Event handlers', () => {
-      events.forEach(({ name, trigger, assertion }) => {
+      events.forEach(({name, trigger, assertion}) => {
         it(`handles ${name}`, async () => {
-          const mockProps = { ...baseProps };
-          
+          const mockProps = {...baseProps};
+
           // Mock all function props
           Object.keys(mockProps).forEach((key) => {
             if (typeof (mockProps as any)[key] === 'function') {
@@ -175,8 +181,8 @@ export const componentTest = {
    * Test component error boundaries
    */
   testErrorBoundary(
-    Story: StoryObj & { render: () => ReactElement },
-    errorMessage: string
+    Story: StoryObj & {render: () => ReactElement},
+    errorMessage: string,
   ) {
     // Mock console.error to avoid noise
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -187,7 +193,9 @@ export const componentTest = {
         throw new Error(errorMessage);
       };
 
-      expect(() => render(React.createElement(ThrowError))).toThrow(errorMessage);
+      expect(() => render(React.createElement(ThrowError))).toThrow(
+        errorMessage,
+      );
     } finally {
       consoleSpy.mockRestore();
     }
@@ -197,8 +205,8 @@ export const componentTest = {
    * Test component render performance
    */
   async testRenderPerformance(
-    Story: StoryObj & { render: () => ReactElement },
-    maxRenderTime = 16 // 60fps threshold
+    Story: StoryObj & {render: () => ReactElement},
+    maxRenderTime = 16, // 60fps threshold
   ) {
     const start = performance.now();
     const StoryComponent = Story.render || (() => null);
@@ -208,7 +216,7 @@ export const componentTest = {
 
     expect(
       renderTime,
-      `Component should render in less than ${maxRenderTime}ms`
+      `Component should render in less than ${maxRenderTime}ms`,
     ).toBeLessThan(maxRenderTime);
   },
 };
@@ -221,7 +229,7 @@ export function createSnapshotTests<T extends Meta>(
   options?: {
     skip?: string[];
     only?: string[];
-  }
+  },
 ) {
   const composedStories = composeStories(stories as any);
   const storyEntries = Object.entries(composedStories);
@@ -233,7 +241,7 @@ export function createSnapshotTests<T extends Meta>(
 
       it(`${name} matches snapshot`, () => {
         const StoryComponent = (Story as any).render || (() => null);
-        const { container } = render(React.createElement(StoryComponent));
+        const {container} = render(React.createElement(StoryComponent));
         expect(container).toMatchSnapshot();
       });
     });
@@ -244,7 +252,7 @@ export function createSnapshotTests<T extends Meta>(
  * Create a test suite for a component
  */
 export function createComponentTestSuite<T extends Record<string, any>>(
-  stories: T & { default?: Meta },
+  stories: T & {default?: Meta},
   config?: {
     skipStories?: string[];
     skipSnapshots?: boolean;
@@ -253,17 +261,17 @@ export function createComponentTestSuite<T extends Record<string, any>>(
       name: string;
       test: (stories: any) => void;
     }>;
-  }
+  },
 ) {
   const composedStories = composeStories(stories as any);
 
   describe((stories as any).default?.title || 'Component Test Suite', () => {
     // Story rendering tests
-    testAllStories(stories, { skip: config?.skipStories });
+    testAllStories(stories, {skip: config?.skipStories});
 
     // Snapshot tests
     if (!config?.skipSnapshots) {
-      createSnapshotTests(stories as any, { skip: config?.skipStories });
+      createSnapshotTests(stories as any, {skip: config?.skipStories});
     }
 
     // Accessibility tests
@@ -280,7 +288,7 @@ export function createComponentTestSuite<T extends Record<string, any>>(
     }
 
     // Custom tests
-    config?.customTests?.forEach(({ name, test }) => {
+    config?.customTests?.forEach(({name, test}) => {
       describe(name, () => {
         test(composedStories);
       });
