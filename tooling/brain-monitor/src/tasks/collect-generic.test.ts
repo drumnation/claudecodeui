@@ -140,10 +140,11 @@ FAIL test2.spec.ts
       await run("unit");
 
       const reportCall = mockWriteFileSync.mock.calls[0];
-      expect(reportCall[0]).toBe("_errors/errors.unit-failures.md");
-      expect(reportCall[1]).toContain("FAIL test2.spec.ts");
-      expect(reportCall[1]).toContain("Expected true to be false");
-      expect(reportCall[1]).toContain("Total failures found: 1");
+      expect(reportCall).toBeTruthy();
+      expect(reportCall?.[0]).toBe("_errors/errors.unit-failures.md");
+      expect(reportCall?.[1]).toContain("FAIL test2.spec.ts");
+      expect(reportCall?.[1]).toContain("Expected true to be false");
+      expect(reportCall?.[1]).toContain("Total failures found: 1");
     });
 
     it("should parse ✗ markers", async () => {
@@ -160,9 +161,10 @@ Test Suite
       await run("integration");
 
       const reportCall = mockWriteFileSync.mock.calls[0];
-      expect(reportCall[1]).toContain("✗ test failed");
-      expect(reportCall[1]).toContain("Assertion error");
-      expect(reportCall[1]).toContain("Total failures found: 1");
+      expect(reportCall).toBeTruthy();
+      expect(reportCall?.[1]).toContain("✗ test failed");
+      expect(reportCall?.[1]).toContain("Assertion error");
+      expect(reportCall?.[1]).toContain("Total failures found: 1");
     });
 
     it('should parse "failed" keyword', async () => {
@@ -178,8 +180,9 @@ Summary: 2 failed, 1 passed
       await run("e2e");
 
       const reportCall = mockWriteFileSync.mock.calls[0];
-      expect(reportCall[1]).toContain("2 tests failed");
-      expect(reportCall[1]).toContain("Total failures found: 1");
+      expect(reportCall).toBeTruthy();
+      expect(reportCall?.[1]).toContain("2 tests failed");
+      expect(reportCall?.[1]).toContain("Total failures found: 1");
     });
 
     it("should handle multiple failures", async () => {
@@ -196,10 +199,11 @@ FAIL test2.spec.ts
       await run("unit");
 
       const reportCall = mockWriteFileSync.mock.calls[0];
-      expect(reportCall[1]).toContain("Total failures found: 3");
-      expect(reportCall[1]).toContain("Failure 1");
-      expect(reportCall[1]).toContain("Failure 2");
-      expect(reportCall[1]).toContain("Failure 3");
+      expect(reportCall).toBeTruthy();
+      expect(reportCall?.[1]).toContain("Total failures found: 3");
+      expect(reportCall?.[1]).toContain("Failure 1");
+      expect(reportCall?.[1]).toContain("Failure 2");
+      expect(reportCall?.[1]).toContain("Failure 3");
     });
 
     it("should handle no failures", async () => {
@@ -213,9 +217,10 @@ FAIL test2.spec.ts
       await run("unit");
 
       const reportCall = mockWriteFileSync.mock.calls[0];
-      expect(reportCall[1]).toContain("Total failures found: 0");
-      expect(reportCall[1]).toContain("✅ All tests passed!");
-      expect(reportCall[1]).toContain("No action needed");
+      expect(reportCall).toBeTruthy();
+      expect(reportCall?.[1]).toContain("Total failures found: 0");
+      expect(reportCall?.[1]).toContain("✅ All tests passed!");
+      expect(reportCall?.[1]).toContain("No action needed");
     });
   });
 
@@ -255,7 +260,8 @@ FAIL test2.spec.ts
       await run("unit");
 
       const reportCall = mockWriteFileSync.mock.calls[0];
-      expect(reportCall[1]).toContain("2024-01-15T10:30:00.000Z");
+      expect(reportCall).toBeTruthy();
+      expect(reportCall?.[1]).toContain("2024-01-15T10:30:00.000Z");
 
       vi.useRealTimers();
     });
@@ -266,7 +272,8 @@ FAIL test2.spec.ts
       await run("integration");
 
       const reportCall = mockWriteFileSync.mock.calls[0];
-      expect(reportCall[1]).toContain("Test command: `pnpm test:integration`");
+      expect(reportCall).toBeTruthy();
+      expect(reportCall?.[1]).toContain("Test command: `pnpm test:integration`");
     });
 
     it("should format failures with code blocks", async () => {
@@ -280,8 +287,9 @@ FAIL Component test
       await run("unit");
 
       const reportCall = mockWriteFileSync.mock.calls[0];
-      expect(reportCall[1]).toContain("```\nFAIL Component test");
-      expect(reportCall[1]).toContain("Received: false\n```");
+      expect(reportCall).toBeTruthy();
+      expect(reportCall?.[1]).toContain("```\nFAIL Component test");
+      expect(reportCall?.[1]).toContain("Received: false\n```");
     });
   });
 
@@ -297,10 +305,11 @@ FAIL Component test
       await run("unit");
 
       const reportCall = mockWriteFileSync.mock.calls[0];
-      expect(reportCall[0]).toBe("_errors/errors.unit-failures.md");
-      expect(reportCall[1]).toContain("Test Collection Error");
-      expect(reportCall[1]).toContain("Unexpected error");
-      expect(reportCall[1]).toContain("Troubleshooting");
+      expect(reportCall).toBeTruthy();
+      expect(reportCall?.[0]).toBe("_errors/errors.unit-failures.md");
+      expect(reportCall?.[1]).toContain("Test Collection Error");
+      expect(reportCall?.[1]).toContain("Unexpected error");
+      expect(reportCall?.[1]).toContain("Troubleshooting");
     });
 
     it("should handle missing stdout/stderr in error", async () => {
@@ -310,7 +319,8 @@ FAIL Component test
       await run("custom");
 
       const reportCall = mockWriteFileSync.mock.calls[0];
-      expect(reportCall[1]).toContain("Command not found");
+      expect(reportCall).toBeTruthy();
+      expect(reportCall?.[1]).toContain("Command not found");
     });
 
     it("should log errors to console", async () => {

@@ -114,10 +114,43 @@ class BrowserConsoleCapture {
 
   private capture(level: string, args: any[]): void {
     try {
+      const message = this.formatArgs(args);
+      
+      // Enhanced filtering to prevent infinite loops
+      if (
+        // Skip brain monitor's own logs
+        message.includes("[Brain-Monitor]") || 
+        message.includes("brain-monitor") ||
+        message.includes("Brain monitor console capture") ||
+        
+        // Skip only brain monitor's own pino logs that could cause loops
+        args.some(arg => 
+          typeof arg === 'object' && 
+          arg !== null && 
+          (arg.scope === 'brain-monitor' || 
+           (arg.msg && typeof arg.msg === 'string' && arg.msg.includes('brain-monitor')))
+        ) ||
+        
+        // Skip service worker logs
+        message.includes("SW:") ||
+        message.includes("Service Worker") ||
+        
+        // Skip React DevTools and development noise
+        message.includes("ReactRefresh") ||
+        message.includes("HMR") ||
+        message.includes("Fast Refresh") ||
+        
+        // Skip Vite development logs
+        message.includes("[vite]") ||
+        message.includes("hmr update")
+      ) {
+        return;
+      }
+
       const logEntry: LogEntry = {
         level,
         timestamp: new Date().toISOString(),
-        message: this.formatArgs(args),
+        message,
         source: "browser",
         url: window.location.href,
         userAgent: navigator.userAgent,
@@ -158,20 +191,57 @@ class BrowserConsoleCapture {
         }
         if (typeof arg === "object") {
           try {
-            return JSON.stringify(arg, null, 2);
+            // Compact JSON formatting for better token efficiency
+            return JSON.stringify(arg, null, 0);
           } catch (e) {
             return String(arg);
           }
         }
         return String(arg);
       })
-      .join(" ");
+      .join(" ")
+      // Remove color codes and console formatting at source
+      .replace(/color:\s*#[A-Fa-f0-9]{6}\s*/g, '')
+      .replace(/color:\s*#[A-Fa-f0-9]{3}\s*/g, '')
+      .replace(/%c/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
+
+  private isFlushInProgress = false;
+  private lastFlushTime = 0;
+  private readonly MIN_FLUSH_INTERVAL = 1000; // 1 second minimum between flushes
+  private flushQueue: LogEntry[][] = [];
 
   private async flush(): Promise<void> {
     if (this.capturedLogs.length === 0) {
       return;
     }
+
+    const now = Date.now();
+    
+    // Rate limiting: prevent excessive flush frequency
+    if (now - this.lastFlushTime < this.MIN_FLUSH_INTERVAL) {
+      // Queue this flush request for later
+      if (this.flushQueue.length === 0) {
+        setTimeout(() => {
+          void this.processFlushQueue();
+        }, this.MIN_FLUSH_INTERVAL - (now - this.lastFlushTime));
+      }
+      this.flushQueue.push([...this.capturedLogs]);
+      this.capturedLogs = [];
+      return;
+    }
+
+    // Prevent concurrent flush operations
+    if (this.isFlushInProgress) {
+      this.flushQueue.push([...this.capturedLogs]);
+      this.capturedLogs = [];
+      return;
+    }
+
+    this.isFlushInProgress = true;
+    this.lastFlushTime = now;
 
     const logsToSend = [...this.capturedLogs];
     this.capturedLogs = [];
@@ -192,9 +262,37 @@ class BrowserConsoleCapture {
         }),
       });
     } catch (error) {
-      // Re-add logs to buffer if send failed
+      // Re-add logs to buffer if send failed, but implement exponential backoff
       this.capturedLogs.unshift(...logsToSend);
       this.originalMethods.error("[Brain-Monitor] Failed to send logs:", error);
+      
+      // Exponential backoff: delay next flush attempt
+      const backoffDelay = Math.min(5000, 1000 * Math.pow(2, this.flushQueue.length));
+      setTimeout(() => {
+        this.isFlushInProgress = false;
+        void this.processFlushQueue();
+      }, backoffDelay);
+      return;
+    } finally {
+      this.isFlushInProgress = false;
+    }
+
+    // Process any queued flush requests
+    void this.processFlushQueue();
+  }
+
+  private async processFlushQueue(): Promise<void> {
+    if (this.flushQueue.length === 0 || this.isFlushInProgress) {
+      return;
+    }
+
+    // Merge all queued logs and flush once
+    const allQueuedLogs = this.flushQueue.flat();
+    this.flushQueue = [];
+    
+    if (allQueuedLogs.length > 0) {
+      this.capturedLogs.unshift(...allQueuedLogs);
+      await this.flush();
     }
   }
 
@@ -207,8 +305,9 @@ class BrowserConsoleCapture {
   }
 }
 
-// Singleton instance
+// Singleton instance with stronger protection
 let instance: BrowserConsoleCapture | null = null;
+let instanceId: string | null = null;
 
 /**
  * Initialize browser console capture
@@ -217,10 +316,17 @@ let instance: BrowserConsoleCapture | null = null;
 export function initBrowserConsoleCapture(
   config?: ConsoleCapturConfig,
 ): BrowserConsoleCapture {
+  const currentInstanceId = `instance-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  
   if (!instance) {
+    console.log(`[Brain-Monitor] Creating new instance: ${currentInstanceId}`);
+    instanceId = currentInstanceId;
     instance = new BrowserConsoleCapture(config);
     instance.start();
+  } else {
+    console.warn(`[Brain-Monitor] Instance already exists (${instanceId}), rejecting duplicate initialization attempt: ${currentInstanceId}`);
   }
+  
   return instance;
 }
 
@@ -233,21 +339,8 @@ export function getConsoleCapture(): BrowserConsoleCapture | null {
 
 /**
  * Auto-initialize if this script is loaded directly
+ * DISABLED: Manual initialization only to prevent conflicts
  */
-if (typeof window !== "undefined" && typeof document !== "undefined") {
-  // Check if we should auto-init based on a meta tag or global config
-  const autoInit = (window as any).__BRAIN_MONITOR_AUTO_INIT__ !== false;
-
-  if (autoInit) {
-    // Wait for DOM ready
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", () => {
-        initBrowserConsoleCapture();
-      });
-    } else {
-      initBrowserConsoleCapture();
-    }
-  }
-}
+// Auto-initialization disabled to prevent conflicts with manual initialization
 
 export type { LogEntry, ConsoleCapturConfig };

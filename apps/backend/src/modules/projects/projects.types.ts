@@ -28,6 +28,9 @@ export interface Project {
   isManuallyAdded?: boolean;
   sessions: Session[];
   sessionMeta?: SessionMeta;
+  subprojects?: Project[];
+  isSubproject?: boolean;
+  parentProject?: string;
 }
 
 export interface SessionsResult {

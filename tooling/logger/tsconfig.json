@@ -1,5 +1,9 @@
 {
   "extends": "@kit/tsconfig/react",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "vite/client"]
+  },
   "include": ["src"],
   "exclude": ["node_modules"]
 }

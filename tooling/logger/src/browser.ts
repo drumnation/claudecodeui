@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 import pino from 'pino';
 import { getEnv } from '@kit/env-loader/browser';
 import type { Logger, LoggerOptions, LoggerMetadata, LogLevel } from './types.js';
@@ -33,7 +35,7 @@ function createThemeWriter(theme: ThemeDefinition, scope: string) {
     return `color: ${color}`;
   };
 
-  const createLogFunction = (level: string, levelNum: keyof ThemeDefinition) => {
+  const createLogFunction = (level: string, levelColor: string) => {
     return function(o: any) {
       const timestamp = new Date().toLocaleTimeString();
       const scopeName = o.scope || scope;
@@ -43,20 +45,19 @@ function createThemeWriter(theme: ThemeDefinition, scope: string) {
         `%c${timestamp} %c[${scopeName}]%c ${level.toUpperCase()} %c| %c${o.msg}`,
         formatStyle(theme.time),
         formatStyle(theme.scope),
-        formatStyle(theme[levelNum]),
+        formatStyle(levelColor),
         formatStyle(isMonochrome ? 'normal' : '#666666'),
-        formatStyle(isMonochrome ? 'normal' : '#ffffff'),
-        o
+        formatStyle(isMonochrome ? 'normal' : '#ffffff')
       );
     };
   };
 
   return {
-    error: createLogFunction('error', 50),
-    warn: createLogFunction('warn', 40),
-    info: createLogFunction('info', 30),
-    debug: createLogFunction('debug', 20),
-    trace: createLogFunction('trace', 10),
+    error: createLogFunction('error', theme.error),
+    warn: createLogFunction('warn', theme.warn),
+    info: createLogFunction('info', theme.info),
+    debug: createLogFunction('debug', theme.debug),
+    trace: createLogFunction('trace', theme.trace),
   };
 }
 

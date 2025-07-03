@@ -3,8 +3,8 @@
   "compilerOptions": {
     "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
     "rootDir": "src",
-    "lib": ["ES2022", "DOM"],
-    "types": ["node"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "vite/client"],
     "module": "ESNext"
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],

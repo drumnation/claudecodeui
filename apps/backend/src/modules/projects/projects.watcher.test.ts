@@ -246,7 +246,7 @@ describe('projects.watcher', () => {
 
       vi.mocked(getProjectsList).mockResolvedValue([]);
 
-      watcher.createProjectsWatcher(mixedClients);
+      watcher.createProjectsWatcher(mixedClients, mockLogger);
 
       const addHandler = vi
         .mocked(mockWatcher.on)
@@ -262,9 +262,6 @@ describe('projects.watcher', () => {
 
     it('should handle errors in project list retrieval', async () => {
       vi.mocked(getProjectsList).mockRejectedValue(new Error('Read error'));
-      const consoleErrorSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
 
       watcher.createProjectsWatcher(mockClients, mockLogger);
 
@@ -276,20 +273,14 @@ describe('projects.watcher', () => {
       vi.advanceTimersByTime(300);
       await vi.runAllTimersAsync();
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        '❌ Error handling project changes:',
-        expect.any(Error),
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        '❌ Error handling project changes',
+        {error: expect.any(Error)},
       );
       expect(mockClient1.send).not.toHaveBeenCalled();
-
-      consoleErrorSpy.mockRestore();
     });
 
     it('should handle watcher errors', () => {
-      const consoleErrorSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
-
       watcher.createProjectsWatcher(mockClients, mockLogger);
 
       const errorHandler = vi
@@ -298,19 +289,13 @@ describe('projects.watcher', () => {
       const testError = new Error('Watcher error');
       errorHandler!(testError);
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        '❌ Chokidar watcher error:',
-        testError,
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        '❌ Chokidar watcher error',
+        {error: testError},
       );
-
-      consoleErrorSpy.mockRestore();
     });
 
     it('should log when ready', () => {
-      const consoleLogSpy = vi
-        .spyOn(console, 'log')
-        .mockImplementation(() => {});
-
       watcher.createProjectsWatcher(mockClients, mockLogger);
 
       const readyHandler = vi
@@ -318,9 +303,7 @@ describe('projects.watcher', () => {
         .mock.calls.find((call) => call[0] === 'ready')?.[1];
       readyHandler!();
 
-      expect(consoleLogSpy).toHaveBeenCalledWith('✅ File watcher ready');
-
-      consoleLogSpy.mockRestore();
+      expect(mockLogger.info).toHaveBeenCalledWith('✅ File watcher ready');
     });
 
     it('should handle setup errors', () => {
@@ -328,18 +311,12 @@ describe('projects.watcher', () => {
         throw new Error('Setup failed');
       });
 
-      const consoleErrorSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
-
       watcher.createProjectsWatcher(mockClients, mockLogger);
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        '❌ Failed to setup projects watcher:',
-        expect.any(Error),
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        '❌ Failed to setup projects watcher',
+        {error: expect.any(Error)},
       );
-
-      consoleErrorSpy.mockRestore();
     });
   });
 

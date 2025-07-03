@@ -1,0 +1,1 @@
+export { default as MainContent, type MainContentProps } from './MainContent';

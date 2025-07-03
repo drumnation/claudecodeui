@@ -123,7 +123,7 @@ describe("detect-tests", () => {
       const result = findPackagesWithTests();
 
       expect(result).toHaveLength(1);
-      expect(result[0].availableTests).toEqual(["test:unit"]);
+      expect(result[0]?.availableTests).toEqual(["test:unit"]);
     });
 
     it("should handle missing package.json gracefully", () => {
@@ -159,7 +159,7 @@ describe("detect-tests", () => {
 
       const result = findPackagesWithTests();
 
-      expect(result[0].name).toBe("app1");
+      expect(result[0]?.name).toBe("app1");
     });
 
     it("should handle packages without scripts", () => {

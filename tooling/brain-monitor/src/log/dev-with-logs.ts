@@ -2,7 +2,7 @@
 /* eslint-disable no-console */
 
 import { spawn, ChildProcess, execSync } from "child_process";
-import { mkdirSync, writeFileSync, appendFileSync, readdirSync } from "fs";
+import { mkdirSync, writeFileSync, appendFileSync, readFileSync, readdirSync } from "fs";
 import { join } from "path";
 import chalk, { type ChalkInstance } from "chalk";
 import { discoverDevPackages } from "../utils/package-discovery.js";
@@ -96,6 +96,51 @@ async function startDevServers() {
     );
   };
 
+  // Helper to prepend logs (newest first) with intelligent truncation
+  const prependToLog = (logFile: string, newLine: string) => {
+    try {
+      // Read current content
+      const existingContent = readFileSync(logFile, 'utf8');
+      
+      // Find the end of the header (after opening ```)
+      const headerEnd = existingContent.indexOf('```\n') + 4;
+      
+      if (headerEnd > 3) {
+        // Split content: header + existing logs
+        const header = existingContent.substring(0, headerEnd);
+        let existingLogs = existingContent.substring(headerEnd);
+        
+        // Intelligent truncation: keep logs useful for AI analysis
+        // Truncate if file is too large (>2MB) or too many lines (>1000)
+        const maxFileSize = 2 * 1024 * 1024; // 2MB
+        const maxLines = 1000;
+        
+        const currentSize = existingContent.length;
+        const lineCount = existingLogs.split('\n').length;
+        
+        if (currentSize > maxFileSize || lineCount > maxLines) {
+          // Keep only the most recent entries (top 600 lines since newest is first)
+          const lines = existingLogs.split('\n');
+          const keepLines = Math.min(600, lines.length);
+          existingLogs = lines.slice(0, keepLines).join('\n');
+          
+          // Add truncation notice at the bottom
+          existingLogs += '\n\n[...older logs truncated for AI readability...]';
+        }
+        
+        // Prepend new line to existing logs (newest first)
+        const newContent = header + newLine + '\n' + existingLogs;
+        writeFileSync(logFile, newContent);
+      } else {
+        // Fallback to append if header not found
+        appendFileSync(logFile, newLine + '\n');
+      }
+    } catch (error) {
+      // Fallback to append on any error
+      appendFileSync(logFile, newLine + '\n');
+    }
+  };
+
   // Helper to write initial log header
   const writeLogHeader = (logFile: string, serverName: string) => {
     const header = `# 📋 ${serverName} Server Logs
@@ -139,15 +184,20 @@ async function startDevServers() {
           .filter((line: string) => line.trim());
         lines.forEach((line: string) => {
           const timestamp = getTimestamp();
-          const logLine = `[${timestamp}] ${line}`;
+          
+          // Check if line already has a pino timestamp (format: [HH:MM:SS])
+          const hasTimestamp = /^\[?\d{2}:\d{2}:\d{2}/.test(line.trim());
+          
+          // Only add brain-monitor timestamp if the line doesn't already have one
+          const logLine = hasTimestamp ? line : `[${timestamp}] ${line}`;
 
-          // Write to console with color
+          // Write to console with color (always show server name and current timestamp)
           console.log(
             `${colorFn(`[${server.name}]`)} ${chalk.gray(`[${timestamp}]`)} ${line}`,
           );
 
-          // Append to log file
-          appendFileSync(server.logFile, logLine + "\n");
+          // Write to log file without double timestamps
+          prependToLog(server.logFile, logLine);
         });
       });
     }
@@ -161,23 +211,28 @@ async function startDevServers() {
           .filter((line: string) => line.trim());
         lines.forEach((line: string) => {
           const timestamp = getTimestamp();
-          const logLine = `[${timestamp}] [ERROR] ${line}`;
+          
+          // Check if line already has a pino timestamp (format: [HH:MM:SS])
+          const hasTimestamp = /^\[?\d{2}:\d{2}:\d{2}/.test(line.trim());
+          
+          // Only add brain-monitor timestamp if the line doesn't already have one
+          const logLine = hasTimestamp ? line : `[${timestamp}] [ERROR] ${line}`;
 
-          // Write to console with color
+          // Write to console with color (always show server name and current timestamp)
           console.log(
             `${colorFn(`[${server.name}]`)} ${chalk.gray(`[${timestamp}]`)} ${chalk.red(line)}`,
           );
 
-          // Append to log file
-          appendFileSync(server.logFile, logLine + "\n");
+          // Write to log file without double timestamps
+          prependToLog(server.logFile, logLine);
         });
       });
     }
 
     // Handle process exit
     proc.on("exit", (code) => {
-      const exitLine = `\n[${getTimestamp()}] Process exited with code ${code}\n\`\`\`\n`;
-      appendFileSync(server.logFile, exitLine);
+      const exitLine = `[${getTimestamp()}] Process exited with code ${code}`;
+      prependToLog(server.logFile, exitLine);
       console.log(
         `${colorFn(`[${server.name}]`)} ${chalk.red(`Process exited with code ${code}`)}`,
       );

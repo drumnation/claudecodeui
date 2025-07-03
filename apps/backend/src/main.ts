@@ -29,13 +29,40 @@ async function bootstrap() {
     debug: process.env['NODE_ENV'] === 'development',
   });
 
-  // Create root logger after environment is loaded
+  // Create root logger after environment is loaded with enhanced debug level
+  const logLevel = process.env.LOG_LEVEL || (process.env.NODE_ENV === 'development' ? 'debug' : 'info');
   const logger = createLogger({
     scope: 'claudecodeui-backend',
-    level: process.env.LOG_LEVEL || 'info',
+    level: logLevel,
   });
 
-  logger.info('Bootstrap starting...');
+  logger.info('Bootstrap starting...', {
+    logLevel,
+    environment: process.env.NODE_ENV,
+    processId: process.pid,
+    nodeVersion: process.version
+  });
+  
+  // Log startup information for debugging
+  logger.debug('Environment variables', {
+    NODE_ENV: process.env.NODE_ENV,
+    LOG_LEVEL: process.env.LOG_LEVEL,
+    PORT: process.env.PORT,
+    TEST_MODE: process.env.TEST_MODE
+  });
+  
+  // Ensure _logs directory exists and log file destinations
+  const projectRoot = process.cwd().includes('apps/backend') 
+    ? process.cwd().replace('/apps/backend', '') 
+    : process.cwd();
+  const logsDir = `${projectRoot}/_logs`;
+  
+  logger.info('Log configuration', {
+    logLevel,
+    logsDirectory: logsDir,
+    projectRoot,
+    currentWorkingDirectory: process.cwd()
+  });
   
   // Check for test mode
   if (process.env.TEST_MODE === '1') {

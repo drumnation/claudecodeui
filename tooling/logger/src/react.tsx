@@ -45,13 +45,13 @@ interface LoggerProviderProps extends LoggerOptions {
  */
 export function LoggerProvider({children, ...options}: LoggerProviderProps) {
   // Create logger instance once and maintain it
-  const loggerRef = useRef<Logger | null>(null);
+  const loggerRef = React.useRef<Logger | null>(null);
 
   if (!loggerRef.current) {
     loggerRef.current = createLogger(options);
   }
 
-  const value = useMemo(
+  const value = React.useMemo(
     () => ({logger: loggerRef.current!}),
     [], // Logger instance never changes
   );
@@ -79,7 +79,7 @@ export function LoggerProvider({children, ...options}: LoggerProviderProps) {
  * ```
  */
 export function useLoggerContext(): LoggerContextValue {
-  const context = useContext(LoggerContext);
+  const context = React.useContext(LoggerContext);
 
   if (!context) {
     throw new Error(
@@ -117,7 +117,7 @@ export function useLogger(scope: LoggerMetadata): Logger {
   const {logger} = useLoggerContext();
 
   // Memoize the scoped logger to avoid recreating it on every render
-  const scopedLogger = useMemo(() => logger.child(scope), [logger, scope]);
+  const scopedLogger = React.useMemo(() => logger.child(scope), [logger, scope]);
 
   return scopedLogger;
 }
@@ -223,3 +223,14 @@ export function withDevLogger<P extends object>(
     return <Component {...props} />;
   };
 }
+
+// Re-export render tracker functions for React components
+export { 
+  useRenderTracker, 
+  withAutoRenderTracking, 
+  enableGlobalAutoTracking, 
+  configureAutoTracking,
+  getPerformanceSummary,
+  logPerformanceSummary,
+  clearPerformanceStats
+} from './renderTracker.js';

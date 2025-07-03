@@ -112,6 +112,16 @@ export const handleProcessOutput = (
       if (deps.logger?.isLevelEnabled('debug')) {
         deps.logger.debug('📄 Parsed JSON response', {response});
       }
+      
+      // Log specific message types for debugging
+      if (response.type === 'message' && response.message) {
+        deps.logger?.info('🔍 Claude message detected', {
+          messageType: response.message.type,
+          role: response.message.role,
+          hasContent: !!response.message.content,
+          contentType: Array.isArray(response.message.content) ? 'array' : typeof response.message.content
+        });
+      }
 
       // Handle session ID capture
       if (response.session_id && !state.capturedSessionId) {

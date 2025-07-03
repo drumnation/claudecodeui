@@ -2,6 +2,8 @@
 // This module provides utilities for accessing environment variables in browser environments
 // It works with bundlers like Vite, Webpack, etc. that inject env vars at build time
 
+/// <reference types="vite/client" />
+
 export interface BrowserEnvOptions {
   prefix?: string;
   debug?: boolean;

@@ -1,6 +1,10 @@
 {
   "extends": "@kit/tsconfig/react",
   "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
     "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
     "rootDir": "src",
     "outDir": "dist",

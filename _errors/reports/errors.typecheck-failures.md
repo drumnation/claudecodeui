@@ -1,8 +1,8 @@
 # 🚨 Current TypeScript Errors
 
-[✓ Date compliance: All dates generated via command] **Last Updated:** Wednesday, July 2, 2025 at 9:24:17 PM
-**Run:** #11 | **Branch:** refactor/frontend-typescript | **Commit:** ea6e5b4
-**Status:** 88 errors in 0 packages
+[✓ Date compliance: All dates generated via command] **Last Updated:** Thursday, July 3, 2025 at 12:55:09 PM
+**Run:** #12 | **Branch:** refactor/frontend-typescript | **Commit:** 7002e66
+**Status:** 92 errors in 0 packages
 
 ## 🔄 Batch-Fixing Opportunities
 
@@ -50,15 +50,103 @@ Fix these TypeScript errors in batch, prioritizing the high-impact patterns abov
 - **6-15 errors:** Group by file (`fix: resolve TypeScript errors in pattern-extraction.node.ts`)
 - **16+ errors:** Group by error type (`fix: add undefined checks for TS2532 errors`)
 
-### 🎯 Current Strategy for 88 errors:
+### 🎯 Current Strategy for 92 errors:
 **Group by error type** (`fix: add undefined checks for TS2532 errors`)
 
 ## 📊 Quick Summary
-- **Errors:** 88 TypeScript issues
+- **Errors:** 92 TypeScript issues
 - **Failed Packages:** 0
 - **Exit Code:** 2
 
 ## 🎯 Fix These Errors (Checkboxes)
+
+- [ ] **TS2554** in `projects.service.ts` (Line 95)
+  - **Path:** `src/modules/projects/projects.service.ts`
+  - **Error:** Expected 2 arguments, but got 1.
+
+- [ ] **TS2554** in `projects.service.ts` (Line 160)
+  - **Path:** `src/modules/projects/projects.service.ts`
+  - **Error:** Expected 2 arguments, but got 1.
+
+- [ ] **TS2554** in `projects.service.ts` (Line 268)
+  - **Path:** `src/modules/projects/projects.service.ts`
+  - **Error:** Expected 2 arguments, but got 1.
+
+- [ ] **TS2554** in `sessions.controller.ts` (Line 77)
+  - **Path:** `src/modules/sessions/sessions.controller.ts`
+  - **Error:** Expected 4 arguments, but got 3.
+
+- [ ] **TS2339** in `browser.ts` (Line 19)
+  - **Path:** `../../tooling/env-loader/src/browser.ts`
+  - **Error:** Property 'env' does not exist on type 'ImportMeta'.
+
+- [ ] **TS2339** in `browser.ts` (Line 20)
+  - **Path:** `../../tooling/env-loader/src/browser.ts`
+  - **Error:** Property 'env' does not exist on type 'ImportMeta'.
+
+- [ ] **TS2304** in `browser.ts` (Line 31)
+  - **Path:** `../../tooling/env-loader/src/browser.ts`
+  - **Error:** Cannot find name 'window'.
+
+- [ ] **TS2304** in `browser.ts` (Line 31)
+  - **Path:** `../../tooling/env-loader/src/browser.ts`
+  - **Error:** Cannot find name 'window'.
+
+- [ ] **TS2304** in `browser.ts` (Line 32)
+  - **Path:** `../../tooling/env-loader/src/browser.ts`
+  - **Error:** Cannot find name 'window'.
+
+- [ ] **TS2339** in `browser.ts` (Line 93)
+  - **Path:** `../../tooling/env-loader/src/browser.ts`
+  - **Error:** Property 'env' does not exist on type 'ImportMeta'.
+
+- [ ] **TS2339** in `browser.ts` (Line 94)
+  - **Path:** `../../tooling/env-loader/src/browser.ts`
+  - **Error:** Property 'env' does not exist on type 'ImportMeta'.
+
+- [ ] **TS2304** in `browser.ts` (Line 111)
+  - **Path:** `../../tooling/env-loader/src/browser.ts`
+  - **Error:** Cannot find name 'window'.
+
+- [ ] **TS2304** in `browser.ts` (Line 111)
+  - **Path:** `../../tooling/env-loader/src/browser.ts`
+  - **Error:** Cannot find name 'window'.
+
+- [ ] **TS2304** in `browser.ts` (Line 112)
+  - **Path:** `../../tooling/env-loader/src/browser.ts`
+  - **Error:** Cannot find name 'window'.
+
+- [ ] **TS2304** in `browser.ts` (Line 136)
+  - **Path:** `../../tooling/env-loader/src/browser.ts`
+  - **Error:** Cannot find name 'window'.
+
+- [ ] **TS2304** in `browser.ts` (Line 136)
+  - **Path:** `../../tooling/env-loader/src/browser.ts`
+  - **Error:** Cannot find name 'window'.
+
+- [ ] **TS2304** in `browser.ts` (Line 137)
+  - **Path:** `../../tooling/env-loader/src/browser.ts`
+  - **Error:** Cannot find name 'window'.
+
+- [ ] **TS2304** in `browser.ts` (Line 137)
+  - **Path:** `../../tooling/env-loader/src/browser.ts`
+  - **Error:** Cannot find name 'window'.
+
+- [ ] **TS2339** in `browser.ts` (Line 16)
+  - **Path:** `../../tooling/logger/src/browser.ts`
+  - **Error:** Property 'env' does not exist on type 'ImportMeta'.
+
+- [ ] **TS2339** in `browser.ts` (Line 67)
+  - **Path:** `../../tooling/logger/src/browser.ts`
+  - **Error:** Property 'env' does not exist on type 'ImportMeta'.
+
+- [ ] **TS2304** in `index.ts` (Line 12)
+  - **Path:** `../../tooling/logger/src/index.ts`
+  - **Error:** Cannot find name 'window'.
+
+- [ ] **TS2304** in `index.ts` (Line 12)
+  - **Path:** `../../tooling/logger/src/index.ts`
+  - **Error:** Cannot find name 'window'.
 
 - [ ] **TS2532** in `init.test.ts` (Line 333)
   - **Path:** `src/init.test.ts`
@@ -288,6 +376,22 @@ Fix these TypeScript errors in batch, prioritizing the high-impact patterns abov
   - **Path:** `src/utils/package-discovery.test.ts`
   - **Error:** Property 'match' does not exist on type 'PathLike | FileHandle'.
 
+- [ ] **TS1005** in `renderTracker.ts` (Line 233)
+  - **Path:** `src/utils/renderTracker.ts`
+  - **Error:** '>' expected.
+
+- [ ] **TS1005** in `renderTracker.ts` (Line 233)
+  - **Path:** `src/utils/renderTracker.ts`
+  - **Error:** ';' expected.
+
+- [ ] **TS1109** in `renderTracker.ts` (Line 233)
+  - **Path:** `src/utils/renderTracker.ts`
+  - **Error:** Expression expected.
+
+- [ ] **TS1109** in `renderTracker.ts` (Line 233)
+  - **Path:** `src/utils/renderTracker.ts`
+  - **Error:** Expression expected.
+
 - [ ] **TS2345** in `prompt-templates.ts` (Line 46)
   - **Path:** `src/ai-generation/prompt-templates.ts`
   - **Error:** Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
@@ -324,94 +428,6 @@ Fix these TypeScript errors in batch, prioritizing the high-impact patterns abov
   - **Path:** `src/runners/recursive.ts`
   - **Error:** Argument of type '{ id: string; goal: string; acceptance: never[]; tags: never[]; }' is not assignable to parameter of type 'UserStory'.
 
-- [ ] **TS2554** in `projects.service.ts` (Line 95)
-  - **Path:** `src/modules/projects/projects.service.ts`
-  - **Error:** Expected 2 arguments, but got 1.
-
-- [ ] **TS2554** in `projects.service.ts` (Line 160)
-  - **Path:** `src/modules/projects/projects.service.ts`
-  - **Error:** Expected 2 arguments, but got 1.
-
-- [ ] **TS2554** in `projects.service.ts` (Line 268)
-  - **Path:** `src/modules/projects/projects.service.ts`
-  - **Error:** Expected 2 arguments, but got 1.
-
-- [ ] **TS2554** in `sessions.controller.ts` (Line 77)
-  - **Path:** `src/modules/sessions/sessions.controller.ts`
-  - **Error:** Expected 4 arguments, but got 3.
-
-- [ ] **TS2339** in `browser.ts` (Line 19)
-  - **Path:** `../../tooling/env-loader/src/browser.ts`
-  - **Error:** Property 'env' does not exist on type 'ImportMeta'.
-
-- [ ] **TS2339** in `browser.ts` (Line 20)
-  - **Path:** `../../tooling/env-loader/src/browser.ts`
-  - **Error:** Property 'env' does not exist on type 'ImportMeta'.
-
-- [ ] **TS2304** in `browser.ts` (Line 31)
-  - **Path:** `../../tooling/env-loader/src/browser.ts`
-  - **Error:** Cannot find name 'window'.
-
-- [ ] **TS2304** in `browser.ts` (Line 31)
-  - **Path:** `../../tooling/env-loader/src/browser.ts`
-  - **Error:** Cannot find name 'window'.
-
-- [ ] **TS2304** in `browser.ts` (Line 32)
-  - **Path:** `../../tooling/env-loader/src/browser.ts`
-  - **Error:** Cannot find name 'window'.
-
-- [ ] **TS2339** in `browser.ts` (Line 93)
-  - **Path:** `../../tooling/env-loader/src/browser.ts`
-  - **Error:** Property 'env' does not exist on type 'ImportMeta'.
-
-- [ ] **TS2339** in `browser.ts` (Line 94)
-  - **Path:** `../../tooling/env-loader/src/browser.ts`
-  - **Error:** Property 'env' does not exist on type 'ImportMeta'.
-
-- [ ] **TS2304** in `browser.ts` (Line 111)
-  - **Path:** `../../tooling/env-loader/src/browser.ts`
-  - **Error:** Cannot find name 'window'.
-
-- [ ] **TS2304** in `browser.ts` (Line 111)
-  - **Path:** `../../tooling/env-loader/src/browser.ts`
-  - **Error:** Cannot find name 'window'.
-
-- [ ] **TS2304** in `browser.ts` (Line 112)
-  - **Path:** `../../tooling/env-loader/src/browser.ts`
-  - **Error:** Cannot find name 'window'.
-
-- [ ] **TS2304** in `browser.ts` (Line 136)
-  - **Path:** `../../tooling/env-loader/src/browser.ts`
-  - **Error:** Cannot find name 'window'.
-
-- [ ] **TS2304** in `browser.ts` (Line 136)
-  - **Path:** `../../tooling/env-loader/src/browser.ts`
-  - **Error:** Cannot find name 'window'.
-
-- [ ] **TS2304** in `browser.ts` (Line 137)
-  - **Path:** `../../tooling/env-loader/src/browser.ts`
-  - **Error:** Cannot find name 'window'.
-
-- [ ] **TS2304** in `browser.ts` (Line 137)
-  - **Path:** `../../tooling/env-loader/src/browser.ts`
-  - **Error:** Cannot find name 'window'.
-
-- [ ] **TS2339** in `browser.ts` (Line 16)
-  - **Path:** `../../tooling/logger/src/browser.ts`
-  - **Error:** Property 'env' does not exist on type 'ImportMeta'.
-
-- [ ] **TS2339** in `browser.ts` (Line 67)
-  - **Path:** `../../tooling/logger/src/browser.ts`
-  - **Error:** Property 'env' does not exist on type 'ImportMeta'.
-
-- [ ] **TS2304** in `index.ts` (Line 12)
-  - **Path:** `../../tooling/logger/src/index.ts`
-  - **Error:** Cannot find name 'window'.
-
-- [ ] **TS2304** in `index.ts` (Line 12)
-  - **Path:** `../../tooling/logger/src/index.ts`
-  - **Error:** Cannot find name 'window'.
-
 ## 📦 Failed Packages
 
 🎉 All packages passed TypeScript checking!
@@ -429,6 +445,7 @@ Fix these TypeScript errors in batch, prioritizing the high-impact patterns abov
 - **@kit/brain-monitor**: 57 errors
 - **@claude-code-ui/backend**: 22 errors
 - **@kit/testing**: 9 errors
+- **@claude-code-ui/frontend**: 4 errors
 
 ### 🚨 Severity Breakdown by Package
 
@@ -443,6 +460,9 @@ Fix these TypeScript errors in batch, prioritizing the high-impact patterns abov
 #### @kit/testing (9 errors, severity score: 22)
 - 🔴 **High Severity**: 6 errors (syntax, missing declarations, type assignments)
 - 🟡 **Medium Severity**: 2 errors (property issues, undefined checks)
+
+#### @claude-code-ui/frontend (4 errors, severity score: 6)
+- 🔴 **High Severity**: 2 errors (syntax, missing declarations, type assignments)
 
 ### 🎯 **Recommended Package Priority:**
 

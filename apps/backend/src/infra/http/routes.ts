@@ -14,6 +14,7 @@ import {createGitRoutes} from '../../modules/git/git.controller.js';
 import {createServerRoutes} from '../../modules/servers/servers.controller.js';
 import {createSlashCommandRoutes} from '../../modules/claude-cli/slash-commands.controller.js';
 import {handleGenerateSummary} from '../../modules/claude-cli/summary.handler.js';
+import {handleBrowserLogs} from '../../modules/brain-monitor/index.js';
 import {createLogger} from '@kit/logger/node';
 
 interface RouteDependencies {
@@ -78,4 +79,7 @@ export const setupRoutes = (app: Express, deps: RouteDependencies): void => {
 
   // Slash commands
   app.use('/api', createSlashCommandRoutes());
+
+  // Brain monitor browser logs endpoint
+  app.post('/api/brain-monitor/browser-logs', handleBrowserLogs);
 };

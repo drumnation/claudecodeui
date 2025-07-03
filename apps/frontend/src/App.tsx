@@ -28,15 +28,19 @@ import {
 } from "react-router-dom";
 import { useLogger } from "@kit/logger/react";
 import type { Logger } from "@kit/logger/types";
-import Sidebar from "./components/Sidebar";
-import MainContent from "./components/MainContent";
-import { MobileNav } from "./components/MobileNav";
-import type { MobileNavTab } from "./components/MobileNav";
-import ToolsSettings from "./components/ToolsSettings";
-import { QuickSettingsPanel } from "./components/QuickSettingsPanel";
+import { useUserActionLogger } from "@/utils/userActionLogger";
+import { Sidebar } from "@/features/projects";
+import { MainContent } from "@/components/layouts";
+import { MobileNav } from "@/components/molecules";
+import type { MobileNavTab } from "@/components/molecules";
+import { ToolsSettings } from "@/features/settings";
+import { QuickSettingsPanel } from "@/features/settings";
 import { useWebSocket } from "./utils/websocket";
 import type { WSMessage } from "./utils/websocket";
 import { ThemeProvider } from "./contexts/ThemeContext";
+
+// Import dev helpers for performance debugging
+import './utils/devHelpers';
 
 // Extend Window interface for refreshProjects function
 declare global {
@@ -45,40 +49,40 @@ declare global {
   }
 }
 
-// Project and Session type definitions
+// Project and Session type definitions  
 export interface Project {
-  id: string;
   name: string;
+  path: string | null;
   displayName: string;
   fullPath: string;
-  sessionMeta: SessionMeta;
+  isCustomName: boolean;
+  isManuallyAdded?: boolean;
   sessions: Session[];
+  sessionMeta?: SessionMeta;
+  subprojects?: Project[];
+  isSubproject?: boolean;
+  parentProject?: string;
 }
 
 export interface Session {
   id: string;
   summary: string;
-  title?: string;
-  created_at?: string;
-  updated_at?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  messageCount?: number;
-  lastActivity?: string;
+  messageCount: number;
+  lastActivity: Date;
+  cwd: string;
 }
 
 export interface SessionMeta {
-  totalSessions: number;
-  total?: number;
-  recentSession?: Session;
-  hasMore?: boolean;
+  hasMore: boolean;
+  total: number;
 }
 
 // Main App component with routing
 function AppContent() {
   const navigate = useNavigate();
-  const { sessionId } = useParams<{ sessionId: string }>();
+  const { sessionId } = useParams<{ sessionId?: string }>();
   const logger: Logger = useLogger({ component: "App" });
+  const { logNavigation, logStateChange, logClick } = useUserActionLogger('App');
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -87,6 +91,7 @@ function AppContent() {
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const [isLoadingProjects, setIsLoadingProjects] = useState<boolean>(true);
+  const [loadingSessionId, setLoadingSessionId] = useState<string | null>(null);
   const [isInputFocused, setIsInputFocused] = useState<boolean>(false);
   const [showToolsSettings, setShowToolsSettings] = useState<boolean>(false);
   const [showQuickSettings, setShowQuickSettings] = useState<boolean>(false);
@@ -169,9 +174,8 @@ function AppContent() {
     // Compare key fields that would affect the loaded chat interface
     const sessionUnchanged =
       currentSelectedSession.id === updatedSelectedSession.id &&
-      currentSelectedSession.title === updatedSelectedSession.title &&
-      currentSelectedSession.created_at === updatedSelectedSession.created_at &&
-      currentSelectedSession.updated_at === updatedSelectedSession.updated_at;
+      currentSelectedSession.summary === updatedSelectedSession.summary &&
+      currentSelectedSession.messageCount === updatedSelectedSession.messageCount;
 
     // This is considered additive if the selected session is unchanged
     // (new sessions may have been added elsewhere, but active session is protected)
@@ -291,6 +295,12 @@ function AppContent() {
           );
         }
       }
+
+      // Handle session history loading completion
+      if (latestMessage.type === "session_history") {
+        // Clear loading state for the session that just finished loading
+        setLoadingSessionId(null);
+      }
     }
   }, [messages, selectedProject, selectedSession, activeSessions]);
 
@@ -340,7 +350,7 @@ function AppContent() {
   // Expose fetchProjects globally for component access
   window.refreshProjects = fetchProjects;
 
-  // Handle URL-based session loading
+  // Handle URL-based session loading (original behavior)
   useEffect(() => {
     if (sessionId && projects.length > 0) {
       // Only switch tabs on initial load, not on every project update
@@ -365,19 +375,41 @@ function AppContent() {
       // Just navigate to it and it will be found when the sidebar refreshes
       // Don't redirect to home, let the session load naturally
     }
-  }, [sessionId, projects, navigate]);
+  }, [sessionId, projects, navigate, selectedProject, selectedSession]);
 
   const handleProjectSelect = (project: Project): void => {
+    // Log user action
+    logNavigation('sidebar', 'project-home', {
+      projectName: project.name,
+      previousProject: selectedProject?.name,
+      sessionCount: project.sessions?.length || 0,
+      isMobile
+    });
+    
     setSelectedProject(project);
-    setSelectedSession(null);
-    navigate("/");
+    setSelectedSession(null); // Clear session when selecting project
+    navigate('/'); // Go to home, not project-specific URL
     if (isMobile) {
       setSidebarOpen(false);
     }
   };
 
   const handleSessionSelect = (session: Session): void => {
+    // Log user action
+    logNavigation('sidebar', 'session-chat', {
+      sessionId: session.id,
+      sessionSummary: session.summary?.substring(0, 50) + '...',
+      previousSession: selectedSession?.id,
+      projectName: selectedProject?.name,
+      currentTab: activeTab,
+      isMobile
+    });
+    
+    // Set loading state for this session
+    setLoadingSessionId(session.id);
+    
     setSelectedSession(session);
+    // DON'T set selectedProject here - let URL effect handle it
     // Only switch to chat tab when user explicitly selects a session
     // This prevents tab switching during automatic updates
     if (activeTab !== "git" && activeTab !== "preview") {
@@ -386,24 +418,44 @@ function AppContent() {
     if (isMobile) {
       setSidebarOpen(false);
     }
+    
+    // Always use session-only URL (original behavior)
     navigate(`/session/${session.id}`);
   };
 
   const handleNewSession = (project: Project): void => {
+    // Log user action
+    logClick('new-session', {
+      projectName: project.name,
+      existingSessionCount: project.sessions?.length || 0,
+      isMobile
+    });
+    
     setSelectedProject(project);
     setSelectedSession(null);
     setActiveTab("chat");
-    navigate("/");
+    navigate('/'); // Go to home with selected project (original behavior)
     if (isMobile) {
       setSidebarOpen(false);
     }
+  };
+
+  const handleTabChange = (newTab: MobileNavTab): void => {
+    // Log user action
+    logNavigation(`${activeTab}-tab`, `${newTab}-tab`, {
+      projectName: selectedProject?.name,
+      sessionId: selectedSession?.id,
+      isMobile
+    });
+    
+    setActiveTab(newTab);
   };
 
   const handleSessionDelete = (sessionId: string): void => {
     // If the deleted session was currently selected, clear it
     if (selectedSession?.id === sessionId) {
       setSelectedSession(null);
-      navigate("/");
+      navigate("/"); // Go to home (original behavior)
     }
 
     // Update projects state locally instead of full refresh
@@ -415,7 +467,7 @@ function AppContent() {
             (session: Session) => session.id !== sessionId,
           ) ?? [],
         sessionMeta: {
-          ...project.sessionMeta,
+          hasMore: project.sessionMeta?.hasMore ?? false,
           total: Math.max(0, (project.sessionMeta?.total ?? 0) - 1),
         },
       })),
@@ -609,7 +661,7 @@ function AppContent() {
           selectedProject={selectedProject}
           selectedSession={selectedSession}
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          setActiveTab={handleTabChange}
           ws={ws}
           sendMessage={sendMessage}
           messages={messages}
@@ -634,7 +686,7 @@ function AppContent() {
       {isMobile && (
         <MobileNav
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          setActiveTab={handleTabChange}
           isInputFocused={isInputFocused}
         />
       )}
@@ -668,6 +720,8 @@ function AppContent() {
         isOpen={showToolsSettings}
         onClose={() => void setShowToolsSettings(false)}
       />
+      
+      {/* Debug Helper - Only in development */}
     </div>
   );
 }

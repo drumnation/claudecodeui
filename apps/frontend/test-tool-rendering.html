@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Tool Rendering</title>
+    <script>
+        // Test data to simulate tool messages
+        const testMessages = [
+            {
+                type: 'tool_use',
+                content: '',
+                id: 'test-1',
+                timestamp: new Date().toISOString(),
+                tool_name: 'TodoWrite',
+                toolName: 'TodoWrite',
+                tool_input: {
+                    todos: [
+                        { content: "Fix tool visualization", status: "completed", priority: "high", id: "1" },
+                        { content: "Test the changes", status: "in_progress", priority: "medium", id: "2" },
+                        { content: "Deploy to production", status: "pending", priority: "low", id: "3" }
+                    ]
+                },
+                isToolUse: true
+            },
+            {
+                type: 'tool_use',
+                content: '',
+                id: 'test-2',
+                timestamp: new Date().toISOString(),
+                tool_name: 'Edit',
+                toolName: 'Edit',
+                tool_input: {
+                    file_path: '/src/components/Test.tsx',
+                    old_string: 'const message = "Hello";',
+                    new_string: 'const message = "Hello World!";'
+                },
+                isToolUse: true
+            },
+            {
+                type: 'tool_use',
+                content: '',
+                id: 'test-3',
+                timestamp: new Date().toISOString(),
+                tool_name: 'Write',
+                toolName: 'Write',
+                tool_input: {
+                    file_path: '/src/components/NewFile.tsx',
+                    content: 'export const NewComponent = () => {\n  return <div>Hello!</div>;\n};'
+                },
+                isToolUse: true
+            }
+        ];
+
+        console.log('Test messages for tool rendering:', testMessages);
+        
+        // Instructions
+        console.log(`
+To test the tool rendering:
+1. Open the browser console
+2. In the React DevTools, find the ChatInterface component
+3. Manually update the chatMessages state with these test messages
+4. Or send these through the WebSocket to test end-to-end
+        `);
+    </script>
+</head>
+<body>
+    <h1>Tool Rendering Test Data</h1>
+    <p>Check the browser console for test messages you can use to verify the tool rendering is working.</p>
+</body>
+</html>

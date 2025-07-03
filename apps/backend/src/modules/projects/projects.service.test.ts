@@ -7,12 +7,24 @@ import type {
   SessionsResult,
   FileWithStats,
 } from './projects.types.js';
+import type { Logger } from '@kit/logger';
 
 vi.mock('./projects.repository.js');
 
 describe('projects.service', () => {
+  let mockLogger: Logger;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLogger = {
+      error: vi.fn(),
+      warn: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn(),
+      child: vi.fn(() => mockLogger),
+      isLevelEnabled: vi.fn(() => true),
+    };
   });
 
   describe('generateDisplayName', () => {
@@ -178,7 +190,7 @@ describe('projects.service', () => {
         },
       );
 
-      const result = await service.getSessions('/home', 'project', 1, 0);
+      const result = await service.getSessions('/home', 'project', 1, 0, mockLogger);
 
       expect(result.sessions).toHaveLength(1);
       expect(result.sessions[0].id).toBe('session2');
@@ -191,7 +203,7 @@ describe('projects.service', () => {
     it('should handle empty project', async () => {
       vi.mocked(repository.readJsonlFiles).mockResolvedValue([]);
 
-      const result = await service.getSessions('/home', 'project', 5, 0);
+      const result = await service.getSessions('/home', 'project', 5, 0, mockLogger);
 
       expect(result.sessions).toHaveLength(0);
       expect(result.hasMore).toBe(false);
@@ -203,7 +215,7 @@ describe('projects.service', () => {
         new Error('File read error'),
       );
 
-      const result = await service.getSessions('/home', 'project', 5, 0);
+      const result = await service.getSessions('/home', 'project', 5, 0, mockLogger);
 
       expect(result.sessions).toHaveLength(0);
       expect(result.hasMore).toBe(false);
@@ -232,7 +244,7 @@ describe('projects.service', () => {
         },
       );
 
-      const result = await service.getSessions('/home', 'project', 5, 0);
+      const result = await service.getSessions('/home', 'project', 5, 0, mockLogger);
 
       expect(result.sessions).toHaveLength(1);
       expect(result.total).toBe(1);
@@ -269,6 +281,7 @@ describe('projects.service', () => {
         '/home',
         'project',
         'session1',
+        mockLogger,
       );
 
       expect(result).toHaveLength(2);
@@ -302,6 +315,7 @@ describe('projects.service', () => {
         '/home',
         'project',
         'session1',
+        mockLogger,
       );
 
       expect(result[0].message?.content).toBe('First');
@@ -315,6 +329,7 @@ describe('projects.service', () => {
         '/home',
         'project',
         'session1',
+        mockLogger,
       );
 
       expect(result).toHaveLength(0);
@@ -329,6 +344,7 @@ describe('projects.service', () => {
         '/home',
         'project',
         'session1',
+        mockLogger,
       );
 
       expect(result).toHaveLength(0);
@@ -350,6 +366,7 @@ describe('projects.service', () => {
         '/path',
         config,
         '/home',
+        mockLogger,
       );
 
       expect(result.displayName).toBe('Custom Name');
@@ -380,6 +397,7 @@ describe('projects.service', () => {
         '/path',
         {},
         '/home',
+        mockLogger,
       );
 
       expect(result.displayName).toBe('Auto Name');
@@ -401,6 +419,7 @@ describe('projects.service', () => {
         '/path',
         {},
         '/home',
+        mockLogger,
       );
 
       expect(result.sessions).toEqual([]);
@@ -497,7 +516,7 @@ describe('projects.service', () => {
     it('should return true for empty project', async () => {
       vi.mocked(repository.readJsonlFiles).mockResolvedValue([]);
 
-      const result = await service.isProjectEmpty('/home', 'project');
+      const result = await service.isProjectEmpty('/home', 'project', mockLogger);
 
       expect(result).toBe(true);
     });
@@ -516,7 +535,7 @@ describe('projects.service', () => {
         },
       );
 
-      const result = await service.isProjectEmpty('/home', 'project');
+      const result = await service.isProjectEmpty('/home', 'project', mockLogger);
 
       expect(result).toBe(false);
     });
@@ -532,7 +551,7 @@ describe('projects.service', () => {
         new Error('Read error'),
       );
 
-      const result = await service.isProjectEmpty('/home', 'project');
+      const result = await service.isProjectEmpty('/home', 'project', mockLogger);
 
       expect(result).toBe(true);
       expect(consoleErrorSpy).toHaveBeenCalledWith(

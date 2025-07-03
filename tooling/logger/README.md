@@ -262,6 +262,29 @@ if (logger.isLevelEnabled('debug')) {
 }
 ```
 
+### 🔍 Temporary Debugging Logs
+
+For temporary debugging that should be automatically removed:
+
+```typescript
+import { useUserActionLogger } from '@/utils/userActionLogger';
+
+function MyComponent() {
+  const { logTrace, logTemp } = useUserActionLogger('MyComponent');
+  
+  const handleClick = () => {
+    // Temporary debugging - will be auto-removed
+    logTrace('Investigating click flow', { step: 'validation' });
+    logTemp('Testing new behavior', { enabled: true });
+    
+    // Regular logging - permanent
+    logger.info('Button clicked', { buttonType: 'submit' });
+  };
+}
+```
+
+**Cleanup**: Run `pnpm logs:clean-temp` to remove all temporary logs automatically.
+
 ### Theme Functions
 
 ```typescript

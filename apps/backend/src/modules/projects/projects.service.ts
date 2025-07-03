@@ -92,7 +92,7 @@ export const getSessions = async (
   const projectDir = path.join(homePath, '.claude', 'projects', projectName);
 
   try {
-    const jsonlFiles = await repository.readJsonlFiles(projectDir);
+    const jsonlFiles = await repository.readJsonlFiles(projectDir, logger);
 
     if (jsonlFiles.length === 0) {
       return {sessions: [], hasMore: false, total: 0};
@@ -157,7 +157,7 @@ export const getSessionMessages = async (
   const projectDir = path.join(homePath, '.claude', 'projects', projectName);
 
   try {
-    const jsonlFiles = await repository.readJsonlFiles(projectDir);
+    const jsonlFiles = await repository.readJsonlFiles(projectDir, logger);
 
     if (jsonlFiles.length === 0) {
       return [];
@@ -265,7 +265,7 @@ export const findSessionFile = async (
   logger: Logger,
 ): Promise<string | null> => {
   const projectDir = path.join(homePath, '.claude', 'projects', projectName);
-  const jsonlFiles = await repository.readJsonlFiles(projectDir);
+  const jsonlFiles = await repository.readJsonlFiles(projectDir, logger);
 
   for (const file of jsonlFiles) {
     const jsonlFile = path.join(projectDir, file);

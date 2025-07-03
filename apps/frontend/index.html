@@ -29,20 +29,31 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx?v=2"></script>
+    <script type="module" src="/src/main.tsx"></script>
     
-    <!-- Force Service Worker Override -->
+    <!-- Service Worker Registration -->
     <script>
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' })
-          .then(registration => {
-            console.log('Force SW registered:', registration);
-            // Force update
-            registration.update();
-          })
-          .catch(error => {
-            console.log('Force SW registration failed:', error);
-          });
+        // Only register once per session to avoid reload loops
+        const swRegistered = sessionStorage.getItem('sw-registered');
+        
+        if (!swRegistered) {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(registration => {
+              console.log('SW registered successfully:', registration);
+              sessionStorage.setItem('sw-registered', 'true');
+              
+              // Only update if there's already a service worker
+              if (registration.active) {
+                registration.update();
+              }
+            })
+            .catch(error => {
+              console.log('SW registration failed:', error);
+            });
+        } else {
+          console.log('SW already registered this session');
+        }
       }
     </script>
   </body>

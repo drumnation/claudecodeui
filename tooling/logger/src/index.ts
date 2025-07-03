@@ -41,3 +41,6 @@ export type { ThemeDefinition, ThemeName };
 
 // Export React integration if in browser
 export * from './react.js';
+
+// Export render tracker for performance monitoring
+export * from './renderTracker.js';

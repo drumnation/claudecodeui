@@ -1,0 +1,1 @@
+export { handleBrowserLogs } from './brain-monitor.controller.js';

@@ -1,0 +1,194 @@
+[
+  {
+    "oldPath": "apps/frontend/src/components/ChatInterface.jsx",
+    "newPath": "apps/frontend/src/features/chat/components/ChatInterface/ChatInterface.tsx",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to feature-sliced architecture"
+  },
+  {
+    "oldPath": "apps/frontend/src/components/Sidebar.jsx",
+    "newPath": "apps/frontend/src/features/projects/components/Sidebar/Sidebar.tsx",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to projects feature module"
+  },
+  {
+    "oldPath": "apps/frontend/src/components/MainContent.jsx",
+    "newPath": "apps/frontend/src/components/layouts/MainContent/MainContent.tsx",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to layouts directory"
+  },
+  {
+    "oldPath": "apps/frontend/src/components/FileTree.jsx",
+    "newPath": "apps/frontend/src/features/files/components/FileTree/FileTree.tsx",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to files feature module"
+  },
+  {
+    "oldPath": "apps/frontend/src/components/CodeEditor.jsx",
+    "newPath": "apps/frontend/src/features/files/components/CodeEditor/CodeEditor.tsx",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to files feature module"
+  },
+  {
+    "oldPath": "apps/frontend/src/components/Shell.jsx",
+    "newPath": "apps/frontend/src/features/shell/components/Shell/Shell.tsx",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to shell feature module"
+  },
+  {
+    "oldPath": "apps/frontend/src/components/GitPanel.jsx",
+    "newPath": "apps/frontend/src/features/git/components/GitPanel/GitPanel.tsx",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to git feature module"
+  },
+  {
+    "oldPath": "apps/frontend/src/components/LivePreviewPanel.jsx",
+    "newPath": "apps/frontend/src/features/preview/components/LivePreviewPanel/LivePreviewPanel.tsx",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to preview feature module"
+  },
+  {
+    "oldPath": "apps/frontend/src/components/ClaudeStatus.jsx",
+    "newPath": "apps/frontend/src/features/chat/components/ClaudeStatus/ClaudeStatus.tsx",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to chat feature module"
+  },
+  {
+    "oldPath": "apps/frontend/src/components/MicButton.jsx",
+    "newPath": "apps/frontend/src/features/chat/components/MicButton/MicButton.tsx",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to chat feature module"
+  },
+  {
+    "oldPath": "apps/frontend/src/components/TodoList.jsx",
+    "newPath": "apps/frontend/src/components/molecules/TodoList/TodoList.tsx",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to molecules directory"
+  },
+  {
+    "oldPath": "apps/frontend/src/components/CommandMenu.jsx",
+    "newPath": "apps/frontend/src/components/molecules/CommandMenu/CommandMenu.tsx",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to molecules directory"
+  },
+  {
+    "oldPath": "apps/frontend/src/components/DarkModeToggle.jsx",
+    "newPath": "apps/frontend/src/components/molecules/DarkModeToggle/DarkModeToggle.tsx",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to molecules directory"
+  },
+  {
+    "oldPath": "apps/frontend/src/components/MobileNav.jsx",
+    "newPath": "apps/frontend/src/components/molecules/MobileNav/MobileNav.tsx",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to molecules directory"
+  },
+  {
+    "oldPath": "apps/frontend/src/components/ui/button.jsx",
+    "newPath": "apps/frontend/src/components/atoms/Button/Button.tsx",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to atoms directory"
+  },
+  {
+    "oldPath": "apps/frontend/src/components/ui/input.jsx",
+    "newPath": "apps/frontend/src/components/atoms/Input/Input.tsx",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to atoms directory"
+  },
+  {
+    "oldPath": "apps/frontend/src/components/ui/badge.jsx",
+    "newPath": "apps/frontend/src/components/atoms/Badge/Badge.tsx",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to atoms directory"
+  },
+  {
+    "oldPath": "apps/frontend/src/components/ui/scroll-area.jsx",
+    "newPath": "apps/frontend/src/components/atoms/ScrollArea/ScrollArea.tsx",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to atoms directory"
+  },
+  {
+    "oldPath": "N/A",
+    "newPath": "tooling/brain-monitor",
+    "changeType": "added",
+    "notes": "Added @kit/brain-monitor for agent coordination and error tracking"
+  },
+  {
+    "oldPath": "N/A",
+    "newPath": "tooling/logger",
+    "changeType": "added",
+    "notes": "Added @kit/logger for unified logging across the monorepo"
+  },
+  {
+    "oldPath": "N/A",
+    "newPath": "tooling/env-loader",
+    "changeType": "added",
+    "notes": "Added @kit/env-loader for standardized environment variable management"
+  },
+  {
+    "oldPath": "N/A",
+    "newPath": "tooling/testing",
+    "changeType": "added",
+    "notes": "Added @kit/testing for unified testing infrastructure"
+  },
+  {
+    "oldPath": "package.json",
+    "newPath": "package.json",
+    "changeType": "modified",
+    "notes": "Converted to ESM with type: module, updated to use pnpm workspaces and Turborepo"
+  },
+  {
+    "oldPath": "apps/backend/server.js",
+    "newPath": "apps/backend/src/main.ts",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and restructured with module-based architecture"
+  },
+  {
+    "oldPath": "apps/backend/claude-cli.js",
+    "newPath": "apps/backend/src/modules/claude-cli/claude-cli.service.ts",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to module-based service architecture"
+  },
+  {
+    "oldPath": "apps/backend/projects.js",
+    "newPath": "apps/backend/src/modules/projects/projects.service.ts",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to module-based service architecture"
+  },
+  {
+    "oldPath": "apps/backend/serverManager.js",
+    "newPath": "apps/backend/src/modules/server-manager/server-manager.service.ts",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to module-based service architecture"
+  },
+  {
+    "oldPath": "apps/backend/routes.js",
+    "newPath": "apps/backend/src/infra/http/routes.ts",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to infrastructure layer"
+  },
+  {
+    "oldPath": "apps/backend/middleware.js",
+    "newPath": "apps/backend/src/infra/http/middleware.ts",
+    "changeType": "moved",
+    "notes": "Migrated to TypeScript and moved to infrastructure layer"
+  },
+  {
+    "oldPath": "CommonJS",
+    "newPath": "ESM",
+    "changeType": "modified",
+    "notes": "Entire codebase converted from CommonJS (require/module.exports) to ESM (import/export)"
+  },
+  {
+    "oldPath": "JavaScript",
+    "newPath": "TypeScript",
+    "changeType": "modified",
+    "notes": "All source files migrated from JavaScript to TypeScript with strict type checking"
+  },
+  {
+    "oldPath": "Flat structure",
+    "newPath": "Feature-sliced architecture",
+    "changeType": "modified",
+    "notes": "Frontend restructured from flat component directory to feature-sliced design with features/, components/, and proper module boundaries"
+  }
+]

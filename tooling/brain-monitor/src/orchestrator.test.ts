@@ -90,8 +90,10 @@ describe("orchestrator", () => {
 
       // Trigger close event for all spawned processes
       mockSpawn.mock.calls.forEach((call, index) => {
-        const process = mockSpawn.mock.results[index].value;
-        process.emit("close", 0);
+        const result = mockSpawn.mock.results[index];
+        if (result && result.value) {
+          result.value.emit("close", 0);
+        }
       });
 
       await promise.catch(() => {}); // Catch the exit
@@ -122,8 +124,10 @@ describe("orchestrator", () => {
 
       await new Promise((resolve) => setTimeout(resolve, 10));
       mockSpawn.mock.calls.forEach((call, index) => {
-        const process = mockSpawn.mock.results[index].value;
-        process.emit("close", 0);
+        const result = mockSpawn.mock.results[index];
+        if (result && result.value) {
+          result.value.emit("close", 0);
+        }
       });
 
       await promise.catch(() => {});
@@ -147,10 +151,12 @@ describe("orchestrator", () => {
 
       await new Promise((resolve) => setTimeout(resolve, 10));
       mockSpawn.mock.calls.forEach((call, index) => {
-        const process = mockSpawn.mock.results[index].value;
-        process.stdout.emit("data", Buffer.from("Test output"));
-        process.stderr.emit("data", Buffer.from("Test error"));
-        process.emit("close", 0);
+        const result = mockSpawn.mock.results[index];
+        if (result && result.value) {
+          result.value.stdout.emit("data", Buffer.from("Test output"));
+          result.value.stderr.emit("data", Buffer.from("Test error"));
+          result.value.emit("close", 0);
+        }
       });
 
       await promise.catch(() => {});
@@ -167,15 +173,17 @@ describe("orchestrator", () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
       mockSpawn.mock.calls.forEach((call, index) => {
         const command = call[1][1];
-        const process = mockSpawn.mock.results[index].value;
-
-        if (command.includes("typecheck")) {
-          process.stdout.emit(
-            "data",
-            Buffer.from("Found 5 errors in 3 packages"),
-          );
+        const result = mockSpawn.mock.results[index];
+        
+        if (result && result.value) {
+          if (command.includes("typecheck")) {
+            result.value.stdout.emit(
+              "data",
+              Buffer.from("Found 5 errors in 3 packages"),
+            );
+          }
+          result.value.emit("close", command.includes("typecheck") ? 1 : 0);
         }
-        process.emit("close", command.includes("typecheck") ? 1 : 0);
       });
 
       await promise.catch(() => {});
@@ -197,12 +205,14 @@ describe("orchestrator", () => {
       await Promise.resolve();
       mockSpawn.mock.calls.forEach((call, index) => {
         const command = call[1][1];
-        const process = mockSpawn.mock.results[index].value;
-
-        if (command.includes("test unit")) {
-          process.stdout.emit("data", Buffer.from("Test failures: 3"));
+        const result = mockSpawn.mock.results[index];
+        
+        if (result && result.value) {
+          if (command.includes("test unit")) {
+            result.value.stdout.emit("data", Buffer.from("Test failures: 3"));
+          }
+          result.value.emit("close", command.includes("test unit") ? 1 : 0);
         }
-        process.emit("close", command.includes("test unit") ? 1 : 0);
       });
 
       await promise.catch(() => {});
@@ -223,15 +233,17 @@ describe("orchestrator", () => {
       await Promise.resolve();
       mockSpawn.mock.calls.forEach((call, index) => {
         const command = call[1][1];
-        const process = mockSpawn.mock.results[index].value;
-
-        if (command.includes("lint")) {
-          process.stdout.emit(
-            "data",
-            Buffer.from("Auto-fix: Applied\nErrors: 0\nWarnings: 2"),
-          );
+        const result = mockSpawn.mock.results[index];
+        
+        if (result && result.value) {
+          if (command.includes("lint")) {
+            result.value.stdout.emit(
+              "data",
+              Buffer.from("Auto-fix: Applied\nErrors: 0\nWarnings: 2"),
+            );
+          }
+          result.value.emit("close", 0);
         }
-        process.emit("close", 0);
       });
 
       await promise.catch(() => {});
@@ -253,8 +265,10 @@ describe("orchestrator", () => {
 
       await Promise.resolve();
       mockSpawn.mock.calls.forEach((call, index) => {
-        const process = mockSpawn.mock.results[index].value;
-        process.emit("close", 0);
+        const result = mockSpawn.mock.results[index];
+        if (result && result.value) {
+          result.value.emit("close", 0);
+        }
       });
 
       await promise.catch(() => {});
@@ -273,8 +287,10 @@ describe("orchestrator", () => {
 
       await Promise.resolve();
       mockSpawn.mock.calls.forEach((call, index) => {
-        const process = mockSpawn.mock.results[index].value;
-        process.emit("close", 0);
+        const result = mockSpawn.mock.results[index];
+        if (result && result.value) {
+          result.value.emit("close", 0);
+        }
       });
 
       await promise.catch(() => {});
@@ -294,8 +310,10 @@ describe("orchestrator", () => {
       await Promise.resolve();
       mockSpawn.mock.calls.forEach((call, index) => {
         const command = call[1][1];
-        const process = mockSpawn.mock.results[index].value;
-        process.emit("close", command.includes("typecheck") ? 1 : 0);
+        const result = mockSpawn.mock.results[index];
+        if (result && result.value) {
+          result.value.emit("close", command.includes("typecheck") ? 1 : 0);
+        }
       });
 
       await promise.catch(() => {});
@@ -318,8 +336,10 @@ describe("orchestrator", () => {
 
       await Promise.resolve();
       mockSpawn.mock.calls.forEach((call, index) => {
-        const process = mockSpawn.mock.results[index].value;
-        process.emit("close", 0);
+        const result = mockSpawn.mock.results[index];
+        if (result && result.value) {
+          result.value.emit("close", 0);
+        }
       });
 
       await promise.catch(() => {});
@@ -342,8 +362,10 @@ describe("orchestrator", () => {
       await new Promise((resolve) => setTimeout(resolve, 150));
 
       mockSpawn.mock.calls.forEach((call, index) => {
-        const process = mockSpawn.mock.results[index].value;
-        process.emit("close", 0);
+        const result = mockSpawn.mock.results[index];
+        if (result && result.value) {
+          result.value.emit("close", 0);
+        }
       });
 
       await promise.catch(() => {});
@@ -363,8 +385,10 @@ describe("orchestrator", () => {
 
       await new Promise((resolve) => setTimeout(resolve, 10));
       mockSpawn.mock.calls.forEach((call, index) => {
-        const process = mockSpawn.mock.results[index].value;
-        process.emit("close", 0);
+        const result = mockSpawn.mock.results[index];
+        if (result && result.value) {
+          result.value.emit("close", 0);
+        }
       });
 
       await promise.catch(() => {});
@@ -380,8 +404,10 @@ describe("orchestrator", () => {
 
       await new Promise((resolve) => setTimeout(resolve, 10));
       mockSpawn.mock.calls.forEach((call, index) => {
-        const process = mockSpawn.mock.results[index].value;
-        process.emit("close", 1);
+        const result = mockSpawn.mock.results[index];
+        if (result && result.value) {
+          result.value.emit("close", 1);
+        }
       });
 
       await promise.catch(() => {});

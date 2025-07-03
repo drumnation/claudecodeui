@@ -12,6 +12,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      // Path alias for clean imports
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
       // Use pino browser version for client-side code
       'pino': 'pino/browser',
     },
@@ -34,9 +36,24 @@ export default defineConfig({
           }),
     },
     watch: {
-      // Force polling in case native fs events aren't working
-      usePolling: true,
-      interval: 100,
+      // Use native fs events for better performance
+      usePolling: false,
+      // Fallback polling configuration for problematic filesystems
+      // Enable if HMR fails on WSL, Docker, or network filesystems
+      // usePolling: true,
+      // interval: 100,
+      // binaryInterval: 300,
+    },
+    fs: {
+      // Ensure all source files are accessible for HMR
+      allow: [
+        // Allow access to the entire project
+        '..',
+        // Allow access to node_modules
+        process.cwd(),
+        // Allow access to workspace packages
+        path.resolve(process.cwd(), '../..'),
+      ],
     },
     allowedHosts: [
       'localhost',
@@ -71,9 +88,8 @@ export default defineConfig({
       },
     },
   },
-  // Ensure we're not caching aggressively
+  // Optimize dependencies
   optimizeDeps: {
-    force: true,
     include: ['pino', 'pino/browser'],
   },
 });

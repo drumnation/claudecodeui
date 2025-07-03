@@ -28,6 +28,7 @@
     "brain:watch": "brain-monitor watch",
     "brain:typecheck-failures": "brain-monitor typecheck",
     "brain:lint-failures": "brain-monitor lint",
+    "logs:clean-temp": "node scripts/clean-temp-logs.js",
     "brain:format-failures": "brain-monitor format",
     "brain:logs": "brain-monitor logs",
     "brain:dev": "brain-monitor dev",

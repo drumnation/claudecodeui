@@ -66,12 +66,14 @@ describe('projects.controller', () => {
       expect(repository.readProjectConfig).toHaveBeenCalledWith('/home/user');
       expect(repository.readProjectDirectories).toHaveBeenCalledWith(
         '/home/user/.claude/projects',
+        expect.any(Object),
       );
       expect(service.buildProject).toHaveBeenCalledWith(
         'project1',
         '/home/user/.claude/projects/project1',
         mockConfig,
         '/home/user',
+        expect.any(Object),
       );
       expect(jsonMock).toHaveBeenCalledWith([mockProject]);
     });
@@ -142,6 +144,7 @@ describe('projects.controller', () => {
         'project1',
         10,
         5,
+        expect.any(Object),
       );
       expect(jsonMock).toHaveBeenCalledWith(mockSessions);
     });
@@ -162,6 +165,7 @@ describe('projects.controller', () => {
         'project1',
         5,
         0,
+        expect.any(Object),
       );
     });
 
@@ -209,6 +213,7 @@ describe('projects.controller', () => {
         '/home/user',
         'project1',
         'session1',
+        expect.any(Object),
       );
       expect(jsonMock).toHaveBeenCalledWith({messages: mockMessages});
     });
