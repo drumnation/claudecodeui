@@ -1,4 +1,4 @@
-import React, {useState, useRef, useEffect} from 'react';
+import React, { useState, useRef, useEffect } from "react";
 import {
   Globe,
   RefreshCw,
@@ -9,11 +9,34 @@ import {
   Square,
   Terminal,
   AlertCircle,
-} from 'lucide-react';
-import {Button} from './ui/button';
-import {Input} from './ui/input';
-import {Badge} from './ui/badge';
-import {useLogger} from '@kit/logger/react';
+} from "lucide-react";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Badge } from "./ui/badge";
+import { useLogger } from "@kit/logger/react";
+import type { Logger } from "@kit/logger/types";
+import type { Project } from "../App";
+
+interface ServerLog {
+  type: string;
+  message: string;
+  timestamp?: any;
+}
+
+export interface LivePreviewPanelProps {
+  selectedProject: Project | null;
+  serverStatus: string;
+  serverUrl: string;
+  availableScripts: string[];
+  onStartServer: (script: string) => void;
+  onStopServer: () => void;
+  onScriptSelect: (script: string) => void;
+  currentScript: string;
+  onClose: () => void;
+  isMobile: boolean;
+  serverLogs?: ServerLog[];
+  onClearLogs: () => void;
+}
 
 function LivePreviewPanel({
   selectedProject,
@@ -26,31 +49,32 @@ function LivePreviewPanel({
   currentScript,
   onClose,
   isMobile,
-  serverLogs = [],
+  serverLogs = [] as ServerLog[],
   onClearLogs,
-}) {
-  const logger = useLogger({ scope: 'LivePreviewPanel' });
+}: LivePreviewPanelProps) {
+  const logger: Logger = useLogger({ scope: "LivePreviewPanel" });
   // Check if the current dev server is already running
-  const isCurrentProjectServer =
-    window.location.hostname === 'localhost' && window.location.port === '8766';
-  const [url, setUrl] = useState('http://localhost:8766');
-  const [canGoBack, setCanGoBack] = useState(false);
-  const [canGoForward, setCanGoForward] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const iframeRef = useRef(null);
-  const [iframeKey, setIframeKey] = useState(0);
-  const [showDevServerAnyway, setShowDevServerAnyway] = useState(false);
-  const [showLogs, setShowLogs] = useState(false);
+  const isCurrentProjectServer: boolean =
+    window.location.hostname === "localhost" && window.location.port === "8766";
+  const [url, setUrl] = useState<string>("http://localhost:8766");
+  const [canGoBack, setCanGoBack] = useState<boolean>(false);
+  const [canGoForward, setCanGoForward] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [iframeKey, setIframeKey] = useState<number>(0);
+  const [showDevServerAnyway, setShowDevServerAnyway] =
+    useState<boolean>(false);
+  const [showLogs, setShowLogs] = useState<boolean>(false);
 
   useEffect(() => {
     if (serverUrl) {
       setUrl(serverUrl);
       setError(null);
-    } else if (isCurrentProjectServer && serverStatus === 'stopped') {
+    } else if (isCurrentProjectServer && serverStatus === "stopped") {
       // If we're running on the dev server but status shows stopped,
       // it means the server is running outside of our control
-      setUrl('http://localhost:8766');
+      setUrl("http://localhost:8766");
       setError(null);
     }
   }, [serverUrl, isCurrentProjectServer, serverStatus]);
@@ -58,9 +82,9 @@ function LivePreviewPanel({
   // Log script changes when they actually change
   useEffect(() => {
     if (availableScripts.length > 0) {
-      logger.debug('Available scripts loaded', { 
+      logger.debug("Available scripts loaded", {
         scripts: availableScripts,
-        project: selectedProject?.name 
+        project: selectedProject?.name,
       });
     }
   }, [availableScripts.length, selectedProject?.name]);
@@ -87,7 +111,9 @@ function LivePreviewPanel({
       try {
         iframeRef.current.contentWindow.history.back();
       } catch (e) {
-        logger.warn('Cannot access iframe history', { error: e.message });
+        logger.warn("Cannot access iframe history", {
+          error: (e as Error).message,
+        });
       }
     }
   };
@@ -97,20 +123,22 @@ function LivePreviewPanel({
       try {
         iframeRef.current.contentWindow.history.forward();
       } catch (e) {
-        logger.warn('Cannot access iframe history', { error: e.message });
+        logger.warn("Cannot access iframe history", {
+          error: (e as Error).message,
+        });
       }
     }
   };
 
-  const handleUrlSubmit = (e) => {
+  const handleUrlSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (url) {
       let processedUrl = url.trim();
       if (
-        !processedUrl.startsWith('http://') &&
-        !processedUrl.startsWith('https://')
+        !processedUrl.startsWith("http://") &&
+        !processedUrl.startsWith("https://")
       ) {
-        processedUrl = 'http://' + processedUrl;
+        processedUrl = "http://" + processedUrl;
       }
       setUrl(processedUrl);
       setIsLoading(true);
@@ -120,7 +148,7 @@ function LivePreviewPanel({
     }
   };
 
-  const handleScriptChange = (e) => {
+  const handleScriptChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const script = e.target.value;
     if (script && onScriptSelect) {
       onScriptSelect(script);
@@ -133,10 +161,10 @@ function LivePreviewPanel({
     // Don't try to access cross-origin location
   };
 
-  const handleIframeError = (e) => {
+  const handleIframeError = (e: any) => {
     // Only log if it's not a cross-origin error (which is expected)
-    if (e.message && !e.message.includes('cross-origin')) {
-      logger.error('Iframe error', { error: e.message });
+    if (e.message && !e.message.includes("cross-origin")) {
+      logger.error("Iframe error", { error: e.message });
     }
     setIsLoading(false);
     // Don't set error for cross-origin issues, as they're expected
@@ -144,35 +172,35 @@ function LivePreviewPanel({
 
   const getStatusColor = () => {
     switch (serverStatus) {
-      case 'running':
-        return 'text-green-500';
-      case 'starting':
-        return 'text-yellow-500';
-      case 'stopping':
-        return 'text-orange-500';
-      case 'stopped':
-        return 'text-gray-500';
-      case 'error':
-        return 'text-red-500';
+      case "running":
+        return "text-green-500";
+      case "starting":
+        return "text-yellow-500";
+      case "stopping":
+        return "text-orange-500";
+      case "stopped":
+        return "text-gray-500";
+      case "error":
+        return "text-red-500";
       default:
-        return 'text-gray-500';
+        return "text-gray-500";
     }
   };
 
   const getStatusText = () => {
     switch (serverStatus) {
-      case 'running':
-        return 'Running';
-      case 'starting':
-        return 'Starting...';
-      case 'stopping':
-        return 'Stopping...';
-      case 'stopped':
-        return 'Stopped';
-      case 'error':
-        return 'Error';
+      case "running":
+        return "Running";
+      case "starting":
+        return "Starting...";
+      case "stopping":
+        return "Stopping...";
+      case "stopped":
+        return "Stopped";
+      case "error":
+        return "Error";
       default:
-        return 'Unknown';
+        return "Unknown";
     }
   };
 
@@ -186,7 +214,7 @@ function LivePreviewPanel({
             variant="ghost"
             size="icon"
             onClick={handleGoBack}
-            disabled={!canGoBack || serverStatus !== 'running'}
+            disabled={!canGoBack || serverStatus !== "running"}
             className="h-8 w-8"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -195,7 +223,7 @@ function LivePreviewPanel({
             variant="ghost"
             size="icon"
             onClick={handleGoForward}
-            disabled={!canGoForward || serverStatus !== 'running'}
+            disabled={!canGoForward || serverStatus !== "running"}
             className="h-8 w-8"
           >
             <ChevronRight className="h-4 w-4" />
@@ -204,11 +232,11 @@ function LivePreviewPanel({
             variant="ghost"
             size="icon"
             onClick={handleRefresh}
-            disabled={serverStatus !== 'running'}
+            disabled={serverStatus !== "running"}
             className="h-8 w-8"
           >
             <RefreshCw
-              className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
+              className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
             />
           </Button>
 
@@ -220,7 +248,7 @@ function LivePreviewPanel({
               onChange={(e) => setUrl(e.target.value)}
               placeholder="http://localhost:3000"
               disabled={
-                serverStatus !== 'running' &&
+                serverStatus !== "running" &&
                 !isCurrentProjectServer &&
                 !showDevServerAnyway
               }
@@ -243,19 +271,19 @@ function LivePreviewPanel({
 
         {/* Script selector and server controls */}
         <div
-          className={`flex items-center gap-2 px-2 pb-2 ${isMobile ? 'flex-col' : ''}`}
+          className={`flex items-center gap-2 px-2 pb-2 ${isMobile ? "flex-col" : ""}`}
         >
           <div
-            className={`${isMobile ? 'w-full flex gap-2' : 'flex-1 flex gap-2'}`}
+            className={`${isMobile ? "w-full flex gap-2" : "flex-1 flex gap-2"}`}
           >
             <select
-              value={currentScript || ''}
+              value={currentScript || ""}
               onChange={handleScriptChange}
               disabled={
-                serverStatus === 'starting' || serverStatus === 'stopping'
+                serverStatus === "starting" || serverStatus === "stopping"
               }
               className={`flex-1 h-10 px-3 text-base bg-card dark:bg-gray-700 text-foreground dark:text-gray-100 border border-border dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-ring dark:focus:ring-blue-500`}
-              style={{fontSize: '16px'}} // Prevent zoom on iOS
+              style={{ fontSize: "16px" }} // Prevent zoom on iOS
             >
               <option value="">Select a script...</option>
               {availableScripts.length > 0 ? (
@@ -275,19 +303,19 @@ function LivePreviewPanel({
               className="gap-1.5 h-10 px-3 flex items-center dark:border-gray-600"
             >
               <div
-                className={`w-2 h-2 rounded-full ${getStatusColor()} ${serverStatus === 'running' ? 'animate-pulse' : ''}`}
+                className={`w-2 h-2 rounded-full ${getStatusColor()} ${serverStatus === "running" ? "animate-pulse" : ""}`}
               />
               {getStatusText()}
             </Badge>
           </div>
 
-          <div className={`flex gap-2 ${isMobile ? 'w-full' : ''}`}>
-            {serverStatus === 'stopped' || serverStatus === 'error' ? (
+          <div className={`flex gap-2 ${isMobile ? "w-full" : ""}`}>
+            {serverStatus === "stopped" || serverStatus === "error" ? (
               <Button
                 size="sm"
                 onClick={() => currentScript && onStartServer(currentScript)}
-                disabled={!currentScript || serverStatus === 'starting'}
-                className={`h-10 gap-1.5 ${isMobile ? 'flex-1' : ''}`}
+                disabled={!currentScript || serverStatus.includes("starting")}
+                className={`h-10 gap-1.5 ${isMobile ? "flex-1" : ""}`}
               >
                 <Play className="h-3.5 w-3.5" />
                 Start
@@ -297,8 +325,8 @@ function LivePreviewPanel({
                 size="sm"
                 variant="destructive"
                 onClick={onStopServer}
-                disabled={serverStatus === 'stopping'}
-                className={`h-10 gap-1.5 ${isMobile ? 'flex-1' : ''}`}
+                disabled={serverStatus === "stopping"}
+                className={`h-10 gap-1.5 ${isMobile ? "flex-1" : ""}`}
               >
                 <Square className="h-3.5 w-3.5" />
                 Stop
@@ -309,7 +337,7 @@ function LivePreviewPanel({
               size="sm"
               variant="outline"
               onClick={() => setShowLogs(!showLogs)}
-              className={`h-10 gap-1.5 ${isMobile ? 'flex-1' : ''} ${showLogs ? 'bg-accent dark:bg-gray-700' : ''}`}
+              className={`h-10 gap-1.5 ${isMobile ? "flex-1" : ""} ${showLogs ? "bg-accent dark:bg-gray-700" : ""}`}
             >
               <Terminal className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Logs</span>
@@ -343,7 +371,7 @@ function LivePreviewPanel({
               serverLogs.map((log, index) => (
                 <div
                   key={index}
-                  className={`whitespace-pre-wrap ${log.type === 'error' ? 'text-red-500 dark:text-red-400' : ''}`}
+                  className={`whitespace-pre-wrap ${log.type === "error" ? "text-red-500 dark:text-red-400" : ""}`}
                 >
                   {log.message}
                 </div>
@@ -355,7 +383,7 @@ function LivePreviewPanel({
 
       {/* Preview area */}
       <div className="flex-1 relative bg-white dark:bg-gray-900">
-        {serverStatus === 'running' ||
+        {serverStatus === "running" ||
         showDevServerAnyway ||
         isCurrentProjectServer ? (
           <>
@@ -378,7 +406,7 @@ function LivePreviewPanel({
             <iframe
               key={iframeKey}
               ref={iframeRef}
-              src={url || serverUrl || 'http://localhost:8766'}
+              src={url || serverUrl || "http://localhost:8766"}
               className="w-full h-full border-0 bg-white"
               onLoad={handleIframeLoad}
               onError={handleIframeError}
@@ -410,7 +438,7 @@ function LivePreviewPanel({
                 variant="outline"
                 onClick={() => {
                   setShowDevServerAnyway(true);
-                  setUrl('http://localhost:8766');
+                  setUrl("http://localhost:8766");
                   setIframeKey((prev) => prev + 1);
                 }}
                 className="mt-2 dark:border-gray-600 dark:hover:bg-gray-800"
@@ -428,16 +456,16 @@ function LivePreviewPanel({
               </h3>
               <p className="text-sm text-muted-foreground dark:text-gray-400 mb-4">
                 {availableScripts.length > 0
-                  ? 'Select a script from the dropdown above and click Start to launch your development server.'
-                  : 'Loading available scripts...'}
+                  ? "Select a script from the dropdown above and click Start to launch your development server."
+                  : "Loading available scripts..."}
               </p>
-              {serverStatus === 'starting' && (
+              {serverStatus === "starting" && (
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                   <RefreshCw className="h-4 w-4 animate-spin" />
                   Starting server...
                 </div>
               )}
-              {serverStatus === 'error' && (
+              {serverStatus === "error" && (
                 <div className="text-sm text-destructive">
                   Server failed to start. Check the logs for details.
                 </div>

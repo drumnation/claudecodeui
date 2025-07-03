@@ -73,10 +73,13 @@ export function createLogger(options: LoggerOptions = {}): Logger {
 
   const browserOptions: pino.LoggerOptions = {
     level,
-    browser: {
+    browser: prettyPrint ? {
       serialize: !prettyPrint,
       asObject: !prettyPrint,
-      write: prettyPrint ? createThemeWriter(resolvedTheme, scope) : undefined,
+      write: createThemeWriter(resolvedTheme, scope),
+    } : {
+      serialize: !prettyPrint,
+      asObject: !prettyPrint,
     },
     base: {
       ...metadata,

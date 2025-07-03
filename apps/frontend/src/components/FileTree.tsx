@@ -1,17 +1,39 @@
-import React, {useState, useEffect} from 'react';
-import {ScrollArea} from './ui/scroll-area';
-import {Button} from './ui/button';
-import {Folder, FolderOpen, File, FileText, FileCode} from 'lucide-react';
-import {cn} from '../lib/utils';
-import CodeEditor from './CodeEditor';
-import ImageViewer from './ImageViewer';
+import React, { useState, useEffect } from "react";
+import { ScrollArea } from "./ui/scroll-area";
+import { Button } from "./ui/button";
+import { Folder, FolderOpen, File, FileText, FileCode } from "lucide-react";
+import { cn } from "../lib/utils";
+import CodeEditor from "./CodeEditor";
+import { ImageViewer } from "./ImageViewer";
+import type { Project } from "../App";
 
-function FileTree({selectedProject}) {
-  const [files, setFiles] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [expandedDirs, setExpandedDirs] = useState(new Set());
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [selectedImage, setSelectedImage] = useState(null);
+export interface FileTreeProps {
+  selectedProject: Project | null;
+}
+
+interface FileItem {
+  name: string;
+  path: string;
+  type: "file" | "directory";
+  children?: FileItem[];
+}
+
+function FileTree({ selectedProject }: FileTreeProps) {
+  const [files, setFiles] = useState<FileItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
+  const [selectedFile, setSelectedFile] = useState<{
+    name: string;
+    path: string;
+    projectPath: string;
+    projectName: string;
+  } | null>(null);
+  const [selectedImage, setSelectedImage] = useState<{
+    name: string;
+    path: string;
+    projectPath: string;
+    projectName: string;
+  } | null>(null);
 
   useEffect(() => {
     if (selectedProject) {
@@ -20,17 +42,20 @@ function FileTree({selectedProject}) {
   }, [selectedProject]);
 
   const fetchFiles = async () => {
+    if (!selectedProject) {
+      return;
+    }
     setLoading(true);
     try {
       // Use the project's fullPath as the dirPath parameter
-      const dirPath = selectedProject.fullPath || selectedProject.path;
+      const dirPath = selectedProject.fullPath;
       const response = await fetch(
         `/api/projects/${selectedProject.name}/files?dirPath=${encodeURIComponent(dirPath)}`,
       );
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ File fetch failed:', response.status, errorText);
+        console.error("❌ File fetch failed:", response.status, errorText);
         setFiles([]);
         return;
       }
@@ -38,14 +63,14 @@ function FileTree({selectedProject}) {
       const data = await response.json();
       setFiles(data.files || []);
     } catch (error) {
-      console.error('❌ Error fetching files:', error);
+      console.error("❌ Error fetching files:", error);
       setFiles([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleDirectory = (path) => {
+  const toggleDirectory = (path: string) => {
     const newExpanded = new Set(expandedDirs);
     if (newExpanded.has(path)) {
       newExpanded.delete(path);
@@ -55,25 +80,30 @@ function FileTree({selectedProject}) {
     setExpandedDirs(newExpanded);
   };
 
-  const renderFileTree = (items, level = 0) => {
-    return items.map((item) => (
+  const renderFileTree = (items: any[], level = 0) => {
+    return items.map((item: any) => (
       <div key={item.path} className="select-none">
         <Button
           variant="ghost"
           className={cn(
-            'w-full justify-start p-2 h-auto font-normal text-left hover:bg-accent',
+            "w-full justify-start p-2 h-auto font-normal text-left hover:bg-accent",
           )}
-          style={{paddingLeft: `${level * 16 + 12}px`}}
-          data-testid={item.type === 'directory' ? `directory-${item.path}` : `file-${item.path}`}
+          style={{ paddingLeft: `${level * 16 + 12}px` }}
+          data-testid={
+            item.type === "directory"
+              ? `directory-${item.path}`
+              : `file-${item.path}`
+          }
           onClick={() => {
-            if (item.type === 'directory') {
+            if (!selectedProject) return;
+            if (item.type === "directory") {
               toggleDirectory(item.path);
             } else if (isImageFile(item.name)) {
               // Open image in viewer
               setSelectedImage({
                 name: item.name,
                 path: item.path,
-                projectPath: selectedProject.path,
+                projectPath: selectedProject.fullPath,
                 projectName: selectedProject.name,
               });
             } else {
@@ -81,16 +111,19 @@ function FileTree({selectedProject}) {
               setSelectedFile({
                 name: item.name,
                 path: item.path,
-                projectPath: selectedProject.path,
+                projectPath: selectedProject.fullPath,
                 projectName: selectedProject.name,
               });
             }
           }}
         >
           <div className="flex items-center gap-2 min-w-0 w-full">
-            {item.type === 'directory' ? (
+            {item.type === "directory" ? (
               <>
-                <div data-testid={`expand-${item.path}`} className="flex items-center">
+                <div
+                  data-testid={`expand-${item.path}`}
+                  className="flex items-center"
+                >
                   {expandedDirs.has(item.path) ? (
                     <FolderOpen className="w-4 h-4 text-blue-500 flex-shrink-0" />
                   ) : (
@@ -107,7 +140,7 @@ function FileTree({selectedProject}) {
           </div>
         </Button>
 
-        {item.type === 'directory' &&
+        {item.type === "directory" &&
           expandedDirs.has(item.path) &&
           item.children &&
           item.children.length > 0 && (
@@ -117,55 +150,55 @@ function FileTree({selectedProject}) {
     ));
   };
 
-  const isImageFile = (filename) => {
-    const ext = filename.split('.').pop()?.toLowerCase();
+  const isImageFile = (filename: string) => {
+    const ext = filename.split(".").pop()?.toLowerCase();
     const imageExtensions = [
-      'png',
-      'jpg',
-      'jpeg',
-      'gif',
-      'svg',
-      'webp',
-      'ico',
-      'bmp',
+      "png",
+      "jpg",
+      "jpeg",
+      "gif",
+      "svg",
+      "webp",
+      "ico",
+      "bmp",
     ];
-    return imageExtensions.includes(ext);
+    return ext ? imageExtensions.includes(ext) : false;
   };
 
-  const getFileIcon = (filename) => {
-    const ext = filename.split('.').pop()?.toLowerCase();
+  const getFileIcon = (filename: string) => {
+    const ext = filename.split(".").pop()?.toLowerCase();
 
     const codeExtensions = [
-      'js',
-      'jsx',
-      'ts',
-      'tsx',
-      'py',
-      'java',
-      'cpp',
-      'c',
-      'php',
-      'rb',
-      'go',
-      'rs',
+      "js",
+      "jsx",
+      "ts",
+      "tsx",
+      "py",
+      "java",
+      "cpp",
+      "c",
+      "php",
+      "rb",
+      "go",
+      "rs",
     ];
-    const docExtensions = ['md', 'txt', 'doc', 'pdf'];
+    const docExtensions = ["md", "txt", "doc", "pdf"];
     const imageExtensions = [
-      'png',
-      'jpg',
-      'jpeg',
-      'gif',
-      'svg',
-      'webp',
-      'ico',
-      'bmp',
+      "png",
+      "jpg",
+      "jpeg",
+      "gif",
+      "svg",
+      "webp",
+      "ico",
+      "bmp",
     ];
 
-    if (codeExtensions.includes(ext)) {
+    if (ext && codeExtensions.includes(ext)) {
       return <FileCode className="w-4 h-4 text-green-500 flex-shrink-0" />;
-    } else if (docExtensions.includes(ext)) {
+    } else if (ext && docExtensions.includes(ext)) {
       return <FileText className="w-4 h-4 text-blue-500 flex-shrink-0" />;
-    } else if (imageExtensions.includes(ext)) {
+    } else if (ext && imageExtensions.includes(ext)) {
       return <File className="w-4 h-4 text-purple-500 flex-shrink-0" />;
     } else {
       return <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />;
@@ -174,7 +207,10 @@ function FileTree({selectedProject}) {
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center" data-testid="file-tree-loading">
+      <div
+        className="h-full flex items-center justify-center"
+        data-testid="file-tree-loading"
+      >
         <div className="text-gray-500 dark:text-gray-400">Loading files...</div>
       </div>
     );

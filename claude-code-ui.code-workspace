@@ -1,0 +1,72 @@
+{
+  "folders": [
+    {
+      "name": "🧠 Brain",
+      "path": ".brain"
+    },
+    {
+      "name": "🚨 Errors",
+      "path": "./_errors"
+    },
+    {
+      "name": "💬 Logs",
+      "path": "./_logs"
+    },
+    {
+      "name": "📖 Documentation",
+      "path": "./docs"
+    },
+    {
+      "name": "📱 Apps",
+      "path": "./apps"
+    },
+    {
+      "name": "📦 Packages", 
+      "path": "./packages"
+    },
+    {
+      "name": "🛠️ Tooling",
+      "path": "./tooling"
+    },
+    {
+      "name": "🏠 Root",
+      "path": "."
+    },
+  ],
+  "settings": {
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "typescript.enablePromptUseWorkspaceTsdk": true,
+    "typescript.preferences.importModuleSpecifier": "relative",
+    "javascript.preferences.importModuleSpecifier": "relative",
+    "typescript.preferences.includePackageJsonAutoImports": "on",
+    "typescript.suggest.autoImports": true,
+    "typescript.workspaceSymbols.scope": "allOpenProjects",
+    "typescript.validate.enable": true,
+    "vitest.maximumConfigs": 15,
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/.turbo": true,
+      "**/coverage": true
+    },
+    "files.exclude": {
+      "**/.turbo": true,
+      "**/node_modules": true,
+      "**/dist": true
+    },
+    "workbench.colorCustomizations": {
+        "activityBar.background": "#07351B",
+        "titleBar.activeBackground": "#0A4A26",
+        "titleBar.activeForeground": "#F1FDF7"
+    },
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-vscode.vscode-typescript-next",
+      "vitest.explorer",
+      "bradlc.vscode-tailwindcss",
+      "esbenp.prettier-vscode",
+      "dbaeumer.vscode-eslint"
+    ]
+  }
+}

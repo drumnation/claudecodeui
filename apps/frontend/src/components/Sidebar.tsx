@@ -1,8 +1,8 @@
-import React, {useState, useEffect} from 'react';
-import {ScrollArea} from './ui/scroll-area';
-import {Button} from './ui/button';
-import {Badge} from './ui/badge';
-import {Input} from './ui/input';
+import React, { useState, useEffect } from "react";
+import { ScrollArea } from "./ui/scroll-area";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
+import { Input } from "./ui/input";
 import {
   FolderOpen,
   Folder,
@@ -20,33 +20,49 @@ import {
   RefreshCw,
   Sparkles,
   Edit2,
-} from 'lucide-react';
-import {cn} from '../lib/utils';
-import ClaudeLogo from './ClaudeLogo';
-import {useLogger} from '@kit/logger/react';
+} from "lucide-react";
+import { cn } from "../lib/utils";
+import { ClaudeLogo } from "./ClaudeLogo";
+import { useLogger } from "@kit/logger/react";
+import type { Logger } from "@kit/logger/types";
+import type { Project, Session } from "../App";
+
+export interface SidebarProps {
+  projects: Project[];
+  selectedProject: Project | null;
+  selectedSession: Session | null;
+  onProjectSelect: (project: Project) => void;
+  onSessionSelect: (session: Session) => void;
+  onNewSession: (project: Project) => void;
+  onSessionDelete: (sessionId: string) => void;
+  onProjectDelete: (projectName: string) => void;
+  isLoading: boolean;
+  onRefresh: () => Promise<void>;
+  onShowSettings: () => void;
+}
 
 // Move formatTimeAgo outside component to avoid recreation on every render
-const formatTimeAgo = (dateString, currentTime) => {
+const formatTimeAgo = (dateString: string, currentTime: Date): string => {
   const date = new Date(dateString);
   const now = currentTime;
 
   // Check if date is valid
   if (isNaN(date.getTime())) {
-    return 'Unknown';
+    return "Unknown";
   }
 
-  const diffInMs = now - date;
+  const diffInMs = now.getTime() - date.getTime();
   const diffInSeconds = Math.floor(diffInMs / 1000);
   const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
   const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
   const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
 
-  if (diffInSeconds < 60) return 'Just now';
-  if (diffInMinutes === 1) return '1 min ago';
+  if (diffInSeconds < 60) return "Just now";
+  if (diffInMinutes === 1) return "1 min ago";
   if (diffInMinutes < 60) return `${diffInMinutes} mins ago`;
-  if (diffInHours === 1) return '1 hour ago';
+  if (diffInHours === 1) return "1 hour ago";
   if (diffInHours < 24) return `${diffInHours} hours ago`;
-  if (diffInDays === 1) return '1 day ago';
+  if (diffInDays === 1) return "1 day ago";
   if (diffInDays < 7) return `${diffInDays} days ago`;
   return date.toLocaleDateString();
 };
@@ -63,26 +79,36 @@ function Sidebar({
   isLoading,
   onRefresh,
   onShowSettings,
-}) {
-  const logger = useLogger({ scope: 'Sidebar' });
-  const [expandedProjects, setExpandedProjects] = useState(new Set());
-  const [editingProject, setEditingProject] = useState(null);
-  const [showNewProject, setShowNewProject] = useState(false);
-  const [editingName, setEditingName] = useState('');
-  const [newProjectPath, setNewProjectPath] = useState('');
-  const [creatingProject, setCreatingProject] = useState(false);
-  const [loadingSessions, setLoadingSessions] = useState({});
-  const [additionalSessions, setAdditionalSessions] = useState({});
-  const [initialSessionsLoaded, setInitialSessionsLoaded] = useState(new Set());
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [editingSession, setEditingSession] = useState(null);
-  const [editingSessionName, setEditingSessionName] = useState('');
-  const [generatingSummary, setGeneratingSummary] = useState({});
+}: SidebarProps) {
+  const logger: Logger = useLogger({ scope: "Sidebar" });
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
+    new Set(),
+  );
+  const [editingProject, setEditingProject] = useState<string | null>(null);
+  const [showNewProject, setShowNewProject] = useState<boolean>(false);
+  const [editingName, setEditingName] = useState<string>("");
+  const [newProjectPath, setNewProjectPath] = useState<string>("");
+  const [creatingProject, setCreatingProject] = useState<boolean>(false);
+  const [loadingSessions, setLoadingSessions] = useState<
+    Record<string, boolean>
+  >({});
+  const [additionalSessions, setAdditionalSessions] = useState<
+    Record<string, Session[]>
+  >({});
+  const [initialSessionsLoaded, setInitialSessionsLoaded] = useState<
+    Set<string>
+  >(new Set());
+  const [currentTime, setCurrentTime] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [editingSession, setEditingSession] = useState<string | null>(null);
+  const [editingSessionName, setEditingSessionName] = useState<string>("");
+  const [generatingSummary, setGeneratingSummary] = useState<
+    Record<string, boolean>
+  >({});
 
   // Touch handler to prevent double-tap issues on iPad
-  const handleTouchClick = (callback) => {
-    return (e) => {
+  const handleTouchClick = (callback: () => void) => {
+    return (e: React.TouchEvent | React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
       callback();
@@ -114,7 +140,7 @@ function Sidebar({
   // Mark sessions as loaded when projects come in
   useEffect(() => {
     if (projects.length > 0 && !isLoading) {
-      const newLoaded = new Set();
+      const newLoaded = new Set<string>();
       projects.forEach((project) => {
         if (project.sessions && project.sessions.length >= 0) {
           newLoaded.add(project.name);
@@ -124,7 +150,7 @@ function Sidebar({
     }
   }, [projects, isLoading]);
 
-  const toggleProject = (projectName) => {
+  const toggleProject = (projectName: string) => {
     const newExpanded = new Set(expandedProjects);
     if (newExpanded.has(projectName)) {
       newExpanded.delete(projectName);
@@ -134,24 +160,24 @@ function Sidebar({
     setExpandedProjects(newExpanded);
   };
 
-  const startEditing = (project) => {
+  const startEditing = (project: Project) => {
     setEditingProject(project.name);
     setEditingName(project.displayName);
   };
 
   const cancelEditing = () => {
     setEditingProject(null);
-    setEditingName('');
+    setEditingName("");
   };
 
-  const saveProjectName = async (projectName) => {
+  const saveProjectName = async (projectName: string) => {
     try {
       const response = await fetch(`/api/projects/${projectName}/rename`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({displayName: editingName}),
+        body: JSON.stringify({ displayName: editingName }),
       });
 
       if (response.ok) {
@@ -162,20 +188,26 @@ function Sidebar({
           window.location.reload();
         }
       } else {
-        logger.error('Failed to rename project', { projectName, status: response.status });
+        logger.error("Failed to rename project", {
+          projectName,
+          status: response.status,
+        });
       }
     } catch (error) {
-      logger.error('Error renaming project', { error: error.message, projectName });
+      logger.error("Error renaming project", {
+        error: (error as Error).message,
+        projectName,
+      });
     }
 
     setEditingProject(null);
-    setEditingName('');
+    setEditingName("");
   };
 
-  const deleteSession = async (projectName, sessionId) => {
+  const deleteSession = async (projectName: string, sessionId: string) => {
     if (
       !confirm(
-        'Are you sure you want to delete this session? This action cannot be undone.',
+        "Are you sure you want to delete this session? This action cannot be undone.",
       )
     ) {
       return;
@@ -185,7 +217,7 @@ function Sidebar({
       const response = await fetch(
         `/api/projects/${projectName}/sessions/${sessionId}`,
         {
-          method: 'DELETE',
+          method: "DELETE",
         },
       );
 
@@ -195,99 +227,132 @@ function Sidebar({
           onSessionDelete(sessionId);
         }
       } else {
-        logger.error('Failed to delete session', { sessionId, status: response.status });
-        alert('Failed to delete session. Please try again.');
+        logger.error("Failed to delete session", {
+          sessionId,
+          status: response.status,
+        });
+        alert("Failed to delete session. Please try again.");
       }
     } catch (error) {
-      logger.error('Error deleting session', { error: error.message, sessionId });
-      alert('Error deleting session. Please try again.');
+      logger.error("Error deleting session", {
+        error: (error as Error).message,
+        sessionId,
+      });
+      alert("Error deleting session. Please try again.");
     }
   };
 
-  const generateSessionSummary = async (projectName, sessionId) => {
+  const generateSessionSummary = async (
+    projectName: string,
+    sessionId: string,
+  ) => {
     const key = `${projectName}-${sessionId}`;
-    setGeneratingSummary((prev) => ({...prev, [key]: true}));
+    setGeneratingSummary((prev) => ({ ...prev, [key]: true }));
 
     try {
-      logger.info('Generating summary', { projectName, sessionId });
-      
+      logger.info("Generating summary", { projectName, sessionId });
+
       // First fetch the messages for this session
       const messagesResponse = await fetch(
         `/api/projects/${projectName}/sessions/${sessionId}/messages`,
       );
-      
+
       if (!messagesResponse.ok) {
-        throw new Error('Failed to fetch session messages');
+        throw new Error("Failed to fetch session messages");
       }
-      
+
       const messagesData = await messagesResponse.json();
       const messages = messagesData.messages || [];
-      
+
       const response = await fetch(
         `/api/projects/${projectName}/sessions/${sessionId}/generate-summary`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify({messages}),
+          body: JSON.stringify({ messages }),
         },
       );
 
       if (response.ok) {
         const data = await response.json();
-        logger.info('Summary generated successfully', { summary: data.summary });
+        logger.info("Summary generated successfully", {
+          summary: data.summary,
+        });
         // The UI will update automatically via WebSocket
       } else {
         const error = await response.json();
-        logger.error('Failed to generate summary', { error: error.error || 'Unknown error', projectName, sessionId });
-        alert(`Failed to generate summary: ${error.error || 'Unknown error'}`);
+        logger.error("Failed to generate summary", {
+          error: error.error || "Unknown error",
+          projectName,
+          sessionId,
+        });
+        alert(`Failed to generate summary: ${error.error || "Unknown error"}`);
       }
     } catch (error) {
-      logger.error('Error generating summary', { error: error.message, projectName, sessionId });
-      alert(`Error generating summary: ${error.message || 'Network error'}`);
+      logger.error("Error generating summary", {
+        error: (error as Error).message,
+        projectName,
+        sessionId,
+      });
+      alert(
+        `Error generating summary: ${(error as Error).message || "Network error"}`,
+      );
     } finally {
       setGeneratingSummary((prev) => {
-        const newState = {...prev};
+        const newState = { ...prev };
         delete newState[key];
         return newState;
       });
     }
   };
 
-  const updateSessionSummary = async (projectName, sessionId, newSummary) => {
+  const updateSessionSummary = async (
+    projectName: string,
+    sessionId: string,
+    newSummary: string,
+  ) => {
     try {
       const response = await fetch(
         `/api/projects/${projectName}/sessions/${sessionId}/summary`,
         {
-          method: 'PUT',
+          method: "PUT",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify({summary: newSummary}),
+          body: JSON.stringify({ summary: newSummary }),
         },
       );
 
       if (response.ok) {
-        logger.info('Summary updated successfully', { projectName, sessionId });
+        logger.info("Summary updated successfully", { projectName, sessionId });
         setEditingSession(null);
-        setEditingSessionName('');
+        setEditingSessionName("");
         // The UI will update automatically via WebSocket
       } else {
         const error = await response.json();
-        logger.error('Failed to update summary', { error: error.error, projectName, sessionId });
-        alert('Failed to update summary. Please try again.');
+        logger.error("Failed to update summary", {
+          error: error.error,
+          projectName,
+          sessionId,
+        });
+        alert("Failed to update summary. Please try again.");
       }
     } catch (error) {
-      logger.error('Error updating summary', { error: error.message, projectName, sessionId });
-      alert('Error updating summary. Please try again.');
+      logger.error("Error updating summary", {
+        error: (error as Error).message,
+        projectName,
+        sessionId,
+      });
+      alert("Error updating summary. Please try again.");
     }
   };
 
-  const deleteProject = async (projectName) => {
+  const deleteProject = async (projectName: string) => {
     if (
       !confirm(
-        'Are you sure you want to delete this empty project? This action cannot be undone.',
+        "Are you sure you want to delete this empty project? This action cannot be undone.",
       )
     ) {
       return;
@@ -295,7 +360,7 @@ function Sidebar({
 
     try {
       const response = await fetch(`/api/projects/${projectName}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (response.ok) {
@@ -305,28 +370,34 @@ function Sidebar({
         }
       } else {
         const error = await response.json();
-        logger.error('Failed to delete project', { error: error.error, projectName });
-        alert(error.error || 'Failed to delete project. Please try again.');
+        logger.error("Failed to delete project", {
+          error: error.error,
+          projectName,
+        });
+        alert(error.error || "Failed to delete project. Please try again.");
       }
     } catch (error) {
-      logger.error('Error deleting project', { error: error.message, projectName });
-      alert('Error deleting project. Please try again.');
+      logger.error("Error deleting project", {
+        error: (error as Error).message,
+        projectName,
+      });
+      alert("Error deleting project. Please try again.");
     }
   };
 
   const createNewProject = async () => {
     if (!newProjectPath.trim()) {
-      alert('Please enter a project path');
+      alert("Please enter a project path");
       return;
     }
 
     setCreatingProject(true);
 
     try {
-      const response = await fetch('/api/projects/create', {
-        method: 'POST',
+      const response = await fetch("/api/projects/create", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           path: newProjectPath.trim(),
@@ -336,7 +407,7 @@ function Sidebar({
       if (response.ok) {
         const result = await response.json();
         setShowNewProject(false);
-        setNewProjectPath('');
+        setNewProjectPath("");
 
         // Refresh projects to show the new one
         if (window.refreshProjects) {
@@ -346,11 +417,14 @@ function Sidebar({
         }
       } else {
         const error = await response.json();
-        alert(error.error || 'Failed to create project. Please try again.');
+        alert(error.error || "Failed to create project. Please try again.");
       }
     } catch (error) {
-      logger.error('Error creating project', { error: error.message, path: newProjectPath });
-      alert('Error creating project. Please try again.');
+      logger.error("Error creating project", {
+        error: (error as Error).message,
+        path: newProjectPath,
+      });
+      alert("Error creating project. Please try again.");
     } finally {
       setCreatingProject(false);
     }
@@ -358,10 +432,10 @@ function Sidebar({
 
   const cancelNewProject = () => {
     setShowNewProject(false);
-    setNewProjectPath('');
+    setNewProjectPath("");
   };
 
-  const loadMoreSessions = async (project) => {
+  const loadMoreSessions = async (project: Project) => {
     // Check if we can load more sessions
     const canLoadMore = project.sessionMeta?.hasMore !== false;
 
@@ -369,7 +443,7 @@ function Sidebar({
       return;
     }
 
-    setLoadingSessions((prev) => ({...prev, [project.name]: true}));
+    setLoadingSessions((prev) => ({ ...prev, [project.name]: true }));
 
     try {
       const currentSessionCount =
@@ -391,18 +465,21 @@ function Sidebar({
         // Update project metadata if needed
         if (result.hasMore === false) {
           // Mark that there are no more sessions to load
-          project.sessionMeta = {...project.sessionMeta, hasMore: false};
+          project.sessionMeta = { ...project.sessionMeta, hasMore: false };
         }
       }
     } catch (error) {
-      logger.error('Error loading more sessions', { error: error.message, projectName: project.name });
+      logger.error("Error loading more sessions", {
+        error: (error as Error).message,
+        projectName: project.name,
+      });
     } finally {
-      setLoadingSessions((prev) => ({...prev, [project.name]: false}));
+      setLoadingSessions((prev) => ({ ...prev, [project.name]: false }));
     }
   };
 
   // Helper function to get all sessions for a project (initial + additional)
-  const getAllSessions = (project) => {
+  const getAllSessions = (project: Project) => {
     const initialSessions = project.sessions || [];
     const additional = additionalSessions[project.name] || [];
     return [...initialSessions, ...additional];
@@ -445,7 +522,7 @@ function Sidebar({
               data-testid="refresh-projects-button"
             >
               <RefreshCw
-                className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''} group-hover:rotate-180 transition-transform duration-300`}
+                className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""} group-hover:rotate-180 transition-transform duration-300`}
               />
             </Button>
             <Button
@@ -490,7 +567,7 @@ function Sidebar({
                 data-testid="refresh-projects-button"
               >
                 <RefreshCw
-                  className={`w-4 h-4 text-foreground ${isRefreshing ? 'animate-spin' : ''}`}
+                  className={`w-4 h-4 text-foreground ${isRefreshing ? "animate-spin" : ""}`}
                 />
               </button>
               <button
@@ -521,8 +598,8 @@ function Sidebar({
               className="text-sm focus:ring-2 focus:ring-primary/20"
               autoFocus
               onKeyDown={(e) => {
-                if (e.key === 'Enter') createNewProject();
-                if (e.key === 'Escape') cancelNewProject();
+                if (e.key === "Enter") createNewProject();
+                if (e.key === "Escape") cancelNewProject();
               }}
             />
             <div className="flex gap-2">
@@ -532,7 +609,7 @@ function Sidebar({
                 disabled={!newProjectPath.trim() || creatingProject}
                 className="flex-1 h-8 text-xs hover:bg-primary/90 transition-colors"
               >
-                {creatingProject ? 'Creating...' : 'Create Project'}
+                {creatingProject ? "Creating..." : "Create Project"}
               </Button>
               <Button
                 size="sm"
@@ -577,8 +654,8 @@ function Sidebar({
                   className="text-sm h-10 rounded-md focus:border-primary transition-colors"
                   autoFocus
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') createNewProject();
-                    if (e.key === 'Escape') cancelNewProject();
+                    if (e.key === "Enter") createNewProject();
+                    if (e.key === "Escape") cancelNewProject();
                   }}
                 />
 
@@ -596,7 +673,7 @@ function Sidebar({
                     disabled={!newProjectPath.trim() || creatingProject}
                     className="flex-1 h-9 text-sm rounded-md bg-primary hover:bg-primary/90 active:scale-95 transition-all"
                   >
-                    {creatingProject ? 'Creating...' : 'Create'}
+                    {creatingProject ? "Creating..." : "Create"}
                   </Button>
                 </div>
               </div>
@@ -648,8 +725,8 @@ function Sidebar({
                     <div className="md:hidden">
                       <div
                         className={cn(
-                          'p-3 mx-3 my-1 rounded-lg bg-card border border-border/50 active:scale-[0.98] transition-all duration-150',
-                          isSelected && 'bg-primary/5 border-primary/20',
+                          "p-3 mx-3 my-1 rounded-lg bg-card border border-border/50 active:scale-[0.98] transition-all duration-150",
+                          isSelected && "bg-primary/5 border-primary/20",
                         )}
                         onClick={() => {
                           // On mobile, just toggle the folder - don't select the project
@@ -664,8 +741,8 @@ function Sidebar({
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             <div
                               className={cn(
-                                'w-8 h-8 rounded-lg flex items-center justify-center transition-colors',
-                                isExpanded ? 'bg-primary/10' : 'bg-muted',
+                                "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
+                                isExpanded ? "bg-primary/10" : "bg-muted",
                               )}
                             >
                               {isExpanded ? (
@@ -688,14 +765,14 @@ function Sidebar({
                                   autoComplete="off"
                                   onClick={(e) => e.stopPropagation()}
                                   onKeyDown={(e) => {
-                                    if (e.key === 'Enter')
+                                    if (e.key === "Enter")
                                       saveProjectName(project.name);
-                                    if (e.key === 'Escape') cancelEditing();
+                                    if (e.key === "Escape") cancelEditing();
                                   }}
                                   style={{
-                                    fontSize: '16px', // Prevents zoom on iOS
-                                    WebkitAppearance: 'none',
-                                    borderRadius: '8px',
+                                    fontSize: "16px", // Prevents zoom on iOS
+                                    WebkitAppearance: "none",
+                                    borderRadius: "8px",
                                   }}
                                 />
                               ) : (
@@ -713,7 +790,7 @@ function Sidebar({
                                         hasMore && sessionCount >= 5
                                           ? `${sessionCount}+`
                                           : sessionCount;
-                                      return `${count} session${count === 1 ? '' : 's'}`;
+                                      return `${count} session${count === 1 ? "" : "s"}`;
                                     })()}
                                   </p>
                                 </>
@@ -790,8 +867,8 @@ function Sidebar({
                     <Button
                       variant="ghost"
                       className={cn(
-                        'hidden md:flex w-full justify-between p-2 h-auto font-normal hover:bg-accent/50',
-                        isSelected && 'bg-accent text-accent-foreground',
+                        "hidden md:flex w-full justify-between p-2 h-auto font-normal hover:bg-accent/50",
+                        isSelected && "bg-accent text-accent-foreground",
                       )}
                       onClick={() => {
                         // Desktop behavior: select project and toggle
@@ -825,9 +902,9 @@ function Sidebar({
                                 placeholder="Project name"
                                 autoFocus
                                 onKeyDown={(e) => {
-                                  if (e.key === 'Enter')
+                                  if (e.key === "Enter")
                                     saveProjectName(project.name);
-                                  if (e.key === 'Escape') cancelEditing();
+                                  if (e.key === "Escape") cancelEditing();
                                 }}
                               />
                               <div
@@ -860,9 +937,9 @@ function Sidebar({
                                     className="ml-1 opacity-60"
                                     title={project.fullPath}
                                   >
-                                    •{' '}
+                                    •{" "}
                                     {project.fullPath.length > 25
-                                      ? '...' + project.fullPath.slice(-22)
+                                      ? "..." + project.fullPath.slice(-22)
                                       : project.fullPath}
                                   </span>
                                 )}
@@ -936,14 +1013,14 @@ function Sidebar({
                     <div className="ml-3 space-y-1 border-l border-border pl-3">
                       {!initialSessionsLoaded.has(project.name) ? (
                         // Loading skeleton for sessions
-                        Array.from({length: 3}).map((_, i) => (
+                        Array.from({ length: 3 }).map((_, i) => (
                           <div key={i} className="p-2 rounded-md">
                             <div className="flex items-start gap-2">
                               <div className="w-3 h-3 bg-muted rounded-full animate-pulse mt-0.5" />
                               <div className="flex-1 space-y-1">
                                 <div
                                   className="h-3 bg-muted rounded animate-pulse"
-                                  style={{width: `${60 + i * 15}%`}}
+                                  style={{ width: `${60 + i * 15}%` }}
                                 />
                                 <div className="h-2 bg-muted rounded animate-pulse w-1/2" />
                               </div>
@@ -960,9 +1037,12 @@ function Sidebar({
                       ) : (
                         getAllSessions(project).map((session) => {
                           // Calculate if session is active (within last 10 minutes)
-                          const sessionDate = new Date(session.lastActivity);
+                          const sessionDate = new Date(
+                            session.lastActivity || new Date(),
+                          );
                           const diffInMinutes = Math.floor(
-                            (currentTime - sessionDate) / (1000 * 60),
+                            (currentTime.getTime() - sessionDate.getTime()) /
+                              (1000 * 60),
                           );
                           const isActive = diffInMinutes < 10;
 
@@ -978,12 +1058,12 @@ function Sidebar({
                               <div className="md:hidden">
                                 <div
                                   className={cn(
-                                    'p-2 mx-3 my-0.5 rounded-md bg-card border active:scale-[0.98] transition-all duration-150 relative',
+                                    "p-2 mx-3 my-0.5 rounded-md bg-card border active:scale-[0.98] transition-all duration-150 relative",
                                     selectedSession?.id === session.id
-                                      ? 'bg-primary/5 border-primary/20'
+                                      ? "bg-primary/5 border-primary/20"
                                       : isActive
-                                        ? 'border-green-500/30 bg-green-50/5 dark:bg-green-900/5'
-                                        : 'border-border/30',
+                                        ? "border-green-500/30 bg-green-50/5 dark:bg-green-900/5"
+                                        : "border-border/30",
                                   )}
                                   onClick={() => {
                                     onProjectSelect(project);
@@ -998,52 +1078,53 @@ function Sidebar({
                                   <div className="flex items-center gap-2">
                                     <div
                                       className={cn(
-                                        'w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0',
+                                        "w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0",
                                         selectedSession?.id === session.id
-                                          ? 'bg-primary/10'
+                                          ? "bg-primary/10"
                                           : diffInMinutes < 10
-                                            ? 'bg-green-500/20'
-                                            : 'bg-muted/50',
+                                            ? "bg-green-500/20"
+                                            : "bg-muted/50",
                                       )}
                                     >
                                       <MessageSquare
                                         className={cn(
-                                          'w-3 h-3',
+                                          "w-3 h-3",
                                           selectedSession?.id === session.id
-                                            ? 'text-primary'
+                                            ? "text-primary"
                                             : diffInMinutes < 10
-                                              ? 'text-green-600 dark:text-green-500'
-                                              : 'text-muted-foreground',
+                                              ? "text-green-600 dark:text-green-500"
+                                              : "text-muted-foreground",
                                         )}
                                       />
                                     </div>
                                     <div className="min-w-0 flex-1">
                                       <div className="text-xs font-medium truncate text-foreground">
-                                        {session.summary || 'New Session'}
+                                        {session.summary || "New Session"}
                                       </div>
                                       <div className="flex items-center gap-1 mt-0.5">
                                         <Clock
                                           className={cn(
-                                            'w-2.5 h-2.5',
+                                            "w-2.5 h-2.5",
                                             isActive
-                                              ? 'text-green-600 dark:text-green-500'
-                                              : 'text-muted-foreground',
+                                              ? "text-green-600 dark:text-green-500"
+                                              : "text-muted-foreground",
                                           )}
                                         />
                                         <span
                                           className={cn(
-                                            'text-xs',
+                                            "text-xs",
                                             isActive
-                                              ? 'text-green-600 dark:text-green-500 font-medium'
-                                              : 'text-muted-foreground',
+                                              ? "text-green-600 dark:text-green-500 font-medium"
+                                              : "text-muted-foreground",
                                           )}
                                         >
                                           {formatTimeAgo(
-                                            session.lastActivity,
+                                            session.lastActivity ||
+                                              new Date().toISOString(),
                                             currentTime,
                                           )}
                                         </span>
-                                        {session.messageCount > 0 && (
+                                        {(session.messageCount || 0) > 0 && (
                                           <Badge
                                             variant="secondary"
                                             className="text-xs px-1 py-0 ml-auto"
@@ -1067,15 +1148,15 @@ function Sidebar({
                                             }
                                             onKeyDown={(e) => {
                                               e.stopPropagation();
-                                              if (e.key === 'Enter') {
+                                              if (e.key === "Enter") {
                                                 updateSessionSummary(
                                                   project.name,
                                                   session.id,
                                                   editingSessionName,
                                                 );
-                                              } else if (e.key === 'Escape') {
+                                              } else if (e.key === "Escape") {
                                                 setEditingSession(null);
-                                                setEditingSessionName('');
+                                                setEditingSessionName("");
                                               }
                                             }}
                                             onClick={(e) => e.stopPropagation()}
@@ -1107,11 +1188,11 @@ function Sidebar({
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               setEditingSession(null);
-                                              setEditingSessionName('');
+                                              setEditingSessionName("");
                                             }}
                                             onTouchEnd={handleTouchClick(() => {
                                               setEditingSession(null);
-                                              setEditingSessionName('');
+                                              setEditingSessionName("");
                                             })}
                                           >
                                             <X className="w-2.5 h-2.5 text-gray-600 dark:text-gray-400" />
@@ -1159,14 +1240,14 @@ function Sidebar({
                                               setEditingSession(session.id);
                                               setEditingSessionName(
                                                 session.summary ||
-                                                  'New Session',
+                                                  "New Session",
                                               );
                                             }}
                                             onTouchEnd={handleTouchClick(() => {
                                               setEditingSession(session.id);
                                               setEditingSessionName(
                                                 session.summary ||
-                                                  'New Session',
+                                                  "New Session",
                                               );
                                             })}
                                             title="Edit session name"
@@ -1207,12 +1288,12 @@ function Sidebar({
                                 <Button
                                   variant="ghost"
                                   className={cn(
-                                    'w-full justify-start p-2 h-auto font-normal text-left hover:bg-accent/50 transition-colors duration-200',
+                                    "w-full justify-start p-2 h-auto font-normal text-left hover:bg-accent/50 transition-colors duration-200",
                                     selectedSession?.id === session.id
-                                      ? 'bg-accent text-accent-foreground'
+                                      ? "bg-accent text-accent-foreground"
                                       : isActive
-                                        ? 'bg-green-50/50 dark:bg-green-900/10'
-                                        : '',
+                                        ? "bg-green-50/50 dark:bg-green-900/10"
+                                        : "",
                                   )}
                                   onClick={() => onSessionSelect(session)}
                                   onTouchEnd={handleTouchClick(() =>
@@ -1223,39 +1304,40 @@ function Sidebar({
                                   <div className="flex items-start gap-2 min-w-0 w-full">
                                     <MessageSquare
                                       className={cn(
-                                        'w-3 h-3 mt-0.5 flex-shrink-0',
+                                        "w-3 h-3 mt-0.5 flex-shrink-0",
                                         isActive
-                                          ? 'text-green-600 dark:text-green-500'
-                                          : 'text-muted-foreground',
+                                          ? "text-green-600 dark:text-green-500"
+                                          : "text-muted-foreground",
                                       )}
                                     />
                                     <div className="min-w-0 flex-1">
                                       <div className="text-xs font-medium truncate text-foreground">
-                                        {session.summary || 'New Session'}
+                                        {session.summary || "New Session"}
                                       </div>
                                       <div className="flex items-center gap-1 mt-0.5">
                                         <Clock
                                           className={cn(
-                                            'w-2.5 h-2.5',
+                                            "w-2.5 h-2.5",
                                             isActive
-                                              ? 'text-green-600 dark:text-green-500'
-                                              : 'text-muted-foreground',
+                                              ? "text-green-600 dark:text-green-500"
+                                              : "text-muted-foreground",
                                           )}
                                         />
                                         <span
                                           className={cn(
-                                            'text-xs',
+                                            "text-xs",
                                             isActive
-                                              ? 'text-green-600 dark:text-green-500 font-medium'
-                                              : 'text-muted-foreground',
+                                              ? "text-green-600 dark:text-green-500 font-medium"
+                                              : "text-muted-foreground",
                                           )}
                                         >
                                           {formatTimeAgo(
-                                            session.lastActivity,
+                                            session.lastActivity ||
+                                              new Date().toISOString(),
                                             currentTime,
                                           )}
                                         </span>
-                                        {session.messageCount > 0 && (
+                                        {(session.messageCount || 0) > 0 && (
                                           <Badge
                                             variant="secondary"
                                             className="text-xs px-1 py-0 ml-auto"
@@ -1279,15 +1361,15 @@ function Sidebar({
                                         }
                                         onKeyDown={(e) => {
                                           e.stopPropagation();
-                                          if (e.key === 'Enter') {
+                                          if (e.key === "Enter") {
                                             updateSessionSummary(
                                               project.name,
                                               session.id,
                                               editingSessionName,
                                             );
-                                          } else if (e.key === 'Escape') {
+                                          } else if (e.key === "Escape") {
                                             setEditingSession(null);
-                                            setEditingSessionName('');
+                                            setEditingSessionName("");
                                           }
                                         }}
                                         onClick={(e) => e.stopPropagation()}
@@ -1313,7 +1395,7 @@ function Sidebar({
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           setEditingSession(null);
-                                          setEditingSessionName('');
+                                          setEditingSessionName("");
                                         }}
                                         title="Cancel"
                                       >
@@ -1355,7 +1437,7 @@ function Sidebar({
                                           e.stopPropagation();
                                           setEditingSession(session.id);
                                           setEditingSessionName(
-                                            session.summary || 'New Session',
+                                            session.summary || "New Session",
                                           );
                                         }}
                                         title="Manually edit session name"

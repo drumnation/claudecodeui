@@ -1,8 +1,6 @@
-import React, {useState, useEffect} from 'react';
-import {Button} from './ui/button';
-import {Input} from './ui/input';
-import {ScrollArea} from './ui/scroll-area';
-import {Badge} from './ui/badge';
+import React, { useState, useEffect } from "react";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import {
   X,
   Plus,
@@ -11,35 +9,42 @@ import {
   AlertTriangle,
   Moon,
   Sun,
-} from 'lucide-react';
-import {useTheme} from '../contexts/ThemeContext';
+} from "lucide-react";
+import { useTheme } from "../contexts/ThemeContext";
 
-function ToolsSettings({isOpen, onClose}) {
-  const {isDarkMode, toggleDarkMode} = useTheme();
-  const [allowedTools, setAllowedTools] = useState([]);
-  const [disallowedTools, setDisallowedTools] = useState([]);
-  const [newAllowedTool, setNewAllowedTool] = useState('');
-  const [newDisallowedTool, setNewDisallowedTool] = useState('');
-  const [skipPermissions, setSkipPermissions] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState(null);
+export interface ToolsSettingsProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+function ToolsSettings({ isOpen, onClose }: ToolsSettingsProps) {
+  const { isDarkMode, toggleDarkMode } = useTheme();
+  const [allowedTools, setAllowedTools] = useState<string[]>([]);
+  const [disallowedTools, setDisallowedTools] = useState<string[]>([]);
+  const [newAllowedTool, setNewAllowedTool] = useState<string>("");
+  const [newDisallowedTool, setNewDisallowedTool] = useState<string>("");
+  const [skipPermissions, setSkipPermissions] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [saveStatus, setSaveStatus] = useState<"success" | "error" | null>(
+    null,
+  );
 
   // Common tool patterns
   const commonTools = [
-    'Bash(git log:*)',
-    'Bash(git diff:*)',
-    'Bash(git status:*)',
-    'Write',
-    'Read',
-    'Edit',
-    'Glob',
-    'Grep',
-    'MultiEdit',
-    'Task',
-    'TodoWrite',
-    'TodoRead',
-    'WebFetch',
-    'WebSearch',
+    "Bash(git log:*)",
+    "Bash(git diff:*)",
+    "Bash(git status:*)",
+    "Write",
+    "Read",
+    "Edit",
+    "Glob",
+    "Grep",
+    "MultiEdit",
+    "Task",
+    "TodoWrite",
+    "TodoRead",
+    "WebFetch",
+    "WebSearch",
   ];
 
   useEffect(() => {
@@ -51,13 +56,13 @@ function ToolsSettings({isOpen, onClose}) {
   const loadSettings = () => {
     try {
       // Load from localStorage
-      const savedSettings = localStorage.getItem('claude-tools-settings');
+      const savedSettings = localStorage.getItem("claude-tools-settings");
 
       if (savedSettings) {
         const settings = JSON.parse(savedSettings);
-        setAllowedTools(settings.allowedTools || []);
-        setDisallowedTools(settings.disallowedTools || []);
-        setSkipPermissions(settings.skipPermissions || false);
+        setAllowedTools(settings.allowedTools ?? []);
+        setDisallowedTools(settings.disallowedTools ?? []);
+        setSkipPermissions(settings.skipPermissions ?? false);
       } else {
         // Set defaults
         setAllowedTools([]);
@@ -65,7 +70,7 @@ function ToolsSettings({isOpen, onClose}) {
         setSkipPermissions(false);
       }
     } catch (error) {
-      console.error('Error loading tool settings:', error);
+      console.error("Error loading tool settings:", error);
       // Set defaults on error
       setAllowedTools([]);
       setDisallowedTools([]);
@@ -86,40 +91,40 @@ function ToolsSettings({isOpen, onClose}) {
       };
 
       // Save to localStorage
-      localStorage.setItem('claude-tools-settings', JSON.stringify(settings));
+      localStorage.setItem("claude-tools-settings", JSON.stringify(settings));
 
-      setSaveStatus('success');
+      setSaveStatus("success");
 
       setTimeout(() => {
         onClose();
       }, 1000);
     } catch (error) {
-      console.error('Error saving tool settings:', error);
-      setSaveStatus('error');
+      console.error("Error saving tool settings:", error);
+      setSaveStatus("error");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const addAllowedTool = (tool) => {
+  const addAllowedTool = (tool: string) => {
     if (tool && !allowedTools.includes(tool)) {
       setAllowedTools([...allowedTools, tool]);
-      setNewAllowedTool('');
+      setNewAllowedTool("");
     }
   };
 
-  const removeAllowedTool = (tool) => {
+  const removeAllowedTool = (tool: string) => {
     setAllowedTools(allowedTools.filter((t) => t !== tool));
   };
 
-  const addDisallowedTool = (tool) => {
+  const addDisallowedTool = (tool: string) => {
     if (tool && !disallowedTools.includes(tool)) {
       setDisallowedTools([...disallowedTools, tool]);
-      setNewDisallowedTool('');
+      setNewDisallowedTool("");
     }
   };
 
-  const removeDisallowedTool = (tool) => {
+  const removeDisallowedTool = (tool: string) => {
     setDisallowedTools(disallowedTools.filter((t) => t !== tool));
   };
 
@@ -178,7 +183,7 @@ function ToolsSettings({isOpen, onClose}) {
                     <span className="sr-only">Toggle dark mode</span>
                     <span
                       className={`${
-                        isDarkMode ? 'translate-x-7' : 'translate-x-1'
+                        isDarkMode ? "translate-x-7" : "translate-x-1"
                       } inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-200 flex items-center justify-center`}
                     >
                       {isDarkMode ? (
@@ -240,12 +245,12 @@ function ToolsSettings({isOpen, onClose}) {
                   onChange={(e) => setNewAllowedTool(e.target.value)}
                   placeholder='e.g., "Bash(git log:*)" or "Write"'
                   onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       addAllowedTool(newAllowedTool);
                     }
                   }}
                   className="flex-1 h-10 touch-manipulation"
-                  style={{fontSize: '16px'}}
+                  style={{ fontSize: "16px" }}
                   data-testid="allowed-tool-input"
                 />
                 <Button
@@ -328,12 +333,12 @@ function ToolsSettings({isOpen, onClose}) {
                   onChange={(e) => setNewDisallowedTool(e.target.value)}
                   placeholder='e.g., "Bash(rm:*)" or "Write"'
                   onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       addDisallowedTool(newDisallowedTool);
                     }
                   }}
                   className="flex-1 h-10 touch-manipulation"
-                  style={{fontSize: '16px'}}
+                  style={{ fontSize: "16px" }}
                   data-testid="disallowed-tool-input"
                 />
                 <Button
@@ -385,31 +390,31 @@ function ToolsSettings({isOpen, onClose}) {
                 <li>
                   <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">
                     "Bash(git log:*)"
-                  </code>{' '}
+                  </code>{" "}
                   - Allow all git log commands
                 </li>
                 <li>
                   <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">
                     "Bash(git diff:*)"
-                  </code>{' '}
+                  </code>{" "}
                   - Allow all git diff commands
                 </li>
                 <li>
                   <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">
                     "Write"
-                  </code>{' '}
+                  </code>{" "}
                   - Allow all Write tool usage
                 </li>
                 <li>
                   <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">
                     "Read"
-                  </code>{' '}
+                  </code>{" "}
                   - Allow all Read tool usage
                 </li>
                 <li>
                   <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">
                     "Bash(rm:*)"
-                  </code>{' '}
+                  </code>{" "}
                   - Block all rm commands (dangerous)
                 </li>
               </ul>
@@ -419,7 +424,7 @@ function ToolsSettings({isOpen, onClose}) {
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 md:p-6 border-t border-border flex-shrink-0 gap-3 pb-safe-area-inset-bottom">
           <div className="flex items-center justify-center sm:justify-start gap-2 order-2 sm:order-1">
-            {saveStatus === 'success' && (
+            {saveStatus === "success" && (
               <div className="text-green-600 dark:text-green-400 text-sm flex items-center gap-1">
                 <svg
                   className="w-4 h-4"
@@ -435,7 +440,7 @@ function ToolsSettings({isOpen, onClose}) {
                 Settings saved successfully!
               </div>
             )}
-            {saveStatus === 'error' && (
+            {saveStatus === "error" && (
               <div className="text-red-600 dark:text-red-400 text-sm flex items-center gap-1">
                 <svg
                   className="w-4 h-4"
@@ -474,7 +479,7 @@ function ToolsSettings({isOpen, onClose}) {
                   Saving...
                 </div>
               ) : (
-                'Save Settings'
+                "Save Settings"
               )}
             </Button>
           </div>

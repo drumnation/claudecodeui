@@ -1,16 +1,16 @@
 # 🔍 Validation Summary Report
 
-[✓ Date compliance: All dates generated via command] **Generated:** Wednesday, July 02, 2025 at 11:25:07 AM
-**Total Duration:** 18.3s
-**Overall Status:** ❌ 1 validation(s) failed
-**Total Issues Found:** 7
+[✓ Date compliance: All dates generated via command] **Generated:** Wednesday, July 02, 2025 at 09:23:45 PM
+**Total Duration:** 32.1s
+**Overall Status:** ❌ 3 validation(s) failed
+**Total Issues Found:** 107
 **Auto-fix Applied:** Linting, Formatting
 
 ## 🚦 Quick Status
-- 🟢 **TypeScript**: Passed ✓
+- 🔴 **TypeScript**: 88 errors
 - 🟢 **Linting**: Passed ✓
-- 🔴 **Formatting**: 7 errors
-- 🟢 **Unit Tests**: Passed ✓
+- 🔴 **Formatting**: 6 errors
+- 🔴 **Unit Tests**: 13 errors
 - 🟢 **Integration Tests**: Passed ✓
 - 🟢 **E2E Tests**: Passed ✓
 - 🟢 **Browser E2E Tests**: Passed ✓
@@ -19,19 +19,21 @@
 
 | Validation | Status | Duration | Issues | Auto-Fixed | Report |
 |------------|--------|----------|--------|------------|---------|
-| 🔍 TypeScript | ✅ Passed | 9.4s | 0 | - | [View Report](_errors/reports/errors.typecheck-failures.md) |
-| 📋 Linting | ✅ Passed | 13.7s | 0 | ✅ Yes | [View Report](_errors/reports/errors.lint-failures.md) |
-| 🎨 Formatting | ❌ Failed | 18.3s | 7 | ✅ Yes | [View Report](_errors/reports/errors.format-failures.md) |
-| 🧪 Unit Tests | ✅ Passed | 10.2s | 0 | - | [View Report](_errors/reports/errors.test-failures-unit.md) |
-| 🧪 Integration Tests | ✅ Passed | 10.3s | 0 | - | [View Report](_errors/reports/errors.test-failures-integration.md) |
-| 🧪 E2E Tests | ✅ Passed | 8.9s | 0 | - | [View Report](_errors/reports/errors.test-failures-e2e.md) |
-| 🧪 Browser E2E Tests | ✅ Passed | 8.5s | 0 | - | [View Report](_errors/reports/errors.test-failures-browser-e2e.md) |
+| 🔍 TypeScript | ❌ Failed | 32.1s | 88 | - | [View Report](_errors/reports/errors.typecheck-failures.md) |
+| 📋 Linting | ✅ Passed | 30.8s | 0 | ✅ Yes | [View Report](_errors/reports/errors.lint-failures.md) |
+| 🎨 Formatting | ❌ Failed | 30.7s | 6 | ✅ Yes | [View Report](_errors/reports/errors.format-failures.md) |
+| 🧪 Unit Tests | ❌ Failed | 29.0s | 13 | - | [View Report](_errors/reports/errors.test-failures-unit.md) |
+| 🧪 Integration Tests | ✅ Passed | 25.6s | 0 | - | [View Report](_errors/reports/errors.test-failures-integration.md) |
+| 🧪 E2E Tests | ✅ Passed | 17.3s | 0 | - | [View Report](_errors/reports/errors.test-failures-e2e.md) |
+| 🧪 Browser E2E Tests | ✅ Passed | 27.0s | 0 | - | [View Report](_errors/reports/errors.test-failures-browser-e2e.md) |
 
 ## 🎯 Quick Actions
 
 ### Priority Fixes Required
 
+- Fix TypeScript issues: [View _errors/reports/errors.typecheck-failures.md](_errors/reports/errors.typecheck-failures.md)
 - Fix Formatting issues: Manual intervention needed - [View _errors/reports/errors.format-failures.md](_errors/reports/errors.format-failures.md)
+- Fix Unit Tests issues: [View _errors/reports/errors.test-failures-unit.md](_errors/reports/errors.test-failures-unit.md)
 
 ### Recommended Order:
 1. **TypeScript errors** - Must be fixed manually for compilation
@@ -54,8 +56,8 @@
 ## 📈 Performance
 
 - **Parallel Execution:** All 7 validations ran simultaneously
-- **Total Time:** 18.3s
-- **Average Time per Task:** 2.6s
+- **Total Time:** 32.1s
+- **Average Time per Task:** 4.6s
 - **Turbo Caching:** Enabled for all validations
 
 ---

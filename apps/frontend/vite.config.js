@@ -1,5 +1,7 @@
 import {defineConfig} from 'vite';
 import react from '@vitejs/plugin-react';
+import {fileURLToPath, URL} from 'node:url';
+import path from 'node:path';
 
 export default defineConfig({
   plugins: [react()],
@@ -10,7 +12,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // Ensure pino uses the browser version
+      // Use pino browser version for client-side code
       'pino': 'pino/browser',
     },
   },

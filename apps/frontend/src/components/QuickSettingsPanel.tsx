@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -12,11 +12,30 @@ import {
   Brain,
   Sparkles,
   FileText,
-} from 'lucide-react';
-import DarkModeToggle from './DarkModeToggle';
-import {useTheme} from '../contexts/ThemeContext';
+} from "lucide-react";
+import { DarkModeToggle } from "./DarkModeToggle";
+import { useTheme } from "../contexts/ThemeContext";
 
-const QuickSettingsPanel = ({
+export type WhisperMode =
+  | "default"
+  | "prompt"
+  | "vibe"
+  | "instructions"
+  | "architect";
+
+export interface QuickSettingsPanelProps {
+  isOpen: boolean;
+  onToggle: (isOpen: boolean) => void;
+  autoExpandTools: boolean;
+  onAutoExpandChange: (autoExpand: boolean) => void;
+  showRawParameters: boolean;
+  onShowRawParametersChange: (showRaw: boolean) => void;
+  autoScrollToBottom: boolean;
+  onAutoScrollChange: (autoScroll: boolean) => void;
+  isMobile: boolean;
+}
+
+const QuickSettingsPanel: React.FC<QuickSettingsPanelProps> = ({
   isOpen,
   onToggle,
   autoExpandTools,
@@ -27,35 +46,41 @@ const QuickSettingsPanel = ({
   onAutoScrollChange,
   isMobile,
 }) => {
-  const [localIsOpen, setLocalIsOpen] = useState(isOpen);
-  const [whisperMode, setWhisperMode] = useState(() => {
-    return localStorage.getItem('whisperMode') || 'default';
+  const [localIsOpen, setLocalIsOpen] = useState<boolean>(isOpen);
+  const [whisperMode, setWhisperMode] = useState<WhisperMode>(() => {
+    return (localStorage.getItem("whisperMode") as WhisperMode) || "default";
   });
-  const {isDarkMode} = useTheme();
+  const { isDarkMode } = useTheme();
 
   useEffect(() => {
     setLocalIsOpen(isOpen);
   }, [isOpen]);
 
-  const handleToggle = () => {
+  const handleToggle = (): void => {
     const newState = !localIsOpen;
     setLocalIsOpen(newState);
     onToggle(newState);
+  };
+
+  const handleWhisperModeChange = (mode: WhisperMode): void => {
+    setWhisperMode(mode);
+    localStorage.setItem("whisperMode", mode);
+    window.dispatchEvent(new Event("whisperModeChanged"));
   };
 
   return (
     <>
       {/* Pull Tab */}
       <div
-        className={`fixed ${isMobile ? 'bottom-44' : 'top-1/2 -translate-y-1/2'} ${
-          localIsOpen ? 'right-64' : 'right-0'
+        className={`fixed ${isMobile ? "bottom-44" : "top-1/2 -translate-y-1/2"} ${
+          localIsOpen ? "right-64" : "right-0"
         } z-50 transition-all duration-150 ease-out`}
       >
         <button
           onClick={handleToggle}
           className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-l-md p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-lg"
           aria-label={
-            localIsOpen ? 'Close settings panel' : 'Open settings panel'
+            localIsOpen ? "Close settings panel" : "Open settings panel"
           }
           data-testid="quick-settings-toggle"
         >
@@ -70,8 +95,8 @@ const QuickSettingsPanel = ({
       {/* Panel */}
       <div
         className={`fixed top-0 right-0 h-full w-64 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-xl transform transition-transform duration-150 ease-out z-40 ${
-          localIsOpen ? 'translate-x-0' : 'translate-x-full'
-        } ${isMobile ? 'h-screen' : ''}`}
+          localIsOpen ? "translate-x-0" : "translate-x-full"
+        } ${isMobile ? "h-screen" : ""}`}
       >
         <div className="h-full flex flex-col">
           {/* Header */}
@@ -84,7 +109,7 @@ const QuickSettingsPanel = ({
 
           {/* Settings Content */}
           <div
-            className={`flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-6 bg-white dark:bg-gray-900 ${isMobile ? 'pb-20' : ''}`}
+            className={`flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-6 bg-white dark:bg-gray-900 ${isMobile ? "pb-20" : ""}`}
           >
             {/* Appearance Settings */}
             <div className="space-y-2">
@@ -172,11 +197,11 @@ const QuickSettingsPanel = ({
                     type="radio"
                     name="whisperMode"
                     value="default"
-                    checked={whisperMode === 'default'}
+                    checked={whisperMode === "default"}
                     onChange={() => {
-                      setWhisperMode('default');
-                      localStorage.setItem('whisperMode', 'default');
-                      window.dispatchEvent(new Event('whisperModeChanged'));
+                      setWhisperMode("default");
+                      localStorage.setItem("whisperMode", "default");
+                      window.dispatchEvent(new Event("whisperModeChanged"));
                     }}
                     className="mt-0.5 h-4 w-4 border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-500 focus:ring-blue-500 dark:focus:ring-blue-400 dark:bg-gray-800 dark:checked:bg-blue-600"
                     data-testid="whisper-mode-default"
@@ -197,11 +222,11 @@ const QuickSettingsPanel = ({
                     type="radio"
                     name="whisperMode"
                     value="prompt"
-                    checked={whisperMode === 'prompt'}
+                    checked={whisperMode === "prompt"}
                     onChange={() => {
-                      setWhisperMode('prompt');
-                      localStorage.setItem('whisperMode', 'prompt');
-                      window.dispatchEvent(new Event('whisperModeChanged'));
+                      setWhisperMode("prompt");
+                      localStorage.setItem("whisperMode", "prompt");
+                      window.dispatchEvent(new Event("whisperModeChanged"));
                     }}
                     className="mt-0.5 h-4 w-4 border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-500 focus:ring-blue-500 dark:focus:ring-blue-400 dark:bg-gray-800 dark:checked:bg-blue-600"
                     data-testid="whisper-mode-prompt"
@@ -223,14 +248,14 @@ const QuickSettingsPanel = ({
                     name="whisperMode"
                     value="vibe"
                     checked={
-                      whisperMode === 'vibe' ||
-                      whisperMode === 'instructions' ||
-                      whisperMode === 'architect'
+                      whisperMode === "vibe" ||
+                      whisperMode === "instructions" ||
+                      whisperMode === "architect"
                     }
                     onChange={() => {
-                      setWhisperMode('vibe');
-                      localStorage.setItem('whisperMode', 'vibe');
-                      window.dispatchEvent(new Event('whisperModeChanged'));
+                      setWhisperMode("vibe");
+                      localStorage.setItem("whisperMode", "vibe");
+                      window.dispatchEvent(new Event("whisperModeChanged"));
                     }}
                     className="mt-0.5 h-4 w-4 border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-500 focus:ring-blue-500 dark:focus:ring-blue-400 dark:bg-gray-800 dark:checked:bg-blue-600"
                     data-testid="whisper-mode-vibe"
@@ -262,4 +287,4 @@ const QuickSettingsPanel = ({
   );
 };
 
-export default QuickSettingsPanel;
+export { QuickSettingsPanel };

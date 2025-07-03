@@ -1,8 +1,8 @@
 # 🎨 Current Format Issues
 
-[✓ Date compliance: All dates generated via command] **Last Updated:** Wednesday, July 02, 2025 at 11:25:08 AM
-**Run:** #3 | **Branch:** refactor/backend-typescript | **Commit:** ae0d37b
-**Status:** 7 unformatted files
+[✓ Date compliance: All dates generated via command] **Last Updated:** Wednesday, July 02, 2025 at 09:23:47 PM
+**Run:** #6 | **Branch:** refactor/frontend-typescript | **Commit:** ea6e5b4
+**Status:** 6 unformatted files
 **✅ Auto-format was applied!** Issues shown are files that could not be auto-formatted.
 
 ## 🔄 Quick Fix
@@ -12,7 +12,7 @@
 pnpm turbo run format -- --write
 ```
 
-This will automatically format all 7 files listed below.
+This will automatically format all 6 files listed below.
 
 
 ## 🤖 Agent Workflow Instructions
@@ -33,29 +33,37 @@ This will automatically format all 7 files listed below.
 4. **Commit** with message: `style: apply prettier formatting`
 
 ## 📊 Quick Summary
-- **Unformatted Files:** 7
-- **Exit Code:** 1
+- **Unformatted Files:** 6
+- **Exit Code:** 2
 - **Auto-format:** Applied successfully
 
 ## 🎯 Files Needing Format (By Extension)
 
-### .js Files (6)
+### .mjs Files (3)
 
-- [ ] `[warn] coverage/block-navigation.js`
-- [ ] `[warn] coverage/lcov-report/block-navigation.js`
-- [ ] `[warn] coverage/lcov-report/prettify.js`
-- [ ] `[warn] coverage/lcov-report/sorter.js`
-- [ ] `[warn] coverage/prettify.js`
-- [ ] `[warn] coverage/sorter.js`
+- [ ] `[error] Cannot find module '/Users/dmieloch/Dev/experiments/claudecodeui/tooling/logger/node_modules/@kit/prettier-config/index.js' imported from /Users/dmieloch/Dev/experiments/claudecodeui/node_modules/.pnpm/prettier@3.6.2/node_modules/prettier/index.mjs`
+- [ ] `[error] Cannot find module '/Users/dmieloch/Dev/experiments/claudecodeui/tooling/eslint/node_modules/@kit/prettier-config/index.js' imported from /Users/dmieloch/Dev/experiments/claudecodeui/node_modules/.pnpm/prettier@3.6.2/node_modules/prettier/index.mjs`
+- [ ] `[error] Cannot find module '/Users/dmieloch/Dev/experiments/claudecodeui/tooling/prettier/index.js' imported from /Users/dmieloch/Dev/experiments/claudecodeui/node_modules/.pnpm/prettier@3.6.2/node_modules/prettier/index.mjs`
 
-### .ts Files (1)
+### .ts": Files (2)
 
-- [ ] `[warn] src/modules/sessions/sessions.controller.ts`
+- [ ] `[error] Invalid configuration for file "/Users/dmieloch/Dev/experiments/claudecodeui/tooling/eslint/apps.ts":`
+- [ ] `[error] Invalid configuration for file "/Users/dmieloch/Dev/experiments/claudecodeui/tooling/prettier/index.ts":`
+
+### .md": Files (1)
+
+- [ ] `[error] Invalid configuration for file "/Users/dmieloch/Dev/experiments/claudecodeui/tooling/logger/AI_AGENT_RULES.md":`
 
 ## 📦 Files by Package
 
-### @claude-code-ui/backend
-- **Unformatted files:** 7
+### @kit/logger
+- **Unformatted files:** 2
+
+### @kit/eslint-config
+- **Unformatted files:** 2
+
+### @kit/prettier-config
+- **Unformatted files:** 2
 
 ## ⚡ Quick Actions
 

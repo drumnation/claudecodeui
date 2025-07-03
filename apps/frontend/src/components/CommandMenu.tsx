@@ -1,15 +1,33 @@
-import React, {memo} from 'react';
+import React, { memo } from "react";
+
+export interface Command {
+  name: string;
+  description?: string;
+  [key: string]: any;
+}
+
+export interface CommandMenuProps {
+  commands: Command[];
+  selectedIndex: number;
+  onSelectCommand: (command: Command) => void;
+  position: { x: number; y: number };
+}
 
 const CommandMenu = memo(
-  ({commands, selectedIndex, onSelectCommand, position}) => {
+  ({
+    commands,
+    selectedIndex,
+    onSelectCommand,
+    position,
+  }: CommandMenuProps) => {
     if (!commands || commands.length === 0) return null;
 
     return (
       <div
         className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-48 sm:max-h-64 overflow-y-auto"
         style={{
-          minWidth: '280px',
-          maxWidth: '100%',
+          minWidth: "280px",
+          maxWidth: "100%",
         }}
         data-testid="command-dropdown"
       >
@@ -24,8 +42,8 @@ const CommandMenu = memo(
               key={cmd.command}
               className={`px-3 py-2 cursor-pointer flex items-start gap-3 ${
                 index === selectedIndex
-                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                  : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                  : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
               }`}
               onClick={() => onSelectCommand(cmd)}
             >
@@ -48,6 +66,6 @@ const CommandMenu = memo(
   },
 );
 
-CommandMenu.displayName = 'CommandMenu';
+CommandMenu.displayName = "CommandMenu";
 
 export default CommandMenu;

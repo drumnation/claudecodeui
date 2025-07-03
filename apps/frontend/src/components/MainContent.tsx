@@ -11,14 +11,40 @@
  * No session protection logic is implemented here - it's purely a props bridge.
  */
 
-import React, {useState, useEffect} from 'react';
-import ChatInterface from './ChatInterface';
-import FileTree from './FileTree';
-import CodeEditor from './CodeEditor';
-import Shell from './Shell';
-import GitPanel from './GitPanel';
-import LivePreviewPanel from './LivePreviewPanel';
-import {useLogger} from '@kit/logger/react';
+import React, { useState, useEffect } from "react";
+import ChatInterface from "./ChatInterface";
+import FileTree from "./FileTree";
+import CodeEditor from "./CodeEditor";
+import Shell from "./Shell";
+import GitPanel from "./GitPanel";
+import LivePreviewPanel from "./LivePreviewPanel";
+import { useLogger } from "@kit/logger/react";
+import type { Logger } from "@kit/logger/types";
+import type { Project, Session } from "../App";
+import type { WSMessage } from "../utils/websocket";
+import type { MobileNavTab } from "./MobileNav";
+
+export interface MainContentProps {
+  selectedProject: Project | null;
+  selectedSession: Session | null;
+  activeTab: MobileNavTab;
+  setActiveTab: (tab: MobileNavTab) => void;
+  ws: WebSocket | null;
+  sendMessage: (message: WSMessage) => void;
+  messages: WSMessage[];
+  isMobile: boolean;
+  onMenuClick: () => void;
+  isLoading: boolean;
+  onInputFocusChange: (focused: boolean) => void;
+  onSessionActive: (sessionId: string) => void;
+  onSessionInactive: (sessionId: string) => void;
+  onReplaceTemporarySession: (realSessionId: string) => void;
+  onNavigateToSession: (sessionId: string) => void;
+  onShowSettings: () => void;
+  autoExpandTools: boolean;
+  showRawParameters: boolean;
+  autoScrollToBottom: boolean;
+}
 
 function MainContent({
   selectedProject,
@@ -42,25 +68,29 @@ function MainContent({
   autoExpandTools, // Auto-expand tool accordions
   showRawParameters, // Show raw parameters in tool accordions
   autoScrollToBottom, // Auto-scroll to bottom when new messages arrive
-}) {
-  const logger = useLogger({ scope: 'MainContent' });
-  const [editingFile, setEditingFile] = useState(null);
-  const [serverStatus, setServerStatus] = useState('stopped');
-  const [serverUrl, setServerUrl] = useState('');
-  const [currentScript, setCurrentScript] = useState('');
-  const [availableScripts, setAvailableScripts] = useState([]);
-  const [serverLogs, setServerLogs] = useState([]);
+}: MainContentProps) {
+  const logger: Logger = useLogger({ scope: "MainContent" });
+  const [editingFile, setEditingFile] = useState<any>(null);
+  const [serverStatus, setServerStatus] = useState<string>("stopped");
+  const [serverUrl, setServerUrl] = useState<string>("");
+  const [currentScript, setCurrentScript] = useState<string>("");
+  const [availableScripts, setAvailableScripts] = useState<string[]>([]);
+  const [serverLogs, setServerLogs] = useState<
+    Array<{ message: string; type: string; timestamp: any }>
+  >([]);
 
   // Load available scripts when project changes
   useEffect(() => {
     if (selectedProject?.fullPath && ws && ws.readyState === WebSocket.OPEN) {
-      logger.debug('Requesting scripts for project', { projectPath: selectedProject.fullPath });
-      sendMessage({
-        type: 'server:scripts',
+      logger.debug("Requesting scripts for project", {
         projectPath: selectedProject.fullPath,
       });
       sendMessage({
-        type: 'server:status',
+        type: "server:scripts",
+        projectPath: selectedProject.fullPath,
+      });
+      sendMessage({
+        type: "server:status",
         projectPath: selectedProject.fullPath,
       });
     }
@@ -70,37 +100,41 @@ function MainContent({
   useEffect(() => {
     if (messages.length > 0) {
       const latestMessage = messages[messages.length - 1];
+      if (!latestMessage) return;
 
-      if (latestMessage.type === 'server:scripts') {
+      if (latestMessage.type === "server:scripts") {
         if (latestMessage.projectPath === selectedProject?.fullPath) {
-          logger.debug('Received scripts', { scripts: latestMessage.scripts });
+          logger.debug("Received scripts", { scripts: latestMessage.scripts });
           setAvailableScripts(latestMessage.scripts || []);
         }
-      } else if (latestMessage.type === 'server:status') {
+      } else if (latestMessage.type === "server:status") {
         if (latestMessage.projectPath === selectedProject?.fullPath) {
           const servers = latestMessage.servers || [];
           if (servers.length > 0) {
             const server = servers[0];
             setServerStatus(server.status);
-            setServerUrl(server.url || '');
-            setCurrentScript(server.script || '');
+            setServerUrl(server.url || "");
+            setCurrentScript(server.script || "");
           } else {
-            setServerStatus('stopped');
-            setServerUrl('');
+            setServerStatus("stopped");
+            setServerUrl("");
           }
         }
-      } else if (latestMessage.type === 'server:error') {
+      } else if (latestMessage.type === "server:error") {
         if (latestMessage.projectPath === selectedProject?.fullPath) {
-          setServerStatus('error');
-          logger.error('Server error', { error: latestMessage.error, projectPath: latestMessage.projectPath });
+          setServerStatus("error");
+          logger.error("Server error", {
+            error: latestMessage.error,
+            projectPath: latestMessage.projectPath,
+          });
         }
-      } else if (latestMessage.type === 'server:log') {
+      } else if (latestMessage.type === "server:log") {
         if (latestMessage.projectPath === selectedProject?.fullPath) {
           setServerLogs((prev) => [
             ...prev,
             {
               message: latestMessage.message,
-              type: latestMessage.stream === 'stderr' ? 'error' : 'log',
+              type: latestMessage.stream === "stderr" ? "error" : "log",
               timestamp: latestMessage.timestamp,
             },
           ]);
@@ -109,10 +143,10 @@ function MainContent({
     }
   }, [messages, selectedProject]);
 
-  const handleFileOpen = (filePath, diffInfo = null) => {
+  const handleFileOpen = (filePath: string, diffInfo: any = null) => {
     // Create a file object that CodeEditor expects
     const file = {
-      name: filePath.split('/').pop(),
+      name: filePath.split("/").pop(),
       path: filePath,
       projectName: selectedProject?.name,
       diffInfo: diffInfo, // Pass along diff information if available
@@ -155,9 +189,9 @@ function MainContent({
               <div
                 className="w-full h-full rounded-full border-4 border-gray-200 border-t-blue-500"
                 style={{
-                  animation: 'spin 1s linear infinite',
-                  WebkitAnimation: 'spin 1s linear infinite',
-                  MozAnimation: 'spin 1s linear infinite',
+                  animation: "spin 1s linear infinite",
+                  WebkitAnimation: "spin 1s linear infinite",
+                  MozAnimation: "spin 1s linear infinite",
                 }}
               />
             </div>
@@ -223,10 +257,10 @@ function MainContent({
             </p>
             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
               <p className="text-sm text-blue-700 dark:text-blue-300">
-                💡 <strong>Tip:</strong>{' '}
+                💡 <strong>Tip:</strong>{" "}
                 {isMobile
-                  ? 'Tap the menu button above to access projects'
-                  : 'Create a new project by clicking the folder icon in the sidebar'}
+                  ? "Tap the menu button above to access projects"
+                  : "Create a new project by clicking the folder icon in the sidebar"}
               </p>
             </div>
           </div>
@@ -267,19 +301,19 @@ function MainContent({
               </button>
             )}
             <div className="min-w-0">
-              {activeTab === 'chat' && selectedSession ? (
+              {activeTab === "chat" && selectedSession ? (
                 <div>
                   <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">
                     {selectedSession.summary}
                   </h2>
                   <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {selectedProject.displayName}{' '}
+                    {selectedProject.displayName}{" "}
                     <span className="hidden sm:inline">
                       • {selectedSession.id}
                     </span>
                   </div>
                 </div>
-              ) : activeTab === 'chat' && !selectedSession ? (
+              ) : activeTab === "chat" && !selectedSession ? (
                 <div>
                   <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
                     New Session
@@ -291,11 +325,11 @@ function MainContent({
               ) : (
                 <div>
                   <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                    {activeTab === 'files'
-                      ? 'Project Files'
-                      : activeTab === 'git'
-                        ? 'Source Control'
-                        : 'Project'}
+                    {activeTab === "files"
+                      ? "Project Files"
+                      : activeTab === "git"
+                        ? "Source Control"
+                        : "Project"}
                   </h2>
                   <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                     {selectedProject.displayName}
@@ -309,11 +343,11 @@ function MainContent({
           <div className="flex-shrink-0 hidden sm:block">
             <div className="relative flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
               <button
-                onClick={() => setActiveTab('chat')}
+                onClick={() => setActiveTab("chat")}
                 className={`relative px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md ${
-                  activeTab === 'chat'
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
+                  activeTab === "chat"
+                    ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700"
                 }`}
                 data-testid="tab-chat"
               >
@@ -335,11 +369,11 @@ function MainContent({
                 </span>
               </button>
               <button
-                onClick={() => setActiveTab('shell')}
+                onClick={() => setActiveTab("shell")}
                 className={`relative px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 ${
-                  activeTab === 'shell'
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
+                  activeTab === "shell"
+                    ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700"
                 }`}
                 data-testid="tab-shell"
               >
@@ -361,11 +395,11 @@ function MainContent({
                 </span>
               </button>
               <button
-                onClick={() => setActiveTab('files')}
+                onClick={() => setActiveTab("files")}
                 className={`relative px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 ${
-                  activeTab === 'files'
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
+                  activeTab === "files"
+                    ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700"
                 }`}
                 data-testid="tab-files"
               >
@@ -387,11 +421,11 @@ function MainContent({
                 </span>
               </button>
               <button
-                onClick={() => setActiveTab('git')}
+                onClick={() => setActiveTab("git")}
                 className={`relative px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 ${
-                  activeTab === 'git'
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
+                  activeTab === "git"
+                    ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700"
                 }`}
                 data-testid="tab-git"
               >
@@ -413,11 +447,11 @@ function MainContent({
                 </span>
               </button>
               <button
-                onClick={() => setActiveTab('preview')}
+                onClick={() => setActiveTab("preview")}
                 className={`relative px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 ${
-                  activeTab === 'preview'
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
+                  activeTab === "preview"
+                    ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700"
                 }`}
                 data-testid="tab-preview"
               >
@@ -445,7 +479,7 @@ function MainContent({
 
       {/* Content Area */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <div className={`h-full ${activeTab === 'chat' ? 'block' : 'hidden'}`}>
+        <div className={`h-full ${activeTab === "chat" ? "block" : "hidden"}`}>
           <ChatInterface
             selectedProject={selectedProject}
             selectedSession={selectedSession}
@@ -465,26 +499,26 @@ function MainContent({
           />
         </div>
         <div
-          className={`h-full overflow-hidden ${activeTab === 'files' ? 'block' : 'hidden'}`}
+          className={`h-full overflow-hidden ${activeTab === "files" ? "block" : "hidden"}`}
         >
           <FileTree selectedProject={selectedProject} />
         </div>
         <div
-          className={`h-full overflow-hidden ${activeTab === 'shell' ? 'block' : 'hidden'}`}
+          className={`h-full overflow-hidden ${activeTab === "shell" ? "block" : "hidden"}`}
         >
           <Shell
             selectedProject={selectedProject}
             selectedSession={selectedSession}
-            isActive={activeTab === 'shell'}
+            isActive={activeTab === "shell"}
           />
         </div>
-        {activeTab === 'git' && (
+        {activeTab === "git" && (
           <div className="h-full overflow-hidden">
             <GitPanel selectedProject={selectedProject} isMobile={isMobile} />
           </div>
         )}
         <div
-          className={`h-full overflow-hidden ${activeTab === 'preview' ? 'block' : 'hidden'}`}
+          className={`h-full overflow-hidden ${activeTab === "preview" ? "block" : "hidden"}`}
         >
           <LivePreviewPanel
             selectedProject={selectedProject}
@@ -493,19 +527,20 @@ function MainContent({
             availableScripts={availableScripts}
             onStartServer={(script) => {
               sendMessage({
-                type: 'server:start',
+                type: "server:start",
                 projectPath: selectedProject?.fullPath,
                 script: script,
               });
             }}
             onStopServer={() => {
               sendMessage({
-                type: 'server:stop',
+                type: "server:stop",
                 projectPath: selectedProject?.fullPath,
               });
             }}
             onScriptSelect={setCurrentScript}
             currentScript={currentScript}
+            onClose={() => {}} // No-op since this panel doesn't need closing in this context
             isMobile={isMobile}
             serverLogs={serverLogs}
             onClearLogs={() => setServerLogs([])}
@@ -518,7 +553,7 @@ function MainContent({
         <CodeEditor
           file={editingFile}
           onClose={handleCloseEditor}
-          projectPath={selectedProject?.path}
+          projectPath={selectedProject?.fullPath}
         />
       )}
     </div>

@@ -1,8 +1,10 @@
-import React from 'react';
-import {useTheme} from '../contexts/ThemeContext';
+import React from "react";
+import { useTheme } from "../contexts/ThemeContext";
 
-function DarkModeToggle() {
-  const {isDarkMode, toggleDarkMode} = useTheme();
+export interface DarkModeToggleProps {}
+
+const DarkModeToggle: React.FC<DarkModeToggleProps> = () => {
+  const { isDarkMode, toggleDarkMode } = useTheme();
 
   return (
     <button
@@ -15,7 +17,7 @@ function DarkModeToggle() {
       <span className="sr-only">Toggle dark mode</span>
       <span
         className={`${
-          isDarkMode ? 'translate-x-7' : 'translate-x-1'
+          isDarkMode ? "translate-x-7" : "translate-x-1"
         } inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-200 flex items-center justify-center`}
       >
         {isDarkMode ? (
@@ -50,6 +52,6 @@ function DarkModeToggle() {
       </span>
     </button>
   );
-}
+};
 
-export default DarkModeToggle;
+export { DarkModeToggle };

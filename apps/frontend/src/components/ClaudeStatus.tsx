@@ -1,10 +1,22 @@
-import React, {useState, useEffect} from 'react';
-import {cn} from '../lib/utils';
+import React, { useState, useEffect } from "react";
+import { cn } from "../lib/utils";
 
-function ClaudeStatus({status, onAbort, isLoading}) {
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [animationPhase, setAnimationPhase] = useState(0);
-  const [fakeTokens, setFakeTokens] = useState(0);
+export interface ClaudeStatusData {
+  text?: string;
+  tokens?: number;
+  can_interrupt?: boolean;
+}
+
+export interface ClaudeStatusProps {
+  status?: ClaudeStatusData;
+  onAbort?: () => void;
+  isLoading: boolean;
+}
+
+function ClaudeStatus({ status, onAbort, isLoading }: ClaudeStatusProps) {
+  const [elapsedTime, setElapsedTime] = useState<number>(0);
+  const [animationPhase, setAnimationPhase] = useState<number>(0);
+  const [fakeTokens, setFakeTokens] = useState<number>(0);
 
   // Update elapsed time every second
   useEffect(() => {
@@ -14,9 +26,9 @@ function ClaudeStatus({status, onAbort, isLoading}) {
       return;
     }
 
-    const startTime = Date.now();
-    const timer = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const startTime: number = Date.now();
+    const timer: NodeJS.Timeout = setInterval(() => {
+      const elapsed: number = Math.floor((Date.now() - startTime) / 1000);
       setElapsedTime(elapsed);
       // Simulate token count increasing over time (roughly 30-50 tokens per second)
       setFakeTokens(Math.floor(elapsed * (30 + Math.random() * 20)));
@@ -29,7 +41,7 @@ function ClaudeStatus({status, onAbort, isLoading}) {
   useEffect(() => {
     if (!isLoading) return;
 
-    const timer = setInterval(() => {
+    const timer: NodeJS.Timeout = setInterval(() => {
       setAnimationPhase((prev) => (prev + 1) % 4);
     }, 500);
 
@@ -39,37 +51,42 @@ function ClaudeStatus({status, onAbort, isLoading}) {
   if (!isLoading) return null;
 
   // Clever action words that cycle
-  const actionWords = [
-    'Thinking',
-    'Processing',
-    'Analyzing',
-    'Working',
-    'Computing',
-    'Reasoning',
+  const actionWords: string[] = [
+    "Thinking",
+    "Processing",
+    "Analyzing",
+    "Working",
+    "Computing",
+    "Reasoning",
   ];
-  const actionIndex = Math.floor(elapsedTime / 3) % actionWords.length;
+  const actionIndex: number = Math.floor(elapsedTime / 3) % actionWords.length;
 
   // Parse status data
-  const statusText = status?.text || actionWords[actionIndex];
-  const tokens = status?.tokens || fakeTokens;
-  const canInterrupt = status?.can_interrupt !== false;
+  const statusText: string =
+    status?.text || actionWords[actionIndex] || "Thinking";
+  const tokens: number = status?.tokens || fakeTokens;
+  const canInterrupt: boolean = status?.can_interrupt !== false;
 
   // Animation characters
-  const spinners = ['✻', '✹', '✸', '✶'];
-  const currentSpinner = spinners[animationPhase];
+  const spinners: string[] = ["✻", "✹", "✸", "✶"];
+  const currentSpinner: string =
+    spinners[animationPhase % spinners.length] || "✻";
 
   return (
-    <div className="w-full mb-6 animate-in slide-in-from-bottom duration-300" data-testid="claude-status">
+    <div
+      className="w-full mb-6 animate-in slide-in-from-bottom duration-300"
+      data-testid="claude-status"
+    >
       <div className="flex items-center justify-between max-w-4xl mx-auto bg-gray-900 dark:bg-gray-950 text-white rounded-lg shadow-lg px-4 py-3">
         <div className="flex-1">
           <div className="flex items-center gap-3">
             {/* Animated spinner */}
             <span
               className={cn(
-                'text-xl transition-all duration-500',
+                "text-xl transition-all duration-500",
                 animationPhase % 2 === 0
-                  ? 'text-blue-400 scale-110'
-                  : 'text-blue-300',
+                  ? "text-blue-400 scale-110"
+                  : "text-blue-300",
               )}
             >
               {currentSpinner}
@@ -132,4 +149,4 @@ function ClaudeStatus({status, onAbort, isLoading}) {
   );
 }
 
-export default ClaudeStatus;
+export { ClaudeStatus };

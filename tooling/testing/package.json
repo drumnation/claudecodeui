@@ -103,8 +103,10 @@
     "@storybook/test-runner": "^0.22.0",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.6.0",
+    "@types/js-yaml": "^4.0.9",
     "@vitest/ui": "^3.2.4",
     "axe-playwright": "^2.0.3",
+    "js-yaml": "^4.1.0",
     "vitest": "^3.2.4"
   },
   "devDependencies": {

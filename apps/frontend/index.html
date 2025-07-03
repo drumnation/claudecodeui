@@ -29,23 +29,21 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/src/main.tsx?v=2"></script>
     
-    <!-- Service Worker Registration (disabled for now) -->
-    <!--
+    <!-- Force Service Worker Override -->
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-              console.log('SW registered: ', registration);
-            })
-            .catch(registrationError => {
-              console.log('SW registration failed: ', registrationError);
-            });
-        });
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+          .then(registration => {
+            console.log('Force SW registered:', registration);
+            // Force update
+            registration.update();
+          })
+          .catch(error => {
+            console.log('Force SW registration failed:', error);
+          });
       }
     </script>
-    -->
   </body>
 </html>

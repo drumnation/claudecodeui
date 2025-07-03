@@ -531,6 +531,9 @@ importers:
       '@testing-library/user-event':
         specifier: ^14.6.0
         version: 14.6.1(@testing-library/dom@10.4.0)
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
       '@vitest/ui':
         specifier: ^3.2.4
         version: 3.2.4(vitest@3.2.4)
@@ -540,6 +543,9 @@ importers:
       eslint:
         specifier: ^9.17.0
         version: 9.30.0(jiti@2.4.2)
+      js-yaml:
+        specifier: ^4.1.0
+        version: 4.1.0
       prettier:
         specifier: ^3.4.2
         version: 3.6.2
@@ -7284,6 +7290,14 @@ snapshots:
       chai: 5.2.0
       tinyrainbow: 2.0.0
 
+  '@vitest/mocker@3.2.4(vite@5.4.19(@types/node@22.15.34))':
+    dependencies:
+      '@vitest/spy': 3.2.4
+      estree-walker: 3.0.3
+      magic-string: 0.30.17
+    optionalDependencies:
+      vite: 5.4.19(@types/node@22.15.34)
+
   '@vitest/mocker@3.2.4(vite@5.4.19(@types/node@24.0.8))':
     dependencies:
       '@vitest/spy': 3.2.4
@@ -7333,7 +7347,7 @@ snapshots:
       sirv: 3.0.1
       tinyglobby: 0.2.14
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@24.0.8)(@vitest/ui@3.2.4)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@22.15.34)(@vitest/ui@3.2.4)
 
   '@vitest/utils@2.0.5':
     dependencies:
@@ -11608,7 +11622,7 @@ snapshots:
     dependencies:
       '@types/chai': 5.2.2
       '@vitest/expect': 3.2.4
-      '@vitest/mocker': 3.2.4(vite@5.4.19(@types/node@24.0.8))
+      '@vitest/mocker': 3.2.4(vite@5.4.19(@types/node@22.15.34))
       '@vitest/pretty-format': 3.2.4
       '@vitest/runner': 3.2.4
       '@vitest/snapshot': 3.2.4

@@ -23,14 +23,80 @@ import React, {
   useMemo,
   useCallback,
   memo,
-} from 'react';
-import ReactMarkdown from 'react-markdown';
-import { useLogger } from '@kit/logger/react';
-import TodoList from './TodoList';
-import CommandMenu from './CommandMenu';
-import ClaudeLogo from './ClaudeLogo';
-import ClaudeStatus from './ClaudeStatus';
-import {MicButton} from './MicButton';
+} from "react";
+import ReactMarkdown from "react-markdown";
+import { useLogger } from "@kit/logger/react";
+import type { Logger } from "@kit/logger/types";
+import { TodoList } from "./TodoList";
+import CommandMenu from "./CommandMenu";
+import { ClaudeLogo } from "./ClaudeLogo";
+import { ClaudeStatus, type ClaudeStatusData } from "./ClaudeStatus";
+import { MicButton } from "./MicButton";
+import type { Project, Session } from "../App";
+import type { WSMessage } from "../utils/websocket";
+
+// Chat message types
+export interface ChatMessage {
+  type: "user" | "assistant" | "tool_use" | "tool_result" | "error";
+  content: any;
+  isToolUse?: boolean;
+  isInteractivePrompt?: boolean;
+  timestamp?: string | number | Date;
+  id?: string;
+  tool_name?: string;
+  toolName?: string; // Alternative property name used in some places
+  toolId?: string;
+  tool_input?: any;
+  toolInput?: any; // Alternative property name
+  tool_result?: any;
+  toolResult?: any; // Alternative property name
+  toolError?: boolean;
+  toolResultTimestamp?: string | number | Date;
+  inline?: boolean;
+}
+
+export interface MessageComponentProps {
+  message: ChatMessage;
+  index: number;
+  prevMessage: ChatMessage | null;
+  createDiff: (
+    oldStr: string,
+    newStr: string,
+  ) => Array<{
+    type: "added" | "removed" | "unchanged";
+    content: string;
+    lineNum: number;
+  }>;
+  onFileOpen: (
+    filePath: string,
+    diffOptions?: { old_string: string; new_string: string },
+  ) => void;
+  onShowSettings: () => void;
+  autoExpandTools: boolean;
+  showRawParameters: boolean;
+  logger: Logger;
+}
+
+export interface ChatInterfaceProps {
+  selectedProject: Project | null;
+  selectedSession: Session | null;
+  ws: WebSocket | null;
+  sendMessage: (message: WSMessage) => void;
+  messages: WSMessage[];
+  onFileOpen: (
+    filePath: string,
+    diffOptions?: { old_string: string; new_string: string },
+  ) => void;
+  onInputFocusChange: (focused: boolean) => void;
+  onSessionActive: (sessionId: string) => void;
+  onSessionInactive: (sessionId: string) => void;
+  onReplaceTemporarySession: (realSessionId: string) => void;
+  onNavigateToSession: (sessionId: string) => void;
+  onShowSettings: () => void;
+  autoExpandTools: boolean;
+  showRawParameters: boolean;
+  autoScrollToBottom: boolean;
+}
 
 // Memoized message component to prevent unnecessary re-renders
 const MessageComponent = memo(
@@ -44,15 +110,15 @@ const MessageComponent = memo(
     autoExpandTools,
     showRawParameters,
     logger,
-  }) => {
+  }: MessageComponentProps) => {
     const isGrouped =
       prevMessage &&
       prevMessage.type === message.type &&
-      prevMessage.type === 'assistant' &&
+      prevMessage.type === "assistant" &&
       !prevMessage.isToolUse &&
       !message.isToolUse;
 
-    const messageRef = React.useRef(null);
+    const messageRef = React.useRef<HTMLDivElement>(null);
     const [isExpanded, setIsExpanded] = React.useState(false);
 
     React.useEffect(() => {
@@ -65,15 +131,15 @@ const MessageComponent = memo(
               setIsExpanded(true);
               // Find all details elements and open them
               if (messageRef.current) {
-                const details = messageRef.current.querySelectorAll('details');
-                details.forEach((detail) => {
+                const details = messageRef.current.querySelectorAll("details");
+                details.forEach((detail: HTMLDetailsElement) => {
                   detail.open = true;
                 });
               }
             }
           });
         },
-        {threshold: 0.1},
+        { threshold: 0.1 },
       );
 
       observer.observe(messageRef.current);
@@ -88,10 +154,10 @@ const MessageComponent = memo(
     return (
       <div
         ref={messageRef}
-        className={`chat-message ${message.type} ${isGrouped ? 'grouped' : ''} ${message.type === 'user' ? 'flex justify-end px-3 sm:px-0' : 'px-3 sm:px-0'}`}
+        className={`chat-message ${message.type} ${isGrouped ? "grouped" : ""} ${message.type === "user" ? "flex justify-end px-3 sm:px-0" : "px-3 sm:px-0"}`}
         data-testid={`message-${index}`}
       >
-        {message.type === 'user' ? (
+        {message.type === "user" ? (
           /* User message bubble on the right */
           <div className="flex items-end space-x-0 sm:space-x-3 w-full sm:w-auto sm:max-w-[85%] md:max-w-md lg:max-w-lg xl:max-w-xl">
             <div className="bg-blue-600 text-white rounded-2xl rounded-br-md px-3 sm:px-4 py-2 shadow-sm flex-1 sm:flex-initial">
@@ -99,7 +165,9 @@ const MessageComponent = memo(
                 {message.content}
               </div>
               <div className="text-xs text-blue-100 mt-1 text-right">
-                {new Date(message.timestamp).toLocaleTimeString()}
+                {message.timestamp
+                  ? new Date(message.timestamp).toLocaleTimeString()
+                  : ""}
               </div>
             </div>
             {!isGrouped && (
@@ -115,7 +183,7 @@ const MessageComponent = memo(
           <div className="w-full">
             {!isGrouped && (
               <div className="flex items-center space-x-3 mb-2">
-                {message.type === 'error' ? (
+                {message.type === "error" ? (
                   <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0">
                     !
                   </div>
@@ -125,7 +193,7 @@ const MessageComponent = memo(
                   </div>
                 )}
                 <div className="text-sm font-medium text-gray-900 dark:text-white">
-                  {message.type === 'error' ? 'Error' : 'Claude'}
+                  {message.type === "error" ? "Error" : "Claude"}
                 </div>
               </div>
             )}
@@ -195,7 +263,7 @@ const MessageComponent = memo(
                     )}
                   </div>
                   {message.toolInput &&
-                    message.toolName === 'Edit' &&
+                    message.toolName === "Edit" &&
                     (() => {
                       try {
                         const input = JSON.parse(message.toolInput);
@@ -222,18 +290,17 @@ const MessageComponent = memo(
                                 </svg>
                                 📝 View edit diff for
                                 <button
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    onFileOpen &&
-                                      onFileOpen(input.file_path, {
-                                        old_string: input.old_string,
-                                        new_string: input.new_string,
-                                      });
+                                  onClick={(_e) => {
+                                    _e.preventDefault();
+                                    _e.stopPropagation();
+                                    onFileOpen?.(input.file_path, {
+                                      old_string: input.old_string,
+                                      new_string: input.new_string,
+                                    });
                                   }}
                                   className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline font-mono"
                                 >
-                                  {input.file_path.split('/').pop()}
+                                  {input.file_path.split("/").pop()}
                                 </button>
                               </summary>
                               <div className="mt-3">
@@ -259,30 +326,42 @@ const MessageComponent = memo(
                                     {createDiff(
                                       input.old_string,
                                       input.new_string,
-                                    ).map((diffLine, i) => (
-                                      <div key={i} className="flex">
-                                        <span
-                                          className={`w-8 text-center border-r ${
-                                            diffLine.type === 'removed'
-                                              ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800'
-                                              : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800'
-                                          }`}
-                                        >
-                                          {diffLine.type === 'removed'
-                                            ? '-'
-                                            : '+'}
-                                        </span>
-                                        <span
-                                          className={`px-2 py-0.5 flex-1 whitespace-pre-wrap ${
-                                            diffLine.type === 'removed'
-                                              ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200'
-                                              : 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200'
-                                          }`}
-                                        >
-                                          {diffLine.content}
-                                        </span>
-                                      </div>
-                                    ))}
+                                    ).map(
+                                      (
+                                        diffLine: {
+                                          type:
+                                            | "added"
+                                            | "removed"
+                                            | "unchanged";
+                                          content: string;
+                                          lineNum: number;
+                                        },
+                                        i: number,
+                                      ) => (
+                                        <div key={i} className="flex">
+                                          <span
+                                            className={`w-8 text-center border-r ${
+                                              diffLine.type === "removed"
+                                                ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800"
+                                                : "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800"
+                                            }`}
+                                          >
+                                            {diffLine.type === "removed"
+                                              ? "-"
+                                              : "+"}
+                                          </span>
+                                          <span
+                                            className={`px-2 py-0.5 flex-1 whitespace-pre-wrap ${
+                                              diffLine.type === "removed"
+                                                ? "bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200"
+                                                : "bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200"
+                                            }`}
+                                          >
+                                            {diffLine.content}
+                                          </span>
+                                        </div>
+                                      ),
+                                    )}
                                   </div>
                                 </div>
                                 {showRawParameters && (
@@ -302,7 +381,7 @@ const MessageComponent = memo(
                             </details>
                           );
                         }
-                      } catch (e) {
+                      } catch {
                         // Fall back to raw display if parsing fails
                       }
                       return (
@@ -317,34 +396,34 @@ const MessageComponent = memo(
                       );
                     })()}
                   {message.toolInput &&
-                    message.toolName !== 'Edit' &&
+                    message.toolName !== "Edit" &&
                     (() => {
                       // Debug log to see what we're dealing with
-                      if (logger.isLevelEnabled('debug')) {
-                        logger.debug('Tool display', {
+                      if (logger.isLevelEnabled("debug")) {
+                        logger.debug("Tool display", {
                           name: message.toolName,
                           inputType: typeof message.toolInput,
                         });
                       }
 
                       // Special handling for Write tool
-                      if (message.toolName === 'Write') {
-                        if (logger.isLevelEnabled('debug')) {
-                          logger.debug('Write tool detected', {
+                      if (message.toolName === "Write") {
+                        if (logger.isLevelEnabled("debug")) {
+                          logger.debug("Write tool detected", {
                             toolInput: message.toolInput,
                           });
                         }
                         try {
                           let input;
                           // Handle both JSON string and already parsed object
-                          if (typeof message.toolInput === 'string') {
+                          if (typeof message.toolInput === "string") {
                             input = JSON.parse(message.toolInput);
                           } else {
                             input = message.toolInput;
                           }
 
-                          if (logger.isLevelEnabled('debug')) {
-                            logger.debug('Parsed Write input', { input });
+                          if (logger.isLevelEnabled("debug")) {
+                            logger.debug("Parsed Write input", { input });
                           }
 
                           if (input.file_path && input.content !== undefined) {
@@ -369,15 +448,17 @@ const MessageComponent = memo(
                                     onClick={(e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      onFileOpen &&
+                                      void (
+                                        onFileOpen &&
                                         onFileOpen(input.file_path, {
-                                          old_string: '',
+                                          old_string: "",
                                           new_string: input.content,
-                                        });
+                                        })
+                                      );
                                     }}
                                     className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline font-mono"
                                   >
-                                    {input.file_path.split('/').pop()}
+                                    {input.file_path.split("/").pop()}
                                   </button>
                                 </summary>
                                 <div className="mt-3">
@@ -387,7 +468,7 @@ const MessageComponent = memo(
                                         onClick={() =>
                                           onFileOpen &&
                                           onFileOpen(input.file_path, {
-                                            old_string: '',
+                                            old_string: "",
                                             new_string: input.content,
                                           })
                                         }
@@ -400,25 +481,35 @@ const MessageComponent = memo(
                                       </span>
                                     </div>
                                     <div className="text-xs font-mono">
-                                      {createDiff('', input.content).map(
-                                        (diffLine, i) => (
+                                      {createDiff("", input.content).map(
+                                        (
+                                          diffLine: {
+                                            type:
+                                              | "added"
+                                              | "removed"
+                                              | "unchanged";
+                                            content: string;
+                                            lineNum: number;
+                                          },
+                                          i: number,
+                                        ) => (
                                           <div key={i} className="flex">
                                             <span
                                               className={`w-8 text-center border-r ${
-                                                diffLine.type === 'removed'
-                                                  ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800'
-                                                  : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800'
+                                                diffLine.type === "removed"
+                                                  ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800"
+                                                  : "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800"
                                               }`}
                                             >
-                                              {diffLine.type === 'removed'
-                                                ? '-'
-                                                : '+'}
+                                              {diffLine.type === "removed"
+                                                ? "-"
+                                                : "+"}
                                             </span>
                                             <span
                                               className={`px-2 py-0.5 flex-1 whitespace-pre-wrap ${
-                                                diffLine.type === 'removed'
-                                                  ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200'
-                                                  : 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200'
+                                                diffLine.type === "removed"
+                                                  ? "bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200"
+                                                  : "bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200"
                                               }`}
                                             >
                                               {diffLine.content}
@@ -445,13 +536,13 @@ const MessageComponent = memo(
                               </details>
                             );
                           }
-                        } catch (e) {
+                        } catch {
                           // Fall back to regular display
                         }
                       }
 
                       // Special handling for TodoWrite tool
-                      if (message.toolName === 'TodoWrite') {
+                      if (message.toolName === "TodoWrite") {
                         try {
                           const input = JSON.parse(message.toolInput);
                           if (input.todos && Array.isArray(input.todos)) {
@@ -492,13 +583,13 @@ const MessageComponent = memo(
                               </details>
                             );
                           }
-                        } catch (e) {
+                        } catch {
                           // Fall back to regular display
                         }
                       }
 
                       // Special handling for Bash tool
-                      if (message.toolName === 'Bash') {
+                      if (message.toolName === "Bash") {
                         try {
                           const input = JSON.parse(message.toolInput);
                           return (
@@ -559,30 +650,30 @@ const MessageComponent = memo(
                               </div>
                             </details>
                           );
-                        } catch (e) {
+                        } catch {
                           // Fall back to regular display
                         }
                       }
 
                       // Special handling for Read tool
-                      if (message.toolName === 'Read') {
+                      if (message.toolName === "Read") {
                         try {
                           const input = JSON.parse(message.toolInput);
                           if (input.file_path) {
                             // Extract filename
-                            const filename = input.file_path.split('/').pop();
-                            const pathParts = input.file_path.split('/');
-                            const directoryPath = pathParts
+                            const filename = input.file_path.split("/").pop();
+                            const pathParts = input.file_path.split("/");
+                            const _directoryPath = pathParts
                               .slice(0, -1)
-                              .join('/');
+                              .join("/");
 
                             // Simple heuristic to show only relevant path parts
                             // Show the last 2-3 directory parts before the filename
                             const relevantParts = pathParts.slice(-4, -1); // Get up to 3 directories before filename
                             const relativePath =
                               relevantParts.length > 0
-                                ? relevantParts.join('/') + '/'
-                                : '';
+                                ? relevantParts.join("/") + "/"
+                                : "";
 
                             return (
                               <details className="mt-2" open={autoExpandTools}>
@@ -635,14 +726,18 @@ const MessageComponent = memo(
                               </details>
                             );
                           }
-                        } catch (e) {
+                        } catch {
                           // Fall back to regular display
                         }
                       }
 
                       // Regular tool input display for other tools
                       return (
-                        <details className="mt-2" open={autoExpandTools} data-testid={`tool-params-toggle-${index}`}>
+                        <details
+                          className="mt-2"
+                          open={autoExpandTools}
+                          data-testid={`tool-params-toggle-${index}`}
+                        >
                           <summary className="text-sm text-blue-700 dark:text-blue-300 cursor-pointer hover:text-blue-800 dark:hover:text-blue-200 flex items-center gap-2">
                             <svg
                               className="w-4 h-4 transition-transform details-chevron"
@@ -673,8 +768,8 @@ const MessageComponent = memo(
                         <div
                           className={`w-4 h-4 rounded flex items-center justify-center ${
                             message.toolResult.isError
-                              ? 'bg-red-500'
-                              : 'bg-green-500'
+                              ? "bg-red-500"
+                              : "bg-green-500"
                           }`}
                         >
                           <svg
@@ -703,48 +798,48 @@ const MessageComponent = memo(
                         <span
                           className={`text-sm font-medium ${
                             message.toolResult.isError
-                              ? 'text-red-700 dark:text-red-300'
-                              : 'text-green-700 dark:text-green-300'
+                              ? "text-red-700 dark:text-red-300"
+                              : "text-green-700 dark:text-green-300"
                           }`}
                         >
                           {message.toolResult.isError
-                            ? 'Tool Error'
-                            : 'Tool Result'}
+                            ? "Tool Error"
+                            : "Tool Result"}
                         </span>
                       </div>
 
                       <div
                         className={`text-sm ${
                           message.toolResult.isError
-                            ? 'text-red-800 dark:text-red-200'
-                            : 'text-green-800 dark:text-green-200'
+                            ? "text-red-800 dark:text-red-200"
+                            : "text-green-800 dark:text-green-200"
                         }`}
                       >
                         {(() => {
                           const content = String(
-                            message.toolResult.content || '',
+                            message.toolResult.content ?? "",
                           );
 
                           // Special handling for TodoWrite/TodoRead results
                           if (
-                            (message.toolName === 'TodoWrite' ||
-                              message.toolName === 'TodoRead') &&
+                            (message.toolName === "TodoWrite" ||
+                              message.toolName === "TodoRead") &&
                             (content.includes(
-                              'Todos have been modified successfully',
+                              "Todos have been modified successfully",
                             ) ||
-                              content.includes('Todo list') ||
-                              (content.startsWith('[') &&
+                              content.includes("Todo list") ||
+                              (content.startsWith("[") &&
                                 content.includes('"content"') &&
                                 content.includes('"status"')))
                           ) {
                             try {
                               // Try to parse if it looks like todo JSON data
                               let todos = null;
-                              if (content.startsWith('[')) {
+                              if (content.startsWith("[")) {
                                 todos = JSON.parse(content);
                               } else if (
                                 content.includes(
-                                  'Todos have been modified successfully',
+                                  "Todos have been modified successfully",
                                 )
                               ) {
                                 // For TodoWrite success messages, we don't have the data in the result
@@ -771,46 +866,50 @@ const MessageComponent = memo(
                                   </div>
                                 );
                               }
-                            } catch (e) {
+                            } catch {
                               // Fall through to regular handling
                             }
                           }
 
                           // Special handling for interactive prompts
                           if (
-                            content.includes('Do you want to proceed?') &&
-                            message.toolName === 'Bash'
+                            content.includes("Do you want to proceed?") &&
+                            message.toolName === "Bash"
                           ) {
-                            const lines = content.split('\n');
+                            const lines = content.split("\n");
                             const promptIndex = lines.findIndex((line) =>
-                              line.includes('Do you want to proceed?'),
+                              line.includes("Do you want to proceed?"),
                             );
                             const beforePrompt = lines
                               .slice(0, promptIndex)
-                              .join('\n');
+                              .join("\n");
                             const promptLines = lines.slice(promptIndex);
 
                             // Extract the question and options
                             const questionLine =
                               promptLines.find((line) =>
-                                line.includes('Do you want to proceed?'),
-                              ) || '';
-                            const options = [];
+                                line.includes("Do you want to proceed?"),
+                              ) ?? "";
+                            const options: Array<{
+                              number: string;
+                              text: string;
+                            }> = [];
 
                             // Parse numbered options (1. Yes, 2. No, etc.)
                             promptLines.forEach((line) => {
-                              const optionMatch =
-                                line.match(/^\s*(\d+)\.\s+(.+)$/);
+                              const optionMatch = /^\s*(\d+)\.\s+(.+)$/.exec(
+                                line,
+                              );
                               if (optionMatch) {
                                 options.push({
-                                  number: optionMatch[1],
-                                  text: optionMatch[2].trim(),
+                                  number: optionMatch[1] ?? "",
+                                  text: optionMatch[2]?.trim() ?? "",
                                 });
                               }
                             });
 
                             // Find which option was selected (usually indicated by "> 1" or similar)
-                            const selectedMatch = content.match(/>\s*(\d+)/);
+                            const selectedMatch = />\s*(\d+)/.exec(content);
                             const selectedOption = selectedMatch
                               ? selectedMatch[1]
                               : null;
@@ -856,12 +955,12 @@ const MessageComponent = memo(
                                             key={option.number}
                                             className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${
                                               selectedOption === option.number
-                                                ? 'bg-amber-600 dark:bg-amber-700 text-white border-amber-600 dark:border-amber-700 shadow-md'
-                                                : 'bg-white dark:bg-gray-800 text-amber-900 dark:text-amber-100 border-amber-300 dark:border-amber-700 hover:border-amber-400 dark:hover:border-amber-600 hover:shadow-sm'
+                                                ? "bg-amber-600 dark:bg-amber-700 text-white border-amber-600 dark:border-amber-700 shadow-md"
+                                                : "bg-white dark:bg-gray-800 text-amber-900 dark:text-amber-100 border-amber-300 dark:border-amber-700 hover:border-amber-400 dark:hover:border-amber-600 hover:shadow-sm"
                                             } ${
                                               selectedOption
-                                                ? 'cursor-default'
-                                                : 'cursor-not-allowed opacity-75'
+                                                ? "cursor-default"
+                                                : "cursor-not-allowed opacity-75"
                                             }`}
                                             disabled
                                           >
@@ -870,8 +969,8 @@ const MessageComponent = memo(
                                                 className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                                                   selectedOption ===
                                                   option.number
-                                                    ? 'bg-white/20'
-                                                    : 'bg-amber-100 dark:bg-amber-800/50'
+                                                    ? "bg-white/20"
+                                                    : "bg-amber-100 dark:bg-amber-800/50"
                                                 }`}
                                               >
                                                 {option.number}
@@ -901,7 +1000,7 @@ const MessageComponent = memo(
                                       {selectedOption && (
                                         <div className="bg-amber-100 dark:bg-amber-800/30 rounded-lg p-3">
                                           <p className="text-amber-900 dark:text-amber-100 text-sm font-medium mb-1">
-                                            ✓ Claude selected option{' '}
+                                            ✓ Claude selected option{" "}
                                             {selectedOption}
                                           </p>
                                           <p className="text-amber-800 dark:text-amber-200 text-xs">
@@ -918,9 +1017,8 @@ const MessageComponent = memo(
                             );
                           }
 
-                          const fileEditMatch = content.match(
-                            /The file (.+?) has been updated\./,
-                          );
+                          const fileEditMatch =
+                            /The file (.+?) has been updated\./.exec(content);
                           if (fileEditMatch) {
                             return (
                               <div>
@@ -931,7 +1029,9 @@ const MessageComponent = memo(
                                 </div>
                                 <button
                                   onClick={() =>
-                                    onFileOpen && onFileOpen(fileEditMatch[1])
+                                    onFileOpen &&
+                                    fileEditMatch[1] &&
+                                    onFileOpen(fileEditMatch[1])
                                   }
                                   className="text-xs font-mono bg-green-100 dark:bg-green-800/30 px-2 py-1 rounded text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline cursor-pointer"
                                 >
@@ -942,9 +1042,10 @@ const MessageComponent = memo(
                           }
 
                           // Handle Write tool output for file creation
-                          const fileCreateMatch = content.match(
-                            /(?:The file|File) (.+?) has been (?:created|written)(?: successfully)?\.?/,
-                          );
+                          const fileCreateMatch =
+                            /(?:The file|File) (.+?) has been (?:created|written)(?: successfully)?\.?/.exec(
+                              content,
+                            );
                           if (fileCreateMatch) {
                             return (
                               <div>
@@ -955,7 +1056,9 @@ const MessageComponent = memo(
                                 </div>
                                 <button
                                   onClick={() =>
-                                    onFileOpen && onFileOpen(fileCreateMatch[1])
+                                    onFileOpen &&
+                                    fileCreateMatch[1] &&
+                                    onFileOpen(fileCreateMatch[1])
                                   }
                                   className="text-xs font-mono bg-green-100 dark:bg-green-800/30 px-2 py-1 rounded text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline cursor-pointer"
                                 >
@@ -967,7 +1070,7 @@ const MessageComponent = memo(
 
                           // Special handling for Write tool - hide content if it's just the file content
                           if (
-                            message.toolName === 'Write' &&
+                            message.toolName === "Write" &&
                             !message.toolResult.isError
                           ) {
                             // For Write tool, the diff is already shown in the tool input section
@@ -1001,8 +1104,8 @@ const MessageComponent = memo(
                           }
 
                           if (
-                            content.includes('cat -n') &&
-                            content.includes('→')
+                            content.includes("cat -n") &&
+                            content.includes("→")
                           ) {
                             return (
                               <details open={autoExpandTools}>
@@ -1092,24 +1195,27 @@ const MessageComponent = memo(
                       </h4>
                       {(() => {
                         const lines = message.content
-                          .split('\n')
-                          .filter((line) => line.trim());
+                          .split("\n")
+                          .filter((line: string) => line.trim());
                         const questionLine =
-                          lines.find((line) => line.includes('?')) ||
-                          lines[0] ||
-                          '';
-                        const options = [];
+                          lines.find((line: string) => line.includes("?")) ??
+                          lines[0] ??
+                          "";
+                        const options: Array<{
+                          number: string;
+                          text: string;
+                          isSelected?: boolean;
+                        }> = [];
 
                         // Parse the menu options
-                        lines.forEach((line) => {
+                        lines.forEach((line: string) => {
                           // Match lines like "❯ 1. Yes" or "  2. No"
-                          const optionMatch =
-                            line.match(/[❯\s]*(\d+)\.\s+(.+)/);
+                          const optionMatch = /[❯\s]*(\d+)\.\s+(.+)/.exec(line);
                           if (optionMatch) {
-                            const isSelected = line.includes('❯');
+                            const isSelected = line.includes("❯");
                             options.push({
-                              number: optionMatch[1],
-                              text: optionMatch[2].trim(),
+                              number: optionMatch[1] ?? "",
+                              text: optionMatch[2]?.trim() ?? "",
                               isSelected,
                             });
                           }
@@ -1128,8 +1234,8 @@ const MessageComponent = memo(
                                   key={option.number}
                                   className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${
                                     option.isSelected
-                                      ? 'bg-amber-600 dark:bg-amber-700 text-white border-amber-600 dark:border-amber-700 shadow-md'
-                                      : 'bg-white dark:bg-gray-800 text-amber-900 dark:text-amber-100 border-amber-300 dark:border-amber-700'
+                                      ? "bg-amber-600 dark:bg-amber-700 text-white border-amber-600 dark:border-amber-700 shadow-md"
+                                      : "bg-white dark:bg-gray-800 text-amber-900 dark:text-amber-100 border-amber-300 dark:border-amber-700"
                                   } cursor-not-allowed opacity-75`}
                                   disabled
                                 >
@@ -1137,8 +1243,8 @@ const MessageComponent = memo(
                                     <span
                                       className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                                         option.isSelected
-                                          ? 'bg-white/20'
-                                          : 'bg-amber-100 dark:bg-amber-800/50'
+                                          ? "bg-white/20"
+                                          : "bg-amber-100 dark:bg-amber-800/50"
                                       }`}
                                     >
                                       {option.number}
@@ -1171,17 +1277,17 @@ const MessageComponent = memo(
                 </div>
               ) : (
                 <div className="text-sm text-gray-700 dark:text-gray-300">
-                  {message.type === 'assistant' ? (
+                  {message.type === "assistant" ? (
                     <div className="prose prose-sm max-w-none dark:prose-invert prose-gray [&_code]:!bg-transparent [&_code]:!p-0">
                       <ReactMarkdown
                         components={{
                           code: ({
-                            node,
+                            node: _node,
                             inline,
-                            className,
+                            className: _className,
                             children,
                             ...props
-                          }) => {
+                          }: any) => {
                             return inline ? (
                               <strong
                                 className="text-blue-600 dark:text-blue-400 font-bold not-prose"
@@ -1200,12 +1306,12 @@ const MessageComponent = memo(
                               </div>
                             );
                           },
-                          blockquote: ({children}) => (
+                          blockquote: ({ children }) => (
                             <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic text-gray-600 dark:text-gray-400 my-2">
                               {children}
                             </blockquote>
                           ),
-                          a: ({href, children}) => (
+                          a: ({ href, children }) => (
                             <a
                               href={href}
                               className="text-blue-600 dark:text-blue-400 hover:underline"
@@ -1215,12 +1321,12 @@ const MessageComponent = memo(
                               {children}
                             </a>
                           ),
-                          p: ({children}) => (
+                          p: ({ children }) => (
                             <div className="mb-2 last:mb-0">{children}</div>
                           ),
                         }}
                       >
-                        {String(message.content || '')}
+                        {String(message.content ?? "")}
                       </ReactMarkdown>
                     </div>
                   ) : (
@@ -1230,9 +1336,11 @@ const MessageComponent = memo(
               )}
 
               <div
-                className={`text-xs text-gray-500 dark:text-gray-400 mt-1 ${isGrouped ? 'opacity-0 group-hover:opacity-100' : ''}`}
+                className={`text-xs text-gray-500 dark:text-gray-400 mt-1 ${isGrouped ? "opacity-0 group-hover:opacity-100" : ""}`}
               >
-                {new Date(message.timestamp).toLocaleTimeString()}
+                {message.timestamp
+                  ? new Date(message.timestamp).toLocaleTimeString()
+                  : ""}
               </div>
             </div>
           </div>
@@ -1253,7 +1361,7 @@ const MessageComponent = memo(
 function ChatInterface({
   selectedProject,
   selectedSession,
-  ws,
+  ws: _ws,
   sendMessage,
   messages,
   onFileOpen,
@@ -1266,17 +1374,17 @@ function ChatInterface({
   autoExpandTools,
   showRawParameters,
   autoScrollToBottom,
-}) {
-  const logger = useLogger({ component: 'ChatInterface' });
-  
-  const [input, setInput] = useState(() => {
-    if (typeof window !== 'undefined' && selectedProject) {
-      return localStorage.getItem(`draft_input_${selectedProject.name}`) || '';
+}: ChatInterfaceProps) {
+  const logger: Logger = useLogger({ component: "ChatInterface" });
+
+  const [input, setInput] = useState<string>(() => {
+    if (typeof window !== "undefined" && selectedProject) {
+      return localStorage.getItem(`draft_input_${selectedProject.name}`) ?? "";
     }
-    return '';
+    return "";
   });
-  const [chatMessages, setChatMessages] = useState(() => {
-    if (typeof window !== 'undefined' && selectedProject) {
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
+    if (typeof window !== "undefined" && selectedProject) {
       const saved = localStorage.getItem(
         `chat_messages_${selectedProject.name}`,
       );
@@ -1284,40 +1392,50 @@ function ChatInterface({
     }
     return [];
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentSessionId, setCurrentSessionId] = useState(
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(
     selectedSession?.id || null,
   );
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const [sessionMessages, setSessionMessages] = useState([]);
+  const [isInputFocused, setIsInputFocused] = useState<boolean>(false);
+  const [sessionMessages, setSessionMessages] = useState<ChatMessage[]>([]);
   const [isLoadingSessionMessages, setIsLoadingSessionMessages] =
-    useState(false);
-  const [isSystemSessionChange, setIsSystemSessionChange] = useState(false);
-  const messagesEndRef = useRef(null);
-  const textareaRef = useRef(null);
-  const scrollContainerRef = useRef(null);
-  const [debouncedInput, setDebouncedInput] = useState('');
-  const [showFileDropdown, setShowFileDropdown] = useState(false);
-  const [fileList, setFileList] = useState([]);
-  const [filteredFiles, setFilteredFiles] = useState([]);
-  const [selectedFileIndex, setSelectedFileIndex] = useState(-1);
-  const [cursorPosition, setCursorPosition] = useState(0);
-  const [atSymbolPosition, setAtSymbolPosition] = useState(-1);
-  const [canAbortSession, setCanAbortSession] = useState(false);
-  const [isUserScrolledUp, setIsUserScrolledUp] = useState(false);
-  const scrollPositionRef = useRef({height: 0, top: 0});
-  const [showCommandMenu, setShowCommandMenu] = useState(false);
-  const [slashCommands, setSlashCommands] = useState([]);
-  const [filteredCommands, setFilteredCommands] = useState([]);
-  const [isTextareaExpanded, setIsTextareaExpanded] = useState(false);
-  const [selectedCommandIndex, setSelectedCommandIndex] = useState(-1);
-  const [slashPosition, setSlashPosition] = useState(-1);
-  const [claudeStatus, setClaudeStatus] = useState(null);
+    useState<boolean>(false);
+  const [isSystemSessionChange, setIsSystemSessionChange] =
+    useState<boolean>(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [debouncedInput, setDebouncedInput] = useState<string>("");
+  const [showFileDropdown, setShowFileDropdown] = useState<boolean>(false);
+  const [fileList, setFileList] = useState<
+    { name: string; path: string; relativePath: string }[]
+  >([]);
+  const [filteredFiles, setFilteredFiles] = useState<
+    { name: string; path: string; relativePath: string }[]
+  >([]);
+  const [selectedFileIndex, setSelectedFileIndex] = useState<number>(-1);
+  const [cursorPosition, setCursorPosition] = useState<number>(0);
+  const [atSymbolPosition, setAtSymbolPosition] = useState<number>(-1);
+  const [canAbortSession, setCanAbortSession] = useState<boolean>(false);
+  const [isUserScrolledUp, setIsUserScrolledUp] = useState<boolean>(false);
+  const scrollPositionRef = useRef<{ height: number; top: number }>({
+    height: 0,
+    top: 0,
+  });
+  const [showCommandMenu, setShowCommandMenu] = useState<boolean>(false);
+  const [slashCommands, setSlashCommands] = useState<any[]>([]);
+  const [filteredCommands, setFilteredCommands] = useState<any[]>([]);
+  const [isTextareaExpanded, setIsTextareaExpanded] = useState<boolean>(false);
+  const [selectedCommandIndex, setSelectedCommandIndex] = useState<number>(-1);
+  const [slashPosition, setSlashPosition] = useState<number>(-1);
+  const [claudeStatus, setClaudeStatus] = useState<
+    ClaudeStatusData | undefined
+  >(undefined);
 
   // Memoized diff calculation to prevent recalculating on every render
   const createDiff = useMemo(() => {
     const cache = new Map();
-    return (oldStr, newStr) => {
+    return (oldStr: string, newStr: string) => {
       const key = `${oldStr.length}-${newStr.length}-${oldStr.slice(0, 50)}`;
       if (cache.has(key)) {
         return cache.get(key);
@@ -1334,34 +1452,48 @@ function ChatInterface({
   }, []);
 
   // Load session messages from API
-  const loadSessionMessages = useCallback(async (projectName, sessionId) => {
-    if (!projectName || !sessionId) return [];
+  const loadSessionMessages = useCallback(
+    async (projectName: string, sessionId: string) => {
+      if (!projectName || !sessionId) return [];
 
-    setIsLoadingSessionMessages(true);
-    try {
-      const response = await fetch(
-        `/api/projects/${projectName}/sessions/${sessionId}/messages`,
-      );
-      if (!response.ok) {
-        throw new Error('Failed to load session messages');
+      setIsLoadingSessionMessages(true);
+      try {
+        const response = await fetch(
+          `/api/projects/${projectName}/sessions/${sessionId}/messages`,
+        );
+        if (!response.ok) {
+          throw new Error("Failed to load session messages");
+        }
+        const data = await response.json();
+        return data.messages || [];
+      } catch (error) {
+        logger.error("Error loading session messages", { error });
+        return [];
+      } finally {
+        setIsLoadingSessionMessages(false);
       }
-      const data = await response.json();
-      return data.messages || [];
-    } catch (error) {
-      logger.error('Error loading session messages', { error });
-      return [];
-    } finally {
-      setIsLoadingSessionMessages(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   // Actual diff calculation function
-  const calculateDiff = (oldStr, newStr) => {
-    const oldLines = oldStr.split('\n');
-    const newLines = newStr.split('\n');
+  const calculateDiff = (
+    oldStr: string,
+    newStr: string,
+  ): Array<{
+    type: "added" | "removed" | "unchanged";
+    content: string;
+    lineNum: number;
+  }> => {
+    const oldLines = oldStr.split("\n");
+    const newLines = newStr.split("\n");
 
     // Simple diff algorithm - find common lines and differences
-    const diffLines = [];
+    const diffLines: Array<{
+      type: "added" | "removed" | "unchanged";
+      content: string;
+      lineNum: number;
+    }> = [];
     let oldIndex = 0;
     let newIndex = 0;
 
@@ -1372,16 +1504,16 @@ function ChatInterface({
       if (oldIndex >= oldLines.length) {
         // Only new lines remaining
         diffLines.push({
-          type: 'added',
-          content: newLine,
+          type: "added",
+          content: newLine || "",
           lineNum: newIndex + 1,
         });
         newIndex++;
       } else if (newIndex >= newLines.length) {
         // Only old lines remaining
         diffLines.push({
-          type: 'removed',
-          content: oldLine,
+          type: "removed",
+          content: oldLine || "",
           lineNum: oldIndex + 1,
         });
         oldIndex++;
@@ -1392,13 +1524,13 @@ function ChatInterface({
       } else {
         // Lines are different
         diffLines.push({
-          type: 'removed',
-          content: oldLine,
+          type: "removed",
+          content: oldLine || "",
           lineNum: oldIndex + 1,
         });
         diffLines.push({
-          type: 'added',
-          content: newLine,
+          type: "added",
+          content: newLine || "",
           lineNum: newIndex + 1,
         });
         oldIndex++;
@@ -1409,15 +1541,15 @@ function ChatInterface({
     return diffLines;
   };
 
-  const convertSessionMessages = (rawMessages) => {
-    const converted = [];
+  const convertSessionMessages = (rawMessages: any[]): ChatMessage[] => {
+    const converted: ChatMessage[] = [];
     const toolResults = new Map(); // Map tool_use_id to tool result
 
     // First pass: collect all tool results
     for (const msg of rawMessages) {
-      if (msg.message?.role === 'user' && Array.isArray(msg.message?.content)) {
+      if (msg.message?.role === "user" && Array.isArray(msg.message?.content)) {
         for (const part of msg.message.content) {
-          if (part.type === 'tool_result') {
+          if (part.type === "tool_result") {
             toolResults.set(part.tool_use_id, {
               content: part.content,
               isError: part.is_error,
@@ -1431,23 +1563,28 @@ function ChatInterface({
     // Second pass: process messages and attach tool results to tool uses
     for (const msg of rawMessages) {
       // Handle user messages
-      if (msg.message?.role === 'user' && msg.message?.content) {
-        let content = '';
-        let messageType = 'user';
+      if (msg.message?.role === "user" && msg.message?.content) {
+        let content = "";
+        const messageType:
+          | "user"
+          | "assistant"
+          | "tool_use"
+          | "tool_result"
+          | "error" = "user";
 
         if (Array.isArray(msg.message.content)) {
           // Handle array content, but skip tool results (they're attached to tool uses)
           const textParts = [];
 
           for (const part of msg.message.content) {
-            if (part.type === 'text') {
+            if (part.type === "text") {
               textParts.push(part.text);
             }
             // Skip tool_result parts - they're handled in the first pass
           }
 
-          content = textParts.join('\n');
-        } else if (typeof msg.message.content === 'string') {
+          content = textParts.join("\n");
+        } else if (typeof msg.message.content === "string") {
           content = msg.message.content;
         } else {
           content = String(msg.message.content);
@@ -1456,8 +1593,8 @@ function ChatInterface({
         // Skip command messages and empty content
         if (
           content &&
-          !content.startsWith('<command-name>') &&
-          !content.startsWith('[Request interrupted')
+          !content.startsWith("<command-name>") &&
+          !content.startsWith("[Request interrupted")
         ) {
           converted.push({
             type: messageType,
@@ -1468,28 +1605,28 @@ function ChatInterface({
       }
 
       // Handle assistant messages
-      else if (msg.message?.role === 'assistant' && msg.message?.content) {
+      else if (msg.message?.role === "assistant" && msg.message?.content) {
         if (Array.isArray(msg.message.content)) {
           for (const part of msg.message.content) {
-            if (part.type === 'text') {
+            if (part.type === "text") {
               converted.push({
-                type: 'assistant',
+                type: "assistant",
                 content: part.text,
                 timestamp: msg.timestamp || new Date().toISOString(),
               });
-            } else if (part.type === 'tool_use') {
+            } else if (part.type === "tool_use") {
               // Get the corresponding tool result
               const toolResult = toolResults.get(part.id);
 
               converted.push({
-                type: 'assistant',
-                content: '',
+                type: "assistant",
+                content: "",
                 timestamp: msg.timestamp || new Date().toISOString(),
                 isToolUse: true,
                 toolName: part.name,
                 toolInput: JSON.stringify(part.input),
                 toolResult: toolResult
-                  ? typeof toolResult.content === 'string'
+                  ? typeof toolResult.content === "string"
                     ? toolResult.content
                     : JSON.stringify(toolResult.content)
                   : null,
@@ -1498,9 +1635,9 @@ function ChatInterface({
               });
             }
           }
-        } else if (typeof msg.message.content === 'string') {
+        } else if (typeof msg.message.content === "string") {
           converted.push({
-            type: 'assistant',
+            type: "assistant",
             content: msg.message.content,
             timestamp: msg.timestamp || new Date().toISOString(),
           });
@@ -1528,7 +1665,8 @@ function ChatInterface({
   // Check if user is near the bottom of the scroll container
   const isNearBottom = useCallback(() => {
     if (!scrollContainerRef.current) return false;
-    const {scrollTop, scrollHeight, clientHeight} = scrollContainerRef.current;
+    const { scrollTop, scrollHeight, clientHeight } =
+      scrollContainerRef.current;
     // Consider "near bottom" if within 100px of the bottom
     return scrollHeight - scrollTop - clientHeight < 100;
   }, []);
@@ -1596,9 +1734,9 @@ function ChatInterface({
 
   // Persist input draft to localStorage
   useEffect(() => {
-    if (selectedProject && input !== '') {
+    if (selectedProject && input !== "") {
       localStorage.setItem(`draft_input_${selectedProject.name}`, input);
-    } else if (selectedProject && input === '') {
+    } else if (selectedProject && input === "") {
       localStorage.removeItem(`draft_input_${selectedProject.name}`);
     }
   }, [input, selectedProject]);
@@ -1618,7 +1756,7 @@ function ChatInterface({
     if (selectedProject) {
       // Always load saved input draft for the project
       const savedInput =
-        localStorage.getItem(`draft_input_${selectedProject.name}`) || '';
+        localStorage.getItem(`draft_input_${selectedProject.name}`) || "";
       if (savedInput !== input) {
         setInput(savedInput);
       }
@@ -1629,13 +1767,14 @@ function ChatInterface({
     // Handle WebSocket messages
     if (messages.length > 0) {
       const latestMessage = messages[messages.length - 1];
+      if (!latestMessage) return;
 
       switch (latestMessage.type) {
-        case 'session-created':
+        case "session-created":
           // New session created by Claude CLI - we receive the real session ID here
           // Store it temporarily until conversation completes (prevents premature session association)
           if (latestMessage.sessionId && !currentSessionId) {
-            sessionStorage.setItem('pendingSessionId', latestMessage.sessionId);
+            sessionStorage.setItem("pendingSessionId", latestMessage.sessionId);
 
             // Session Protection: Replace temporary "new-session-*" identifier with real session ID
             // This maintains protection continuity - no gap between temp ID and real ID
@@ -1646,22 +1785,22 @@ function ChatInterface({
           }
           break;
 
-        case 'claude-response':
-          const messageData = latestMessage.data.message || latestMessage.data;
+        case "claude-response":
+          const messageData = latestMessage.data?.message || latestMessage.data;
 
           // Handle Claude CLI session duplication bug workaround:
           // When resuming a session, Claude CLI creates a new session instead of resuming.
           // We detect this by checking for system/init messages with session_id that differs
           // from our current session. When found, we need to switch the user to the new session.
           if (
-            latestMessage.data.type === 'system' &&
-            latestMessage.data.subtype === 'init' &&
-            latestMessage.data.session_id &&
+            latestMessage.data?.type === "system" &&
+            latestMessage.data?.subtype === "init" &&
+            latestMessage.data?.session_id &&
             currentSessionId &&
-            latestMessage.data.session_id !== currentSessionId
+            latestMessage.data?.session_id !== currentSessionId
           ) {
-            if (logger.isLevelEnabled('debug')) {
-              logger.debug('Claude CLI session duplication detected', {
+            if (logger.isLevelEnabled("debug")) {
+              logger.debug("Claude CLI session duplication detected", {
                 originalSession: currentSessionId,
                 newSession: latestMessage.data.session_id,
               });
@@ -1673,20 +1812,20 @@ function ChatInterface({
             // Switch to the new session using React Router navigation
             // This triggers the session loading logic in App.jsx without a page reload
             if (onNavigateToSession) {
-              onNavigateToSession(latestMessage.data.session_id);
+              onNavigateToSession(latestMessage.data?.session_id);
             }
             return; // Don't process the message further, let the navigation handle it
           }
 
           // Handle system/init for new sessions (when currentSessionId is null)
           if (
-            latestMessage.data.type === 'system' &&
-            latestMessage.data.subtype === 'init' &&
-            latestMessage.data.session_id &&
+            latestMessage.data?.type === "system" &&
+            latestMessage.data?.subtype === "init" &&
+            latestMessage.data?.session_id &&
             !currentSessionId
           ) {
-            if (logger.isLevelEnabled('debug')) {
-              logger.debug('New session init detected', {
+            if (logger.isLevelEnabled("debug")) {
+              logger.debug("New session init detected", {
                 newSession: latestMessage.data.session_id,
               });
             }
@@ -1696,21 +1835,21 @@ function ChatInterface({
 
             // Switch to the new session
             if (onNavigateToSession) {
-              onNavigateToSession(latestMessage.data.session_id);
+              onNavigateToSession(latestMessage.data?.session_id);
             }
             return; // Don't process the message further, let the navigation handle it
           }
 
           // For system/init messages that match current session, just ignore them
           if (
-            latestMessage.data.type === 'system' &&
-            latestMessage.data.subtype === 'init' &&
-            latestMessage.data.session_id &&
+            latestMessage.data?.type === "system" &&
+            latestMessage.data?.subtype === "init" &&
+            latestMessage.data?.session_id &&
             currentSessionId &&
-            latestMessage.data.session_id === currentSessionId
+            latestMessage.data?.session_id === currentSessionId
           ) {
-            if (logger.isLevelEnabled('debug')) {
-              logger.debug('System init message for current session, ignoring');
+            if (logger.isLevelEnabled("debug")) {
+              logger.debug("System init message for current session, ignoring");
             }
             return; // Don't process the message further
           }
@@ -1718,16 +1857,16 @@ function ChatInterface({
           // Handle different types of content in the response
           if (Array.isArray(messageData.content)) {
             for (const part of messageData.content) {
-              if (part.type === 'tool_use') {
+              if (part.type === "tool_use") {
                 // Add tool use message
                 const toolInput = part.input
                   ? JSON.stringify(part.input, null, 2)
-                  : '';
+                  : "";
                 setChatMessages((prev) => [
                   ...prev,
                   {
-                    type: 'assistant',
-                    content: '',
+                    type: "assistant",
+                    content: "",
                     timestamp: new Date(),
                     isToolUse: true,
                     toolName: part.name,
@@ -1736,12 +1875,12 @@ function ChatInterface({
                     toolResult: null, // Will be updated when result comes in
                   },
                 ]);
-              } else if (part.type === 'text' && part.text?.trim()) {
+              } else if (part.type === "text" && part.text?.trim()) {
                 // Add regular text message
                 setChatMessages((prev) => [
                   ...prev,
                   {
-                    type: 'assistant',
+                    type: "assistant",
                     content: part.text,
                     timestamp: new Date(),
                   },
@@ -1749,14 +1888,14 @@ function ChatInterface({
               }
             }
           } else if (
-            typeof messageData.content === 'string' &&
+            typeof messageData.content === "string" &&
             messageData.content.trim()
           ) {
             // Add regular text message
             setChatMessages((prev) => [
               ...prev,
               {
-                type: 'assistant',
+                type: "assistant",
                 content: messageData.content,
                 timestamp: new Date(),
               },
@@ -1765,11 +1904,11 @@ function ChatInterface({
 
           // Handle tool results from user messages (these come separately)
           if (
-            messageData.role === 'user' &&
+            messageData.role === "user" &&
             Array.isArray(messageData.content)
           ) {
             for (const part of messageData.content) {
-              if (part.type === 'tool_result') {
+              if (part.type === "tool_result") {
                 // Find the corresponding tool use and update it with the result
                 setChatMessages((prev) =>
                   prev.map((msg) => {
@@ -1791,23 +1930,23 @@ function ChatInterface({
           }
           break;
 
-        case 'claude-output':
+        case "claude-output":
           setChatMessages((prev) => [
             ...prev,
             {
-              type: 'assistant',
+              type: "assistant",
               content: latestMessage.data,
               timestamp: new Date(),
             },
           ]);
           break;
 
-        case 'claude-interactive-prompt':
+        case "claude-interactive-prompt":
           // Handle interactive prompts from CLI
           setChatMessages((prev) => [
             ...prev,
             {
-              type: 'assistant',
+              type: "assistant",
               content: latestMessage.data,
               timestamp: new Date(),
               isInteractivePrompt: true,
@@ -1815,47 +1954,47 @@ function ChatInterface({
           ]);
           break;
 
-        case 'claude-error':
+        case "claude-error":
           setChatMessages((prev) => [
             ...prev,
             {
-              type: 'error',
+              type: "error",
               content: `Error: ${latestMessage.error}`,
               timestamp: new Date(),
             },
           ]);
           break;
 
-        case 'claude-complete':
+        case "claude-complete":
           setIsLoading(false);
           setCanAbortSession(false);
-          setClaudeStatus(null);
+          setClaudeStatus(undefined);
 
           // Session Protection: Mark session as inactive to re-enable automatic project updates
           // Conversation is complete, safe to allow project updates again
           // Use real session ID if available, otherwise use pending session ID
           const activeSessionId =
-            currentSessionId || sessionStorage.getItem('pendingSessionId');
+            currentSessionId || sessionStorage.getItem("pendingSessionId");
           if (activeSessionId && onSessionInactive) {
             onSessionInactive(activeSessionId);
           }
 
           // If we have a pending session ID and the conversation completed successfully, use it
-          const pendingSessionId = sessionStorage.getItem('pendingSessionId');
+          const pendingSessionId = sessionStorage.getItem("pendingSessionId");
           if (
             pendingSessionId &&
             !currentSessionId &&
             latestMessage.exitCode === 0
           ) {
             setCurrentSessionId(pendingSessionId);
-            sessionStorage.removeItem('pendingSessionId');
+            sessionStorage.removeItem("pendingSessionId");
           }
           break;
 
-        case 'session-aborted':
+        case "session-aborted":
           setIsLoading(false);
           setCanAbortSession(false);
-          setClaudeStatus(null);
+          setClaudeStatus(undefined);
 
           // Session Protection: Mark session as inactive when aborted
           // User or system aborted the conversation, re-enable project updates
@@ -1866,23 +2005,25 @@ function ChatInterface({
           setChatMessages((prev) => [
             ...prev,
             {
-              type: 'assistant',
-              content: 'Session interrupted by user.',
+              type: "assistant",
+              content: "Session interrupted by user.",
               timestamp: new Date(),
             },
           ]);
           break;
 
-        case 'claude-status':
+        case "claude-status":
           // Handle Claude working status messages
-          if (logger.isLevelEnabled('debug')) {
-            logger.debug('Received claude-status message', { message: latestMessage });
+          if (logger.isLevelEnabled("debug")) {
+            logger.debug("Received claude-status message", {
+              message: latestMessage,
+            });
           }
           const statusData = latestMessage.data;
           if (statusData) {
             // Parse the status message to extract relevant information
-            let statusInfo = {
-              text: 'Working...',
+            const statusInfo = {
+              text: "Working...",
               tokens: 0,
               can_interrupt: true,
             };
@@ -1892,7 +2033,7 @@ function ChatInterface({
               statusInfo.text = statusData.message;
             } else if (statusData.status) {
               statusInfo.text = statusData.status;
-            } else if (typeof statusData === 'string') {
+            } else if (typeof statusData === "string") {
               statusInfo.text = statusData;
             }
 
@@ -1908,8 +2049,8 @@ function ChatInterface({
               statusInfo.can_interrupt = statusData.can_interrupt;
             }
 
-            if (logger.isLevelEnabled('debug')) {
-              logger.debug('Setting claude status', { statusInfo });
+            if (logger.isLevelEnabled("debug")) {
+              logger.debug("Setting claude status", { statusInfo });
             }
             setClaudeStatus(statusInfo);
             setIsLoading(true);
@@ -1934,16 +2075,20 @@ function ChatInterface({
 
   const fetchProjectFiles = async () => {
     try {
-      // Get the project's full path to use as dirPath
-      const projectPath = selectedProject.fullPath || selectedProject.path;
-      if (!projectPath) {
-        logger.warn('No project path available for file listing');
+      if (!selectedProject) {
+        logger.warn("No project selected for file listing");
         return;
       }
-      
+      // Get the project's full path to use as dirPath
+      const projectPath = selectedProject.fullPath;
+      if (!projectPath) {
+        logger.warn("No project path available for file listing");
+        return;
+      }
+
       const response = await fetch(
         `/api/projects/${selectedProject.name}/files?${new URLSearchParams({
-          dirPath: projectPath
+          dirPath: projectPath,
         })}`,
       );
       if (response.ok) {
@@ -1953,24 +2098,28 @@ function ChatInterface({
         setFileList(flatFiles);
       }
     } catch (error) {
-      logger.error('Error fetching files', { error });
+      logger.error("Error fetching files", { error });
     }
   };
 
   const fetchSlashCommands = async () => {
     try {
-      const response = await fetch('/api/slash-commands');
+      const response = await fetch("/api/slash-commands");
       if (response.ok) {
         const data = await response.json();
         setSlashCommands(data.commands || []);
       }
     } catch (error) {
-      logger.error('Error fetching slash commands', { error });
+      logger.error("Error fetching slash commands", { error });
     }
   };
 
-  const flattenFileTree = (files, basePath = '') => {
-    let result = [];
+  const flattenFileTree = (
+    files: any[],
+    basePath = "",
+  ): Array<{ name: string; path: string; relativePath: string }> => {
+    const result: Array<{ name: string; path: string; relativePath: string }> =
+      [];
     for (const file of files) {
       // The backend returns files with isDirectory property
       if (file.isDirectory) {
@@ -1992,12 +2141,12 @@ function ChatInterface({
   // Handle @ symbol detection and file filtering
   useEffect(() => {
     const textBeforeCursor = input.slice(0, cursorPosition);
-    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    const lastAtIndex = textBeforeCursor.lastIndexOf("@");
 
     if (lastAtIndex !== -1) {
       const textAfterAt = textBeforeCursor.slice(lastAtIndex + 1);
       // Check if there's a space after the @ symbol (which would end the file reference)
-      if (!textAfterAt.includes(' ')) {
+      if (!textAfterAt.includes(" ")) {
         setAtSymbolPosition(lastAtIndex);
         setShowFileDropdown(true);
 
@@ -2025,20 +2174,20 @@ function ChatInterface({
   // Handle / symbol detection and command filtering
   useEffect(() => {
     const textBeforeCursor = input.slice(0, cursorPosition);
-    const lastSlashIndex = textBeforeCursor.lastIndexOf('/');
+    const lastSlashIndex = textBeforeCursor.lastIndexOf("/");
 
     // Only show command menu if / is at the beginning or after a space
     if (lastSlashIndex !== -1) {
       const charBeforeSlash =
-        lastSlashIndex > 0 ? textBeforeCursor[lastSlashIndex - 1] : '';
+        lastSlashIndex > 0 ? textBeforeCursor[lastSlashIndex - 1] : "";
       if (
         lastSlashIndex === 0 ||
-        charBeforeSlash === ' ' ||
-        charBeforeSlash === '\n'
+        charBeforeSlash === " " ||
+        charBeforeSlash === "\n"
       ) {
         const textAfterSlash = textBeforeCursor.slice(lastSlashIndex + 1);
         // Check if there's a space after the / symbol (which would end the command)
-        if (!textAfterSlash.includes(' ')) {
+        if (!textAfterSlash.includes(" ")) {
           setSlashPosition(lastSlashIndex);
           setShowCommandMenu(true);
 
@@ -2047,7 +2196,7 @@ function ChatInterface({
             .filter((cmd) =>
               cmd.command
                 .toLowerCase()
-                .includes('/' + textAfterSlash.toLowerCase()),
+                .includes("/" + textAfterSlash.toLowerCase()),
             )
             .slice(0, 20); // Show more commands
 
@@ -2141,17 +2290,17 @@ function ChatInterface({
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
     if (scrollContainer) {
-      scrollContainer.addEventListener('scroll', handleScroll);
-      return () => scrollContainer.removeEventListener('scroll', handleScroll);
+      scrollContainer.addEventListener("scroll", handleScroll);
+      return () => scrollContainer.removeEventListener("scroll", handleScroll);
     }
   }, [handleScroll]);
 
   // Initial textarea setup
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = "auto";
       textareaRef.current.style.height =
-        textareaRef.current.scrollHeight + 'px';
+        textareaRef.current.scrollHeight + "px";
 
       // Check if initially expanded
       const lineHeight = parseInt(
@@ -2162,7 +2311,7 @@ function ChatInterface({
     }
   }, []); // Only run once on mount
 
-  const handleTranscript = useCallback((text) => {
+  const handleTranscript = useCallback((text: string) => {
     if (text.trim()) {
       setInput((prevInput) => {
         const newInput = prevInput.trim() ? `${prevInput} ${text}` : text;
@@ -2170,9 +2319,9 @@ function ChatInterface({
         // Update textarea height after setting new content
         setTimeout(() => {
           if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = "auto";
             textareaRef.current.style.height =
-              textareaRef.current.scrollHeight + 'px';
+              textareaRef.current.scrollHeight + "px";
 
             // Check if expanded after transcript
             const lineHeight = parseInt(
@@ -2189,12 +2338,12 @@ function ChatInterface({
     }
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading || !selectedProject) return;
 
-    const userMessage = {
-      type: 'user',
+    const userMessage: ChatMessage = {
+      type: "user",
       content: input,
       timestamp: new Date(),
     };
@@ -2204,7 +2353,7 @@ function ChatInterface({
     setCanAbortSession(true);
     // Set a default status when starting
     setClaudeStatus({
-      text: 'Processing',
+      text: "Processing",
       tokens: 0,
       can_interrupt: true,
     });
@@ -2225,12 +2374,12 @@ function ChatInterface({
     // Get tools settings from localStorage
     const getToolsSettings = () => {
       try {
-        const savedSettings = localStorage.getItem('claude-tools-settings');
+        const savedSettings = localStorage.getItem("claude-tools-settings");
         if (savedSettings) {
           return JSON.parse(savedSettings);
         }
       } catch (error) {
-        logger.error('Error loading tools settings', { error });
+        logger.error("Error loading tools settings", { error });
       }
       return {
         allowedTools: [],
@@ -2243,10 +2392,10 @@ function ChatInterface({
 
     // Send command to Claude CLI via WebSocket
     sendMessage({
-      type: 'claude-command',
+      type: "claude-command",
       command: input,
       options: {
-        projectPath: selectedProject.path,
+        projectPath: selectedProject.fullPath,
         cwd: selectedProject.fullPath,
         sessionId: currentSessionId,
         resume: !!currentSessionId,
@@ -2254,7 +2403,7 @@ function ChatInterface({
       },
     });
 
-    setInput('');
+    setInput("");
     setIsTextareaExpanded(false);
     // Clear the saved draft since message was sent
     if (selectedProject) {
@@ -2262,24 +2411,24 @@ function ChatInterface({
     }
   };
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     // Handle command menu navigation
     if (showCommandMenu && filteredCommands.length > 0) {
-      if (e.key === 'ArrowDown') {
+      if (e.key === "ArrowDown") {
         e.preventDefault();
         setSelectedCommandIndex((prev) =>
           prev < filteredCommands.length - 1 ? prev + 1 : 0,
         );
         return;
       }
-      if (e.key === 'ArrowUp') {
+      if (e.key === "ArrowUp") {
         e.preventDefault();
         setSelectedCommandIndex((prev) =>
           prev > 0 ? prev - 1 : filteredCommands.length - 1,
         );
         return;
       }
-      if (e.key === 'Tab' || e.key === 'Enter') {
+      if (e.key === "Tab" || e.key === "Enter") {
         e.preventDefault();
         if (selectedCommandIndex >= 0) {
           selectCommand(filteredCommands[selectedCommandIndex]);
@@ -2288,7 +2437,7 @@ function ChatInterface({
         }
         return;
       }
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         e.preventDefault();
         setShowCommandMenu(false);
         return;
@@ -2297,30 +2446,30 @@ function ChatInterface({
 
     // Handle file dropdown navigation
     if (showFileDropdown && filteredFiles.length > 0) {
-      if (e.key === 'ArrowDown') {
+      if (e.key === "ArrowDown") {
         e.preventDefault();
         setSelectedFileIndex((prev) =>
           prev < filteredFiles.length - 1 ? prev + 1 : 0,
         );
         return;
       }
-      if (e.key === 'ArrowUp') {
+      if (e.key === "ArrowUp") {
         e.preventDefault();
         setSelectedFileIndex((prev) =>
           prev > 0 ? prev - 1 : filteredFiles.length - 1,
         );
         return;
       }
-      if (e.key === 'Tab' || e.key === 'Enter') {
+      if (e.key === "Tab" || e.key === "Enter") {
         e.preventDefault();
-        if (selectedFileIndex >= 0) {
+        if (selectedFileIndex >= 0 && filteredFiles[selectedFileIndex]) {
           selectFile(filteredFiles[selectedFileIndex]);
-        } else if (filteredFiles.length > 0) {
+        } else if (filteredFiles.length > 0 && filteredFiles[0]) {
           selectFile(filteredFiles[0]);
         }
         return;
       }
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         e.preventDefault();
         setShowFileDropdown(false);
         return;
@@ -2328,7 +2477,7 @@ function ChatInterface({
     }
 
     // Handle Enter key: Ctrl+Enter (Cmd+Enter on Mac) sends, Shift+Enter creates new line
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
         // Ctrl+Enter or Cmd+Enter: Send message
         e.preventDefault();
@@ -2342,14 +2491,14 @@ function ChatInterface({
     }
   };
 
-  const selectCommand = (command) => {
+  const selectCommand = (command: any) => {
     const textBeforeSlash = input.slice(0, slashPosition);
     const textAfterSlashQuery = input.slice(slashPosition);
-    const spaceIndex = textAfterSlashQuery.indexOf(' ');
+    const spaceIndex = textAfterSlashQuery.indexOf(" ");
     const textAfterQuery =
-      spaceIndex !== -1 ? textAfterSlashQuery.slice(spaceIndex) : '';
+      spaceIndex !== -1 ? textAfterSlashQuery.slice(spaceIndex) : "";
 
-    const newInput = textBeforeSlash + command.command + ' ' + textAfterQuery;
+    const newInput = textBeforeSlash + command.command + " " + textAfterQuery;
     setInput(newInput);
     setShowCommandMenu(false);
     setSlashPosition(-1);
@@ -2359,20 +2508,24 @@ function ChatInterface({
       textareaRef.current.focus();
       const newCursorPos = textBeforeSlash.length + command.command.length + 1;
       setTimeout(() => {
-        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
         setCursorPosition(newCursorPos);
       }, 0);
     }
   };
 
-  const selectFile = (file) => {
+  const selectFile = (file: {
+    name: string;
+    path: string;
+    relativePath: string;
+  }) => {
     const textBeforeAt = input.slice(0, atSymbolPosition);
     const textAfterAtQuery = input.slice(atSymbolPosition);
-    const spaceIndex = textAfterAtQuery.indexOf(' ');
+    const spaceIndex = textAfterAtQuery.indexOf(" ");
     const textAfterQuery =
-      spaceIndex !== -1 ? textAfterAtQuery.slice(spaceIndex) : '';
+      spaceIndex !== -1 ? textAfterAtQuery.slice(spaceIndex) : "";
 
-    const newInput = textBeforeAt + '@' + file.path + textAfterQuery;
+    const newInput = textBeforeAt + "@" + file.path + textAfterQuery;
     setInput(newInput);
     setShowFileDropdown(false);
     setAtSymbolPosition(-1);
@@ -2382,24 +2535,24 @@ function ChatInterface({
       textareaRef.current.focus();
       const newCursorPos = textBeforeAt.length + 1 + file.path.length;
       setTimeout(() => {
-        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
         setCursorPosition(newCursorPos);
       }, 0);
     }
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
-    setCursorPosition(e.target.selectionStart);
+    setCursorPosition((e.target as HTMLTextAreaElement).selectionStart);
   };
 
-  const handleTextareaClick = (e) => {
-    setCursorPosition(e.target.selectionStart);
+  const handleTextareaClick = (e: React.MouseEvent<HTMLTextAreaElement>) => {
+    setCursorPosition((e.target as HTMLTextAreaElement).selectionStart);
   };
 
   const handleNewSession = () => {
     setChatMessages([]);
-    setInput('');
+    setInput("");
     setIsLoading(false);
     setCanAbortSession(false);
   };
@@ -2407,7 +2560,7 @@ function ChatInterface({
   const handleAbortSession = () => {
     if (currentSessionId && canAbortSession) {
       sendMessage({
-        type: 'abort-session',
+        type: "abort-session",
         sessionId: currentSessionId,
       });
     }
@@ -2470,8 +2623,8 @@ function ChatInterface({
               )}
 
               {visibleMessages.map((message, index) => {
-                const prevMessage =
-                  index > 0 ? visibleMessages[index - 1] : null;
+                const prevMessage: ChatMessage | null =
+                  index > 0 ? visibleMessages[index - 1] || null : null;
 
                 return (
                   <MessageComponent
@@ -2521,19 +2674,19 @@ function ChatInterface({
         {/* Input Area - Fixed Bottom */}
         <div
           className={`p-2 sm:p-4 md:p-6 flex-shrink-0 ${
-            isInputFocused ? 'pb-2 sm:pb-4 md:pb-6' : 'pb-16 sm:pb-4 md:pb-6'
+            isInputFocused ? "pb-2 sm:pb-4 md:pb-6" : "pb-16 sm:pb-4 md:pb-6"
           }`}
         >
           {/* Claude Working Status - positioned above the input form */}
           <ClaudeStatus
-            status={claudeStatus}
+            {...(claudeStatus && { status: claudeStatus })}
             isLoading={isLoading}
             onAbort={handleAbortSession}
           />
 
           <form onSubmit={handleSubmit} className="relative max-w-4xl mx-auto">
             <div
-              className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-600 focus-within:ring-2 focus-within:ring-blue-500 dark:focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200 ${isTextareaExpanded ? 'chat-input-expanded' : ''}`}
+              className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-600 focus-within:ring-2 focus-within:ring-blue-500 dark:focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200 ${isTextareaExpanded ? "chat-input-expanded" : ""}`}
             >
               <textarea
                 ref={textareaRef}
@@ -2546,22 +2699,23 @@ function ChatInterface({
                 data-testid="chat-input"
                 onInput={(e) => {
                   // Immediate resize on input for better UX
-                  e.target.style.height = 'auto';
-                  e.target.style.height = e.target.scrollHeight + 'px';
-                  setCursorPosition(e.target.selectionStart);
+                  const target = e.target as HTMLTextAreaElement;
+                  target.style.height = "auto";
+                  target.style.height = target.scrollHeight + "px";
+                  setCursorPosition(target.selectionStart);
 
                   // Check if textarea is expanded (more than 2 lines worth of height)
                   const lineHeight = parseInt(
-                    window.getComputedStyle(e.target).lineHeight,
+                    window.getComputedStyle(target).lineHeight,
                   );
-                  const isExpanded = e.target.scrollHeight > lineHeight * 2;
+                  const isExpanded = target.scrollHeight > lineHeight * 2;
                   setIsTextareaExpanded(isExpanded);
                 }}
                 placeholder="Ask Claude to help with your code... (@ to reference files)"
                 disabled={isLoading}
                 rows={1}
                 className="chat-input-placeholder w-full px-4 sm:px-6 py-3 sm:py-4 pr-28 sm:pr-40 bg-transparent rounded-2xl focus:outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 disabled:opacity-50 resize-none min-h-[40px] sm:min-h-[56px] max-h-[40vh] sm:max-h-[300px] overflow-y-auto text-sm sm:text-base transition-all duration-200"
-                style={{height: 'auto'}}
+                style={{ height: "auto" }}
               />
               {/* Clear button - shown when there's text */}
               {input.trim() && (
@@ -2570,9 +2724,9 @@ function ChatInterface({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    setInput('');
+                    setInput("");
                     if (textareaRef.current) {
-                      textareaRef.current.style.height = 'auto';
+                      textareaRef.current.style.height = "auto";
                       textareaRef.current.focus();
                     }
                     setIsTextareaExpanded(false);
@@ -2581,9 +2735,9 @@ function ChatInterface({
                   onTouchEnd={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    setInput('');
+                    setInput("");
                     if (textareaRef.current) {
-                      textareaRef.current.style.height = 'auto';
+                      textareaRef.current.style.height = "auto";
                       textareaRef.current.focus();
                     }
                     setIsTextareaExpanded(false);
@@ -2651,9 +2805,8 @@ function ChatInterface({
                     selectedIndex={selectedCommandIndex}
                     onSelectCommand={selectCommand}
                     position={{
-                      bottom: 'auto',
-                      left: 0,
-                      right: 0,
+                      x: 0,
+                      y: 0,
                     }}
                   />
                 </div>
@@ -2661,14 +2814,17 @@ function ChatInterface({
 
               {/* File dropdown */}
               {showFileDropdown && filteredFiles.length > 0 && (
-                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50" data-testid="file-dropdown">
+                <div
+                  className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50"
+                  data-testid="file-dropdown"
+                >
                   {filteredFiles.map((file, index) => (
                     <div
                       key={file.path}
                       className={`px-4 py-2 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0 ${
                         index === selectedFileIndex
-                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                          ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                          : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                       }`}
                       onClick={() => selectFile(file)}
                     >
@@ -2688,7 +2844,7 @@ function ChatInterface({
             </div>
             <div
               className={`text-xs text-gray-500 dark:text-gray-400 text-center mt-2 sm:hidden transition-opacity duration-200 ${
-                isInputFocused ? 'opacity-100' : 'opacity-0'
+                isInputFocused ? "opacity-100" : "opacity-0"
               }`}
             >
               Enter to send • @ for files • / for commands

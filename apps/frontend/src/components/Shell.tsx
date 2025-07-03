@@ -1,23 +1,30 @@
-import React, {useEffect, useRef, useState} from 'react';
-import {Terminal} from 'xterm';
-import {FitAddon} from 'xterm-addon-fit';
-import {ClipboardAddon} from '@xterm/addon-clipboard';
-import {WebglAddon} from '@xterm/addon-webgl';
-import 'xterm/css/xterm.css';
+import React, { useEffect, useRef, useState } from "react";
+import { Terminal } from "xterm";
+import { FitAddon } from "xterm-addon-fit";
+import { ClipboardAddon } from "@xterm/addon-clipboard";
+import { WebglAddon } from "@xterm/addon-webgl";
+import "xterm/css/xterm.css";
+import type { Project, Session } from "../App";
 
 // Global store for shell sessions to persist across tab switches
-const shellSessions = new Map();
+const shellSessions = new Map<string, any>();
 
-function Shell({selectedProject, selectedSession, isActive}) {
-  const terminalRef = useRef(null);
-  const terminal = useRef(null);
-  const fitAddon = useRef(null);
-  const ws = useRef(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isRestarting, setIsRestarting] = useState(false);
-  const [lastSessionId, setLastSessionId] = useState(null);
-  const [isConnecting, setIsConnecting] = useState(false);
+export interface ShellProps {
+  selectedProject: Project | null;
+  selectedSession: Session | null;
+  isActive: boolean;
+}
+
+function Shell({ selectedProject, selectedSession, isActive }: ShellProps) {
+  const terminalRef = useRef<HTMLDivElement | null>(null);
+  const terminal = useRef<Terminal | null>(null);
+  const fitAddon = useRef<FitAddon | null>(null);
+  const ws = useRef<WebSocket | null>(null);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [isRestarting, setIsRestarting] = useState<boolean>(false);
+  const [lastSessionId, setLastSessionId] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState<boolean>(false);
 
   // Connect to shell function
   const connectToShell = () => {
@@ -39,7 +46,7 @@ function Shell({selectedProject, selectedSession, isActive}) {
     // Clear terminal content completely
     if (terminal.current) {
       terminal.current.clear();
-      terminal.current.write('\x1b[2J\x1b[H'); // Clear screen and move cursor to home
+      terminal.current.write("\x1b[2J\x1b[H"); // Clear screen and move cursor to home
     }
 
     setIsConnected(false);
@@ -51,6 +58,7 @@ function Shell({selectedProject, selectedSession, isActive}) {
     setIsRestarting(true);
 
     // Clear ALL session storage for this project to force fresh start
+    if (!selectedProject) return;
     const sessionKeys = Array.from(shellSessions.keys()).filter((key) =>
       key.includes(selectedProject.name),
     );
@@ -94,12 +102,14 @@ function Shell({selectedProject, selectedSession, isActive}) {
       disconnectFromShell();
 
       // Clear stored sessions for this project
-      const allKeys = Array.from(shellSessions.keys());
-      allKeys.forEach((key) => {
-        if (key.includes(selectedProject.name)) {
-          shellSessions.delete(key);
-        }
-      });
+      if (selectedProject) {
+        const allKeys = Array.from(shellSessions.keys());
+        allKeys.forEach((key) => {
+          if (key.includes(selectedProject.name)) {
+            shellSessions.delete(key);
+          }
+        });
+      }
     }
 
     setLastSessionId(currentSessionId);
@@ -125,13 +135,15 @@ function Shell({selectedProject, selectedSession, isActive}) {
         setIsConnected(existingSession.isConnected);
 
         // Reattach to DOM - dispose existing element first if needed
-        if (terminal.current.element && terminal.current.element.parentNode) {
+        if (terminal.current?.element?.parentNode) {
           terminal.current.element.parentNode.removeChild(
             terminal.current.element,
           );
         }
 
-        terminal.current.open(terminalRef.current);
+        if (terminalRef.current && terminal.current) {
+          terminal.current.open(terminalRef.current);
+        }
 
         setTimeout(() => {
           if (fitAddon.current) {
@@ -171,52 +183,52 @@ function Shell({selectedProject, selectedSession, isActive}) {
       // Enhanced theme with full 16-color ANSI support + true colors
       theme: {
         // Basic colors
-        background: '#1e1e1e',
-        foreground: '#d4d4d4',
-        cursor: '#ffffff',
-        cursorAccent: '#1e1e1e',
-        selection: '#264f78',
-        selectionForeground: '#ffffff',
+        background: "#1e1e1e",
+        foreground: "#d4d4d4",
+        cursor: "#ffffff",
+        cursorAccent: "#1e1e1e",
+        selectionBackground: "#264f78",
+        selectionForeground: "#ffffff",
 
         // Standard ANSI colors (0-7)
-        black: '#000000',
-        red: '#cd3131',
-        green: '#0dbc79',
-        yellow: '#e5e510',
-        blue: '#2472c8',
-        magenta: '#bc3fbc',
-        cyan: '#11a8cd',
-        white: '#e5e5e5',
+        black: "#000000",
+        red: "#cd3131",
+        green: "#0dbc79",
+        yellow: "#e5e510",
+        blue: "#2472c8",
+        magenta: "#bc3fbc",
+        cyan: "#11a8cd",
+        white: "#e5e5e5",
 
         // Bright ANSI colors (8-15)
-        brightBlack: '#666666',
-        brightRed: '#f14c4c',
-        brightGreen: '#23d18b',
-        brightYellow: '#f5f543',
-        brightBlue: '#3b8eea',
-        brightMagenta: '#d670d6',
-        brightCyan: '#29b8db',
-        brightWhite: '#ffffff',
+        brightBlack: "#666666",
+        brightRed: "#f14c4c",
+        brightGreen: "#23d18b",
+        brightYellow: "#f5f543",
+        brightBlue: "#3b8eea",
+        brightMagenta: "#d670d6",
+        brightCyan: "#29b8db",
+        brightWhite: "#ffffff",
 
         // Extended colors for better Claude output
         extendedAnsi: [
           // 16-color palette extension for 256-color support
-          '#000000',
-          '#800000',
-          '#008000',
-          '#808000',
-          '#000080',
-          '#800080',
-          '#008080',
-          '#c0c0c0',
-          '#808080',
-          '#ff0000',
-          '#00ff00',
-          '#ffff00',
-          '#0000ff',
-          '#ff00ff',
-          '#00ffff',
-          '#ffffff',
+          "#000000",
+          "#800000",
+          "#008000",
+          "#808000",
+          "#000080",
+          "#800080",
+          "#008080",
+          "#c0c0c0",
+          "#808080",
+          "#ff0000",
+          "#00ff00",
+          "#ffff00",
+          "#0000ff",
+          "#ff00ff",
+          "#00ffff",
+          "#ffffff",
         ],
       },
     });
@@ -239,22 +251,22 @@ function Shell({selectedProject, selectedSession, isActive}) {
       // Ctrl+C or Cmd+C for copy (when text is selected)
       if (
         (event.ctrlKey || event.metaKey) &&
-        event.key === 'c' &&
-        terminal.current.hasSelection()
+        event.key === "c" &&
+        terminal.current?.hasSelection()
       ) {
-        document.execCommand('copy');
+        document.execCommand("copy");
         return false;
       }
 
       // Ctrl+V or Cmd+V for paste
-      if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
+      if ((event.ctrlKey || event.metaKey) && event.key === "v") {
         navigator.clipboard
           .readText()
           .then((text) => {
             if (ws.current && ws.current.readyState === WebSocket.OPEN) {
               ws.current.send(
                 JSON.stringify({
-                  type: 'input',
+                  type: "input",
                   data: text,
                 }),
               );
@@ -283,7 +295,7 @@ function Shell({selectedProject, selectedSession, isActive}) {
       if (ws.current && ws.current.readyState === WebSocket.OPEN) {
         ws.current.send(
           JSON.stringify({
-            type: 'input',
+            type: "input",
             data: data,
           }),
         );
@@ -294,7 +306,7 @@ function Shell({selectedProject, selectedSession, isActive}) {
     const resizeObserver = new ResizeObserver(() => {
       if (fitAddon.current && terminal.current) {
         setTimeout(() => {
-          fitAddon.current.fit();
+          fitAddon.current?.fit();
         }, 50);
       }
     });
@@ -343,27 +355,27 @@ function Shell({selectedProject, selectedSession, isActive}) {
       // Fetch server configuration to get the correct WebSocket URL
       let wsBaseUrl;
       try {
-        const configResponse = await fetch('/api/config');
+        const configResponse = await fetch("/api/config");
         const config = await configResponse.json();
         wsBaseUrl = config.wsUrl;
 
         // If the config returns localhost but we're not on localhost, use current host but with API server port
         if (
-          wsBaseUrl.includes('localhost') &&
-          !window.location.hostname.includes('localhost')
+          wsBaseUrl.includes("localhost") &&
+          !window.location.hostname.includes("localhost")
         ) {
           const protocol =
-            window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            window.location.protocol === "https:" ? "wss:" : "ws:";
           // For development, API server is typically on port 3002 when Vite is on 3001
           const apiPort =
-            window.location.port === '3001' ? '3002' : window.location.port;
+            window.location.port === "3001" ? "3002" : window.location.port;
           wsBaseUrl = `${protocol}//${window.location.hostname}:${apiPort}`;
         }
       } catch (error) {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         // For development, API server is typically on port 3002 when Vite is on 3001
         const apiPort =
-          window.location.port === '3001' ? '3002' : window.location.port;
+          window.location.port === "3001" ? "3002" : window.location.port;
         wsBaseUrl = `${protocol}//${window.location.hostname}:${apiPort}`;
       }
 
@@ -377,28 +389,28 @@ function Shell({selectedProject, selectedSession, isActive}) {
 
         // Send initial setup with project path and session info
         const initPayload = {
-          type: 'init',
-          projectPath: selectedProject.fullPath || selectedProject.path,
+          type: "init",
+          projectPath: selectedProject?.fullPath,
           sessionId: selectedSession?.id,
           hasSession: !!selectedSession,
         };
 
-        ws.current.send(JSON.stringify(initPayload));
+        ws.current?.send(JSON.stringify(initPayload));
       };
 
       ws.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (data.type === 'output') {
+          if (data.type === "output") {
             // Check for URLs in the output and make them clickable
             const urlRegex = /(https?:\/\/[^\s\x1b\x07]+)/g;
-            let output = data.data;
+            const output = data.data;
 
             // Find URLs in the text (excluding ANSI escape sequences)
             const urls = [];
             let match;
             while (
-              (match = urlRegex.exec(output.replace(/\x1b\[[0-9;]*m/g, ''))) !==
+              (match = urlRegex.exec(output.replace(/\x1b\[[0-9;]*m/g, ""))) !==
               null
             ) {
               urls.push(match[1]);
@@ -406,10 +418,10 @@ function Shell({selectedProject, selectedSession, isActive}) {
 
             // If URLs found, log them for potential opening
 
-            terminal.current.write(output);
-          } else if (data.type === 'url_open') {
+            terminal.current?.write(output);
+          } else if (data.type === "url_open") {
             // Handle explicit URL opening requests from server
-            window.open(data.url, '_blank');
+            window.open(data.url, "_blank");
           }
         } catch (error) {}
       };
@@ -421,7 +433,7 @@ function Shell({selectedProject, selectedSession, isActive}) {
         // Clear terminal content when connection closes
         if (terminal.current) {
           terminal.current.clear();
-          terminal.current.write('\x1b[2J\x1b[H'); // Clear screen and move cursor to home
+          terminal.current.write("\x1b[2J\x1b[H"); // Clear screen and move cursor to home
         }
 
         // Don't auto-reconnect anymore - user must manually connect
@@ -470,7 +482,7 @@ function Shell({selectedProject, selectedSession, isActive}) {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div
-              className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+              className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}
             />
             {selectedSession && (
               <span className="text-xs text-blue-300">
@@ -540,7 +552,11 @@ function Shell({selectedProject, selectedSession, isActive}) {
 
       {/* Terminal */}
       <div className="flex-1 p-2 overflow-hidden relative">
-        <div ref={terminalRef} className="h-full w-full" data-testid="terminal-container" />
+        <div
+          ref={terminalRef}
+          className="h-full w-full"
+          data-testid="terminal-container"
+        />
 
         {/* Loading state */}
         {!isInitialized && (
@@ -577,7 +593,7 @@ function Shell({selectedProject, selectedSession, isActive}) {
               <p className="text-gray-400 text-sm mt-3 px-2">
                 {selectedSession
                   ? `Resume session: ${selectedSession.summary.slice(0, 50)}...`
-                  : 'Start a new Claude session'}
+                  : "Start a new Claude session"}
               </p>
             </div>
           </div>

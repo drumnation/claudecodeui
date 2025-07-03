@@ -1,9 +1,29 @@
-import React from 'react';
-import {Button} from './ui/button';
-import {X} from 'lucide-react';
+import React from "react";
+import { Button } from "./ui/button";
+import { X } from "lucide-react";
 
-function ImageViewer({file, onClose}) {
+export interface FileInfo {
+  name: string;
+  path: string;
+  projectName: string;
+}
+
+export interface ImageViewerProps {
+  file: FileInfo;
+  onClose: () => void;
+}
+
+function ImageViewer({ file, onClose }: ImageViewerProps) {
   const imagePath = `/api/projects/${file.projectName}/files/content?path=${encodeURIComponent(file.path)}`;
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const target = e.target as HTMLImageElement;
+    const nextSibling = target.nextSibling as HTMLElement;
+    target.style.display = "none";
+    if (nextSibling) {
+      nextSibling.style.display = "block";
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -27,14 +47,11 @@ function ImageViewer({file, onClose}) {
             src={imagePath}
             alt={file.name}
             className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-md"
-            onError={(e) => {
-              e.target.style.display = 'none';
-              e.target.nextSibling.style.display = 'block';
-            }}
+            onError={handleImageError}
           />
           <div
             className="text-center text-gray-500 dark:text-gray-400"
-            style={{display: 'none'}}
+            style={{ display: "none" }}
           >
             <p>Unable to load image</p>
             <p className="text-sm mt-2">{file.path}</p>
@@ -51,4 +68,4 @@ function ImageViewer({file, onClose}) {
   );
 }
 
-export default ImageViewer;
+export { ImageViewer };
