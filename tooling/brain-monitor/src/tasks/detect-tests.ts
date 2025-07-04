@@ -12,6 +12,8 @@ const TEST_TYPES = [
   "test:storybook",
   "test:storybook:interaction",
   "test:storybook:e2e",
+  "test:storybook:snapshot",
+  "test:snapshot",
 ] as const;
 
 export type TestType = (typeof TEST_TYPES)[number];
@@ -105,6 +107,8 @@ export function getTestDisplayName(testType: TestType): string {
     "test:storybook": "Storybook Tests",
     "test:storybook:interaction": "Storybook Interaction Tests",
     "test:storybook:e2e": "Storybook E2E Tests",
+    "test:storybook:snapshot": "Storybook Snapshot Tests",
+    "test:snapshot": "Snapshot Tests",
   };
   return displayNames[testType] || testType;
 }
@@ -119,6 +123,8 @@ export function getTestFileName(testType: TestType): string {
     "test:storybook": "storybook",
     "test:storybook:interaction": "storybook-interaction",
     "test:storybook:e2e": "storybook-e2e",
+    "test:storybook:snapshot": "storybook-snapshot",
+    "test:snapshot": "snapshot",
   };
   return fileNames[testType] || testType.replace(/:/g, "-");
 }

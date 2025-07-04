@@ -33,6 +33,12 @@ export const configs = {
   storybook: {
     testRunner: () =>
       import('./configs/storybook/test-runner.js').then((m) => m.default),
+    interaction: () =>
+      import('./configs/storybook/interaction.js').then((m) => m.default),
+    e2e: () =>
+      import('./configs/storybook/e2e.js').then((m) => m.default),
+    snapshot: () =>
+      import('./configs/storybook/snapshot.js').then((m) => m.default),
   },
 };
 

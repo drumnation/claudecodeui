@@ -44,6 +44,43 @@
     "test:e2e:browser": { 
       "outputs": [] 
     },
+    "test:storybook": {
+      "dependsOn": ["build-storybook"],
+      "outputs": [],
+      "cache": true
+    },
+    "test:storybook:coverage": {
+      "dependsOn": ["build-storybook"],
+      "outputs": ["coverage-storybook/**"],
+      "cache": true
+    },
+    "test:storybook:watch": {
+      "cache": false,
+      "persistent": true
+    },
+    "test:storybook:interaction": {
+      "dependsOn": ["build-storybook"],
+      "outputs": [],
+      "cache": true
+    },
+    "test:storybook:e2e": {
+      "dependsOn": ["build-storybook"],
+      "outputs": [],
+      "cache": true
+    },
+    "test:storybook:snapshot": {
+      "dependsOn": ["build-storybook"],
+      "outputs": ["__snapshots__/**"],
+      "cache": true
+    },
+    "test:snapshot": {
+      "outputs": ["__snapshots__/**"],
+      "cache": true
+    },
+    "build-storybook": {
+      "outputs": ["storybook-static/**"],
+      "cache": true
+    },
     "test:coverage": {
       "outputs": ["coverage/**"],
       "cache": true

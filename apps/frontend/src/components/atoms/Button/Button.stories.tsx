@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { fn } from '@storybook/test';
+import { expect, userEvent, within } from '@storybook/test';
 import { Download, Plus, Save, X } from 'lucide-react';
 import { Button } from './Button';
 
@@ -134,4 +135,126 @@ export const Interactive: Story = {
       },
     },
   },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const button = canvas.getByRole('button', { name: 'Click me!' });
+    
+    // Test that button is rendered
+    await expect(button).toBeInTheDocument();
+    
+    // Test that button is enabled
+    await expect(button).toBeEnabled();
+    
+    // Test click interaction
+    await userEvent.click(button);
+    
+    // Verify onClick was called
+    await expect(args.onClick).toHaveBeenCalledTimes(1);
+  },
+  tags: ['interaction'],
+};
+
+export const DisabledInteraction: Story = {
+  args: {
+    children: 'Disabled Button',
+    disabled: true,
+    onClick: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const button = canvas.getByRole('button', { name: 'Disabled Button' });
+    
+    // Test that button is disabled
+    await expect(button).toBeDisabled();
+    
+    // Try to click disabled button
+    await userEvent.click(button);
+    
+    // Verify onClick was NOT called
+    await expect(args.onClick).not.toHaveBeenCalled();
+  },
+  tags: ['interaction'],
+};
+
+export const KeyboardInteraction: Story = {
+  args: {
+    children: 'Keyboard Test',
+    onClick: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const button = canvas.getByRole('button', { name: 'Keyboard Test' });
+    
+    // Focus the button
+    await button.focus();
+    
+    // Test that button is focused
+    await expect(button).toHaveFocus();
+    
+    // Press Enter key
+    await userEvent.keyboard('{Enter}');
+    
+    // Verify onClick was called
+    await expect(args.onClick).toHaveBeenCalledTimes(1);
+    
+    // Press Space key
+    await userEvent.keyboard(' ');
+    
+    // Verify onClick was called again
+    await expect(args.onClick).toHaveBeenCalledTimes(2);
+  },
+  tags: ['interaction', 'a11y'],
+};
+
+// Snapshot testing stories
+export const AllVariantsSnapshot: Story = {
+  render: () => (
+    <div className="grid grid-cols-3 gap-4 p-4">
+      <Button variant="default">Default</Button>
+      <Button variant="destructive">Destructive</Button>
+      <Button variant="outline">Outline</Button>
+      <Button variant="secondary">Secondary</Button>
+      <Button variant="ghost">Ghost</Button>
+      <Button variant="link">Link</Button>
+    </div>
+  ),
+  tags: ['snapshot', 'visual'],
+};
+
+export const AllSizesSnapshot: Story = {
+  render: () => (
+    <div className="flex items-center gap-4 p-4">
+      <Button size="sm">Small</Button>
+      <Button size="default">Default</Button>
+      <Button size="lg">Large</Button>
+      <Button size="icon">
+        <Plus className="h-4 w-4" />
+      </Button>
+    </div>
+  ),
+  tags: ['snapshot', 'visual'],
+};
+
+export const StatesSnapshot: Story = {
+  render: () => (
+    <div className="grid grid-cols-2 gap-4 p-4">
+      <div>
+        <h3 className="mb-2 text-sm font-medium">Normal</h3>
+        <div className="flex gap-2">
+          <Button>Default</Button>
+          <Button variant="outline">Outline</Button>
+          <Button variant="destructive">Destructive</Button>
+        </div>
+      </div>
+      <div>
+        <h3 className="mb-2 text-sm font-medium">Disabled</h3>
+        <div className="flex gap-2">
+          <Button disabled>Default</Button>
+          <Button variant="outline" disabled>Outline</Button>
+          <Button variant="destructive" disabled>Destructive</Button>
+        </div>
+      </div>
+    </div>
+  ),
+  tags: ['snapshot', 'visual'],
 };
