@@ -357,6 +357,15 @@ function Sidebar({
     return [...initialSessions, ...additional];
   };
 
+  const hasActiveSessions = (project) => {
+    const sessions = getAllSessions(project);
+    return sessions.some(session => {
+      const sessionDate = new Date(session.lastActivity);
+      const diffInMinutes = Math.floor((currentTime - sessionDate) / (1000 * 60));
+      return diffInMinutes < 10;
+    });
+  };
+
   return (
     <div className="h-full flex flex-col bg-card md:select-none">
       {/* Header */}
@@ -568,6 +577,7 @@ function Sidebar({
             projects.map((project) => {
               const isExpanded = expandedProjects.has(project.name);
               const isSelected = selectedProject?.name === project.name;
+              const hasActiveSession = hasActiveSessions(project);
               
               return (
                 <div key={project.name} className="md:space-y-1">
@@ -590,12 +600,18 @@ function Sidebar({
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             <div className={cn(
                               "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
-                              isExpanded ? "bg-primary/10" : "bg-muted"
+                              isExpanded ? "bg-primary/10" : hasActiveSession ? "bg-green-500/10" : "bg-muted"
                             )}>
                               {isExpanded ? (
-                                <FolderOpen className="w-4 h-4 text-primary" />
+                                <FolderOpen className={cn(
+                                  "w-4 h-4",
+                                  hasActiveSession ? "text-green-600 dark:text-green-500" : "text-primary"
+                                )} />
                               ) : (
-                                <Folder className="w-4 h-4 text-muted-foreground" />
+                                <Folder className={cn(
+                                  "w-4 h-4",
+                                  hasActiveSession ? "text-green-600 dark:text-green-500" : "text-muted-foreground"
+                                )} />
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
@@ -719,9 +735,15 @@ function Sidebar({
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         {isExpanded ? (
-                          <FolderOpen className="w-4 h-4 text-primary flex-shrink-0" />
+                          <FolderOpen className={cn(
+                            "w-4 h-4 flex-shrink-0",
+                            hasActiveSession ? "text-green-600 dark:text-green-500" : "text-primary"
+                          )} />
                         ) : (
-                          <Folder className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          <Folder className={cn(
+                            "w-4 h-4 flex-shrink-0",
+                            hasActiveSession ? "text-green-600 dark:text-green-500" : "text-muted-foreground"
+                          )} />
                         )}
                         <div className="min-w-0 flex-1 text-left">
                           {editingProject === project.name ? (
