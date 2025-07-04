@@ -52,3 +52,5 @@ temp/
 
 # Turbo
 .turbo/
+*storybook.log
+storybook-static
