@@ -378,7 +378,6 @@ function Sidebar({
             </div>
             <div>
               <h1 className="text-lg font-bold text-foreground">Claude Code UI</h1>
-              <p className="text-sm text-muted-foreground">AI coding assistant interface</p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -872,12 +871,6 @@ function Sidebar({
                           
                           return (
                           <div key={session.id} className="group relative">
-                            {/* Active session indicator dot */}
-                            {isActive && (
-                              <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1">
-                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                              </div>
-                            )}
                             {/* Mobile Session Item */}
                             <div className="md:hidden">
                               <div
@@ -922,11 +915,17 @@ function Sidebar({
                                       )}>
                                         {formatTimeAgo(session.lastActivity, currentTime)}
                                       </span>
-                                      {session.messageCount > 0 && (
-                                        <Badge variant="secondary" className="text-xs px-1 py-0 ml-auto">
-                                          {session.messageCount}
-                                        </Badge>
-                                      )}
+                                      <div className="flex items-center ml-auto">
+                                        {session.messageCount > 0 && (
+                                          <Badge variant="secondary" className="text-xs px-1 py-0">
+                                            {session.messageCount}
+                                          </Badge>
+                                        )}
+                                        {/* Active session indicator dot */}
+                                        {isActive && (
+                                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse ml-1" />
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                   {/* Mobile action buttons */}
@@ -1061,11 +1060,17 @@ function Sidebar({
                                       )}>
                                         {formatTimeAgo(session.lastActivity, currentTime)}
                                       </span>
-                                      {session.messageCount > 0 && (
-                                        <Badge variant="secondary" className="text-xs px-1 py-0 ml-auto">
-                                          {session.messageCount}
-                                        </Badge>
-                                      )}
+                                      <div className="flex items-center ml-auto">
+                                        {session.messageCount > 0 && (
+                                          <Badge variant="secondary" className="text-xs px-1 py-0">
+                                            {session.messageCount}
+                                          </Badge>
+                                        )}
+                                        {/* Active session indicator dot */}
+                                        {isActive && (
+                                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse ml-1" />
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
