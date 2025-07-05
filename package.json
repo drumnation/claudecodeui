@@ -93,5 +93,10 @@
     "vite": "^5.0.8",
     "vite-plugin-babel-macros": "^1.0.6",
     "vitest": "^3.2.4"
+  },
+  "babelMacros": {
+    "twin": {
+      "preset": "emotion"
+    }
   }
 }

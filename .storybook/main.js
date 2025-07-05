@@ -15,6 +15,17 @@ const config = {
   "framework": {
     "name": "@storybook/react-vite",
     "options": {}
+  },
+  async viteFinal(config) {
+    // Ensure Storybook uses the same Vite plugins as the main app
+    const { default: macrosPlugin } = await import('vite-plugin-babel-macros');
+    
+    // Add babel macros plugin if not already present
+    if (!config.plugins.find(plugin => plugin.name === 'vite-plugin-babel-macros')) {
+      config.plugins.push(macrosPlugin());
+    }
+    
+    return config;
   }
 };
 export default config;
