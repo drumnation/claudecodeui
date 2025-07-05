@@ -1,8 +1,32 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+/// <reference types="vitest/config" />
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
+import { consoleForwardPlugin } from 'vite-console-forward-plugin';
+const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
+// More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      babel: {
+        plugins: [
+          [
+            '@emotion/babel-plugin',
+            {
+              sourceMap: true,
+              autoLabel: 'dev-only',
+              labelFormat: '[local]',
+              cssPropOptimization: true
+            }
+          ]
+        ]
+      }
+    }),
+    consoleForwardPlugin()
+  ],
   server: {
     port: process.env.VITE_PORT || 8766,
     strictPort: true,
@@ -23,13 +47,7 @@ export default defineConfig({
       usePolling: true,
       interval: 100
     },
-    allowedHosts: [
-      'localhost',
-      '.ngrok.app',
-      '.ngrok-free.app',
-      '.ngrok.io',
-      'claude-code.ngrok.io'
-    ],
+    allowedHosts: ['localhost', '.ngrok.app', '.ngrok-free.app', '.ngrok.io', 'claude-code.ngrok.io'],
     proxy: {
       '/api': `http://localhost:${process.env.VITE_API_PORT || 8765}`,
       '/ws': {
@@ -46,5 +64,28 @@ export default defineConfig({
   // Ensure we're not caching aggressively
   optimizeDeps: {
     force: true
+  },
+  test: {
+    projects: [{
+      extends: true,
+      plugins: [
+      // The plugin will run tests for the stories defined in your Storybook config
+      // See options at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon#storybooktest
+      storybookTest({
+        configDir: path.join(dirname, '.storybook')
+      })],
+      test: {
+        name: 'storybook',
+        browser: {
+          enabled: true,
+          headless: true,
+          provider: 'playwright',
+          instances: [{
+            browser: 'chromium'
+          }]
+        },
+        setupFiles: ['.storybook/vitest.setup.js']
+      }
+    }]
   }
-})
+});
