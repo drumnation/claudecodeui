@@ -12,6 +12,11 @@ export default defineConfig(async () => {
   const { consoleForwardPlugin } = await import('vite-console-forward-plugin');
   
   return {
+  resolve: {
+    alias: {
+      '@': path.resolve(dirname, './src')
+    }
+  },
   plugins: [
     react({
       babel: {
