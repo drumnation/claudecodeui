@@ -16,12 +16,13 @@ async function getSlashCommands() {
     let output = '';
     let captureMode = false;
     
-    // Start Claude in interactive mode
-    const claudeProcess = pty.spawn('claude', [], {
-      name: 'xterm-color',
-      cwd: process.env.HOME,
-      env: process.env,
-    });
+    try {
+      // Start Claude in interactive mode
+      const claudeProcess = pty.spawn('claude', [], {
+        name: 'xterm-color',
+        cwd: process.env.HOME,
+        env: process.env,
+      });
 
     // Set a timeout
     const timeout = setTimeout(() => {
@@ -83,6 +84,11 @@ async function getSlashCommands() {
         resolve(getDefaultCommands());
       }
     });
+    } catch (error) {
+      console.error('Error spawning claude process:', error);
+      // Return default commands if claude CLI is not available
+      resolve(getDefaultCommands());
+    }
   });
 }
 

@@ -58,7 +58,8 @@ export const ProjectsSection = styled.div`
 `;
 
 export const ProjectsList = styled.div`
-  ${tw`md:space-y-3 pb-safe-area-inset-bottom min-h-full flex flex-col`}
+  ${tw`md:space-y-3 min-h-full flex flex-col`}
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 140px);
 `;
 
 export const LoadingState = styled.div`
@@ -102,7 +103,9 @@ export const SettingsSection = styled.div`
 `;
 
 export const MobileSettings = styled.div`
-  ${tw`md:hidden p-4 pb-20 border-t border-border/50`}
+  ${tw`md:hidden fixed bottom-0 left-0 right-0 p-4 bg-card/95 backdrop-blur-sm border-t border-border/50`}
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 60px);
+  z-index: 40;
 `;
 
 export const MobileSettingsButton = styled.button`

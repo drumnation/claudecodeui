@@ -103,7 +103,7 @@ const AssistantMessage = memo(({
     if (content.includes('Do you want to proceed?') && message.toolName === 'Bash') {
       const promptData = logic.parseInteractivePrompt(content);
       return (
-        <S.ToolResultContainer>
+        <S.ToolResultContainer className={message.toolName === 'Bash' ? 'bash-result' : ''}>
           <S.ToolResultHeader>
             <S.ToolResultIcon isError={isError}>
               <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -179,7 +179,7 @@ const AssistantMessage = memo(({
     const fileEditPath = logic.extractFileEditInfo(content);
     if (fileEditPath) {
       return (
-        <S.ToolResultContainer>
+        <S.ToolResultContainer className={message.toolName === 'Bash' ? 'bash-result' : ''}>
           <S.ToolResultHeader>
             <S.ToolResultIcon isError={false}>
               <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -205,7 +205,7 @@ const AssistantMessage = memo(({
     const fileCreatePath = logic.extractFileCreateInfo(content);
     if (fileCreatePath) {
       return (
-        <S.ToolResultContainer>
+        <S.ToolResultContainer className={message.toolName === 'Bash' ? 'bash-result' : ''}>
           <S.ToolResultHeader>
             <S.ToolResultIcon isError={false}>
               <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -231,7 +231,7 @@ const AssistantMessage = memo(({
     // Special handling for Write tool - hide content if it's just the file content
     if (message.toolName === 'Write' && !isError) {
       return (
-        <S.ToolResultContainer>
+        <S.ToolResultContainer className={message.toolName === 'Bash' ? 'bash-result' : ''}>
           <S.ToolResultHeader>
             <S.ToolResultIcon isError={false}>
               <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -258,7 +258,7 @@ const AssistantMessage = memo(({
     // Handle file content display
     if (content.includes('cat -n') && content.includes('→')) {
       return (
-        <S.ToolResultContainer>
+        <S.ToolResultContainer className={message.toolName === 'Bash' ? 'bash-result' : ''}>
           <S.ToolResultHeader>
             <S.ToolResultIcon isError={isError}>
               <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -293,7 +293,7 @@ const AssistantMessage = memo(({
     // Handle long output
     if (content.length > 300) {
       return (
-        <S.ToolResultContainer>
+        <S.ToolResultContainer className={message.toolName === 'Bash' ? 'bash-result' : ''}>
           <S.ToolResultHeader>
             <S.ToolResultIcon isError={isError}>
               <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

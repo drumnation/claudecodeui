@@ -46,7 +46,8 @@ export const TerminalContainer = styled.div`
 `;
 
 export const Terminal = styled.div`
-  background-color: #1e293b;
+  background-color: #000000;
+  border: 1px solid #00ff00;
   border-radius: 8px;
   overflow: hidden;
   margin-bottom: 8px;
@@ -57,28 +58,29 @@ export const TerminalHeader = styled.div`
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background-color: #0f172a;
-  border-bottom: 1px solid #334155;
+  background-color: #000000;
+  border-bottom: 1px solid #00ff00;
 `;
 
 export const TerminalIcon = styled.svg`
   width: 16px;
   height: 16px;
-  color: #94a3b8;
+  color: #00ff00;
 `;
 
 export const TerminalLabel = styled.span`
   font-size: 12px;
-  color: #94a3b8;
+  color: #00ff00;
   font-weight: 500;
 `;
 
 export const TerminalCommand = styled.div`
   padding: 12px;
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
   font-size: 13px;
   line-height: 1.5;
-  color: #e2e8f0;
+  color: #00ff00;
+  background-color: #000000;
 `;
 
 export const CommandDescription = styled.div`

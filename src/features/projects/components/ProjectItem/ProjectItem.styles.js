@@ -40,8 +40,8 @@ export const ProjectName = styled.h3`
   ${tw`text-sm font-medium text-foreground truncate`}
 `;
 
-export const ProjectMeta = styled.p`
-  ${tw`text-xs text-muted-foreground`}
+export const ProjectMeta = styled.div`
+  ${tw`flex items-center gap-2 text-xs text-muted-foreground`}
 `;
 
 export const ProjectActions = styled.div`

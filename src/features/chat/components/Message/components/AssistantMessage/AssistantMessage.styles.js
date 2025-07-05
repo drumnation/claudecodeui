@@ -66,25 +66,51 @@ export const ChevronIcon = styled.svg`
 // Tool Result Styles
 export const ToolResultContainer = styled.div`
   ${tw`mt-3 border-t border-blue-200 dark:border-blue-700 pt-3`}
+  
+  /* Terminal styling for bash results */
+  &.bash-result {
+    background-color: #000000;
+    border: 1px solid #00ff00;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 12px;
+    border-top: 1px solid #00ff00;
+    font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
+  }
 `;
 
 export const ToolResultHeader = styled.div`
   ${tw`flex items-center gap-2 mb-2`}
+  
+  .bash-result & {
+    color: #00ff00;
+  }
 `;
 
 export const ToolResultIcon = styled.div(({ isError }) => [
   tw`w-4 h-4 rounded flex items-center justify-center`,
-  isError ? tw`bg-red-500` : tw`bg-green-500`
+  isError ? tw`bg-red-500` : tw`bg-green-500`,
+  `.bash-result & {
+    background-color: ${isError ? '#ff0000' : '#00ff00'} !important;
+  }`
 ]);
 
 export const ToolResultLabel = styled.span(({ isError }) => [
   tw`text-sm font-medium`,
-  isError ? tw`text-red-700 dark:text-red-300` : tw`text-green-700 dark:text-green-300`
+  isError ? tw`text-red-700 dark:text-red-300` : tw`text-green-700 dark:text-green-300`,
+  `.bash-result & {
+    color: #00ff00 !important;
+  }`
 ]);
 
 export const ToolResultContent = styled.div(({ isError }) => [
   tw`text-sm`,
-  isError ? tw`text-red-800 dark:text-red-200` : tw`text-green-800 dark:text-green-200`
+  isError ? tw`text-red-800 dark:text-red-200` : tw`text-green-800 dark:text-green-200`,
+  `.bash-result & {
+    color: #00ff00 !important;
+    font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
+    background-color: transparent;
+  }`
 ]);
 
 export const SuccessMessage = styled.div`
@@ -222,8 +248,16 @@ export const AssistantProseContent = styled.div`
   }
 `;
 
-export const InlineCode = styled.strong`
-  ${tw`text-blue-600 dark:text-blue-400 font-bold`}
+export const InlineCode = styled.code`
+  background-color: #000000 !important;
+  color: #00ff00 !important;
+  padding: 2px 4px !important;
+  border-radius: 3px !important;
+  font-family: 'Courier New', 'Consolas', 'Monaco', monospace !important;
+  font-size: 0.9em !important;
+  border: 1px solid #00ff00 !important;
+  font-weight: normal !important;
+  display: inline !important;
 `;
 
 export const CodeBlockWrapper = styled.div`

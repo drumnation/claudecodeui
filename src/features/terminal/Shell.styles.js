@@ -2,11 +2,17 @@ import styled from '@emotion/styled';
 import tw from 'twin.macro';
 
 export const ShellContainer = styled.div`
-  ${tw`h-full flex flex-col bg-gray-900`}
+  ${tw`h-full flex flex-col`}
+  background-color: #000000;
+  color: #00ff00;
+  font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
 `;
 
 export const ShellHeader = styled.div`
-  ${tw`flex-shrink-0 bg-gray-800 border-b border-gray-700 px-4 py-2`}
+  ${tw`flex-shrink-0 px-4 py-2`}
+  background-color: #000000;
+  border-bottom: 1px solid #00ff00;
+  color: #00ff00;
 `;
 
 export const HeaderContent = styled.div`
@@ -19,29 +25,31 @@ export const StatusGroup = styled.div`
 
 export const StatusIndicator = styled.div`
   ${tw`w-2 h-2 rounded-full`}
-  ${({ isConnected }) => isConnected ? tw`bg-green-500` : tw`bg-red-500`}
+  background-color: ${({ isConnected }) => isConnected ? '#00ff00' : '#ff0000'};
 `;
 
 export const SessionInfo = styled.span`
-  ${tw`text-xs text-blue-300`}
+  ${tw`text-xs`}
+  color: #00ff00;
 `;
 
 export const SessionLabel = styled.span`
-  ${tw`text-xs text-gray-400`}
+  ${tw`text-xs`}
+  color: #00aa00;
 `;
 
 export const StatusMessage = styled.span`
   ${tw`text-xs`}
-  ${({ type }) => {
+  color: ${({ type }) => {
     switch (type) {
       case 'initializing':
-        return tw`text-yellow-400`;
+        return '#ffff00';
       case 'restarting':
-        return tw`text-blue-400`;
+        return '#00ffff';
       default:
-        return tw`text-gray-400`;
+        return '#00aa00';
     }
-  }}
+  }};
 `;
 
 export const ControlGroup = styled.div`
@@ -62,6 +70,8 @@ export const IconSvg = styled.svg`
 
 export const TerminalWrapper = styled.div`
   ${tw`flex-1 p-2 overflow-hidden relative`}
+  background-color: #000000;
+  color: #00ff00;
 `;
 
 export const TerminalContainer = styled.div`
@@ -69,12 +79,14 @@ export const TerminalContainer = styled.div`
 `;
 
 export const OverlayContainer = styled.div`
-  ${tw`absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-90`}
+  ${tw`absolute inset-0 flex items-center justify-center`}
+  background-color: rgba(0, 0, 0, 0.95);
+  color: #00ff00;
   ${({ withPadding }) => withPadding && tw`p-4`}
 `;
 
 export const LoadingText = styled.div`
-  ${tw`text-white`}
+  color: #00ff00;
 `;
 
 export const ConnectContainer = styled.div`

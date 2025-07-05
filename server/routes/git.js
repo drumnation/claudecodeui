@@ -8,10 +8,59 @@ const router = express.Router();
 const execAsync = promisify(exec);
 
 // Helper function to get the actual project path from the encoded project name
-function getActualProjectPath(projectName) {
+async function getActualProjectPath(projectName) {
+  const { getProjects } = require('../projects');
+  
+  // Get all projects to find the actual path
+  const projects = await getProjects();
+  const project = projects.find(p => p.name === projectName);
+  
+  if (project && project.fullPath) {
+    // Check if the path exists, if not try case variations
+    try {
+      await require('fs').promises.access(project.fullPath);
+      return project.fullPath;
+    } catch {
+      // Try case variations
+      const variations = [
+        project.fullPath,
+        project.fullPath.replace('/Dev/', '/dev/'),
+        project.fullPath.replace('/dev/', '/Dev/')
+      ];
+      
+      for (const variation of variations) {
+        try {
+          await require('fs').promises.access(variation);
+          return variation;
+        } catch {
+          // Continue to next variation
+        }
+      }
+    }
+  }
+  
+  // Fallback to simple conversion if project not found
   // Claude stores projects with dashes instead of slashes
   // Convert "-Users-dmieloch-Dev-experiments-claudecodeui" to "/Users/dmieloch/Dev/experiments/claudecodeui"
-  return projectName.replace(/-/g, '/');
+  const simplePath = projectName.replace(/-/g, '/');
+  
+  // Try case variations for the simple path too
+  const variations = [
+    simplePath,
+    simplePath.replace('/Dev/', '/dev/'),
+    simplePath.replace('/dev/', '/Dev/')
+  ];
+  
+  for (const variation of variations) {
+    try {
+      await require('fs').promises.access(variation);
+      return variation;
+    } catch {
+      // Continue to next variation
+    }
+  }
+  
+  return simplePath; // Return the original if nothing works
 }
 
 // Get git status for a project
@@ -23,8 +72,10 @@ router.get('/status', async (req, res) => {
   }
 
   try {
-    const projectPath = getActualProjectPath(project);
-    console.log('Git status for project:', project, '-> path:', projectPath);
+    const projectPath = await getActualProjectPath(project);
+    console.log('🔍 Git status request for project:', project);
+    console.log('📁 Resolved to path:', projectPath);
+    console.log('📂 Current working directory:', process.cwd());
     
     // Check if directory exists
     try {
@@ -92,7 +143,7 @@ router.get('/diff', async (req, res) => {
   }
 
   try {
-    const projectPath = getActualProjectPath(project);
+    const projectPath = await getActualProjectPath(project);
     
     // Check if file is untracked
     const { stdout: statusOutput } = await execAsync(`git status --porcelain "${file}"`, { cwd: projectPath });
@@ -133,7 +184,7 @@ router.post('/commit', async (req, res) => {
   }
 
   try {
-    const projectPath = getActualProjectPath(project);
+    const projectPath = await getActualProjectPath(project);
     
     // Stage selected files
     for (const file of files) {
@@ -159,7 +210,7 @@ router.get('/branches', async (req, res) => {
   }
 
   try {
-    const projectPath = getActualProjectPath(project);
+    const projectPath = await getActualProjectPath(project);
     console.log('Git branches for project:', project, '-> path:', projectPath);
     
     // Get all branches
@@ -199,7 +250,7 @@ router.post('/checkout', async (req, res) => {
   }
 
   try {
-    const projectPath = getActualProjectPath(project);
+    const projectPath = await getActualProjectPath(project);
     
     // Checkout the branch
     const { stdout } = await execAsync(`git checkout "${branch}"`, { cwd: projectPath });
@@ -220,7 +271,7 @@ router.post('/create-branch', async (req, res) => {
   }
 
   try {
-    const projectPath = getActualProjectPath(project);
+    const projectPath = await getActualProjectPath(project);
     
     // Create and checkout new branch
     const { stdout } = await execAsync(`git checkout -b "${branch}"`, { cwd: projectPath });
@@ -241,7 +292,7 @@ router.get('/commits', async (req, res) => {
   }
 
   try {
-    const projectPath = getActualProjectPath(project);
+    const projectPath = await getActualProjectPath(project);
     
     // Get commit log with stats
     const { stdout } = await execAsync(
@@ -292,7 +343,7 @@ router.get('/commit-diff', async (req, res) => {
   }
 
   try {
-    const projectPath = getActualProjectPath(project);
+    const projectPath = await getActualProjectPath(project);
     
     // Get diff for the commit
     const { stdout } = await execAsync(
@@ -316,7 +367,7 @@ router.post('/generate-commit-message', async (req, res) => {
   }
 
   try {
-    const projectPath = getActualProjectPath(project);
+    const projectPath = await getActualProjectPath(project);
     
     // Get diff for selected files
     let combinedDiff = '';

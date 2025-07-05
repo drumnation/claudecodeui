@@ -39,7 +39,7 @@ export const SessionItemWeb = ({
       <Button
         variant="ghost"
         className={cn(
-          "w-full justify-start h-auto font-normal text-left hover:bg-accent/50 transition-colors duration-200",
+          "w-full justify-start font-normal text-left hover:bg-accent/50 transition-colors duration-200 min-h-fit h-auto",
           isSelected ? "bg-accent text-accent-foreground" :
           isActive ? "bg-green-50/50 dark:bg-green-900/10" : ""
         )}

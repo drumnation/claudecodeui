@@ -165,7 +165,31 @@ export const useChatInterface = ({
   // Effect: Persist chat messages to localStorage
   useEffect(() => {
     if (selectedProject && chatMessages.length > 0) {
-      localStorage.setItem(`chat_messages_${selectedProject.name}`, JSON.stringify(chatMessages));
+      try {
+        localStorage.setItem(`chat_messages_${selectedProject.name}`, JSON.stringify(chatMessages));
+      } catch (e) {
+        if (e.name === 'QuotaExceededError') {
+          console.warn('localStorage quota exceeded, clearing old chat messages...');
+          // Clear old chat messages from other projects
+          const keys = Object.keys(localStorage);
+          const chatKeys = keys.filter(k => k.startsWith('chat_messages_') && k !== `chat_messages_${selectedProject.name}`);
+          
+          // Remove oldest chat messages
+          if (chatKeys.length > 0) {
+            // Remove the first (oldest) chat message storage
+            localStorage.removeItem(chatKeys[0]);
+            
+            // Try again
+            try {
+              localStorage.setItem(`chat_messages_${selectedProject.name}`, JSON.stringify(chatMessages));
+            } catch (e2) {
+              console.error('Still unable to save chat messages after cleanup:', e2);
+            }
+          }
+        } else {
+          console.error('Error saving chat messages:', e);
+        }
+      }
     }
   }, [chatMessages, selectedProject]);
   

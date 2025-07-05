@@ -656,48 +656,18 @@ app.get('/api/projects/:projectName/files', async (req, res) => {
   try {
     
     const fs = require('fs').promises;
-    const projectPath = path.join(process.env.HOME, '.claude', 'projects', req.params.projectName);
+    const { getProjects } = require('./projects');
     
-    // Try different methods to get the actual project path
-    let actualPath = projectPath;
+    // Get all projects to find the actual path
+    const projects = await getProjects();
+    const project = projects.find(p => p.name === req.params.projectName);
     
-    try {
-      // First try to read metadata.json
-      const metadataPath = path.join(projectPath, 'metadata.json');
-      const metadata = JSON.parse(await fs.readFile(metadataPath, 'utf8'));
-      actualPath = metadata.path || metadata.cwd;
-    } catch (e) {
-      // Fallback: try to find the actual path by testing different dash interpretations
-      let testPath = req.params.projectName;
-      if (testPath.startsWith('-')) {
-        testPath = testPath.substring(1);
-      }
-      
-      // Try to intelligently decode the path by testing which directories exist
-      const pathParts = testPath.split('-');
-      actualPath = '/' + pathParts.join('/');
-      
-      // If the simple replacement doesn't work, try to find the correct path
-      // by testing combinations where some dashes might be part of directory names
-      if (!require('fs').existsSync(actualPath)) {
-        // Try different combinations of dash vs slash
-        for (let i = pathParts.length - 1; i >= 0; i--) {
-          let testParts = [...pathParts];
-          // Try joining some parts with dashes instead of slashes
-          for (let j = i; j < testParts.length - 1; j++) {
-            testParts[j] = testParts[j] + '-' + testParts[j + 1];
-            testParts.splice(j + 1, 1);
-            let testActualPath = '/' + testParts.join('/');
-            if (require('fs').existsSync(testActualPath)) {
-              actualPath = testActualPath;
-              break;
-            }
-          }
-          if (require('fs').existsSync(actualPath)) break;
-        }
-      }
-      
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
     }
+    
+    // Use the actual path from the project resolution logic
+    let actualPath = project.fullPath;
     
     // Check if path exists
     try {

@@ -1,6 +1,39 @@
 const fs = require('fs').promises;
 const path = require('path');
 const readline = require('readline');
+const { detectLanguage, annotateMonorepo, detectWorktree, getMainRepoPath } = require('./monorepo');
+
+/**
+ * @typedef {Object} Session
+ * @property {string} id - Session ID
+ * @property {string} summary - Session summary
+ * @property {number} messageCount - Number of messages in session
+ * @property {Date|string} lastActivity - Last activity timestamp
+ * @property {string} cwd - Current working directory
+ */
+
+/**
+ * @typedef {Object} SessionMeta
+ * @property {boolean} hasMore - Whether there are more sessions
+ * @property {number} total - Total number of sessions
+ */
+
+/**
+ * @typedef {Object} Project
+ * @property {string} name - Directory name (path segments joined with -)
+ * @property {string|null} path - Full path to project folder, null for manually added
+ * @property {string} displayName - Human-readable name
+ * @property {string} fullPath - Original path with / instead of -
+ * @property {boolean} isCustomName - Whether displayName is custom set
+ * @property {boolean} [isManuallyAdded] - True for projects added via config but not yet created
+ * @property {Session[]} sessions - First 5 sessions
+ * @property {SessionMeta} [sessionMeta] - Metadata about sessions
+ * @property {string} language - e.g. "JavaScript/TypeScript", "Python", "Go", etc.
+ * @property {boolean} isMonorepo - true if this project is part of a monorepo
+ * @property {string} [monorepoRoot] - filesystem path to the monorepo root, if different
+ * @property {boolean} isWorktree - true if this is a Git worktree
+ * @property {string} [mainRepoPath] - path to the main repository if this is a worktree
+ */
 
 // Load project configuration file
 async function loadProjectConfig() {
@@ -20,40 +53,116 @@ async function saveProjectConfig(config) {
   await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf8');
 }
 
-// Generate better display name from path
-async function generateDisplayName(projectName) {
+/**
+ * Generate better display name from manifest files or path
+ * @param {string} projectName - The encoded project name from the directory
+ * @param {string} [actualPath] - The actual filesystem path to the project
+ * @returns {Promise<string>} - A human-readable display name
+ */
+async function generateDisplayName(projectName, actualPath = null) {
   // Convert "-home-user-projects-myapp" to a readable format
-  let projectPath = projectName.replace(/-/g, '/');
+  let projectPath = projectName.startsWith('-') 
+    ? projectName.substring(1).replace(/-/g, '/')
+    : projectName.replace(/-/g, '/');
   
-  // Try to read package.json from the project path
+  // Use the actual path if provided, otherwise reconstruct from projectName
+  const fsPath = actualPath || projectPath;
+  
+  // Try to read name from various manifest files
   try {
-    const packageJsonPath = path.join(projectPath, 'package.json');
-    const packageData = await fs.readFile(packageJsonPath, 'utf8');
-    const packageJson = JSON.parse(packageData);
+    // Try package.json first (JavaScript/TypeScript)
+    try {
+      const packageJsonPath = path.join(fsPath, 'package.json');
+      const packageData = await fs.readFile(packageJsonPath, 'utf8');
+      const packageJson = JSON.parse(packageData);
+      if (packageJson.name) {
+        return packageJson.name;
+      }
+    } catch {}
     
-    // Return the name from package.json if it exists
-    if (packageJson.name) {
-      return packageJson.name;
-    }
+    // Try pyproject.toml (Python)
+    try {
+      const pyprojectPath = path.join(fsPath, 'pyproject.toml');
+      const pyprojectData = await fs.readFile(pyprojectPath, 'utf8');
+      // Simple regex to extract project name from pyproject.toml
+      const nameMatch = pyprojectData.match(/name\s*=\s*["']([^"']+)["']/);
+      if (nameMatch && nameMatch[1]) {
+        return nameMatch[1];
+      }
+    } catch {}
+    
+    // Try Cargo.toml (Rust)
+    try {
+      const cargoPath = path.join(fsPath, 'Cargo.toml');
+      const cargoData = await fs.readFile(cargoPath, 'utf8');
+      const nameMatch = cargoData.match(/name\s*=\s*["']([^"']+)["']/);
+      if (nameMatch && nameMatch[1]) {
+        return nameMatch[1];
+      }
+    } catch {}
+    
+    // Try go.mod (Go)
+    try {
+      const goModPath = path.join(fsPath, 'go.mod');
+      const goModData = await fs.readFile(goModPath, 'utf8');
+      const moduleMatch = goModData.match(/module\s+(\S+)/);
+      if (moduleMatch && moduleMatch[1]) {
+        // Extract just the last part of the module name
+        const parts = moduleMatch[1].split('/');
+        return parts[parts.length - 1];
+      }
+    } catch {}
+    
+    // Try pom.xml (Java/Maven)
+    try {
+      const pomPath = path.join(fsPath, 'pom.xml');
+      const pomData = await fs.readFile(pomPath, 'utf8');
+      // Simple regex to extract artifactId from pom.xml
+      const artifactMatch = pomData.match(/<artifactId>([^<]+)<\/artifactId>/);
+      if (artifactMatch && artifactMatch[1]) {
+        return artifactMatch[1];
+      }
+    } catch {}
+    
+    // Try composer.json (PHP)
+    try {
+      const composerPath = path.join(fsPath, 'composer.json');
+      const composerData = await fs.readFile(composerPath, 'utf8');
+      const composer = JSON.parse(composerData);
+      if (composer.name) {
+        // composer names are usually "vendor/package", we want just the package
+        const parts = composer.name.split('/');
+        return parts[parts.length - 1];
+      }
+    } catch {}
+    
+    // Try pubspec.yaml (Dart/Flutter)
+    try {
+      const pubspecPath = path.join(fsPath, 'pubspec.yaml');
+      const pubspecData = await fs.readFile(pubspecPath, 'utf8');
+      const nameMatch = pubspecData.match(/^name:\s*(.+)$/m);
+      if (nameMatch && nameMatch[1]) {
+        return nameMatch[1].trim();
+      }
+    } catch {}
   } catch (error) {
-    // Fall back to path-based naming if package.json doesn't exist or can't be read
+    // If all manifest reads fail, fall back to path-based naming
   }
   
-  // If it starts with /, it's an absolute path
-  if (projectPath.startsWith('/')) {
-    const parts = projectPath.split('/').filter(Boolean);
-    if (parts.length > 3) {
-      // Show last 2 folders with ellipsis: "...projects/myapp"
-      return `.../${parts.slice(-2).join('/')}`;
-    } else {
-      // Show full path if short: "/home/user"
-      return projectPath;
-    }
+  // Fallback: Use the directory name as the project name
+  const parts = projectPath.split('/').filter(Boolean);
+  if (parts.length > 0) {
+    // Just use the last directory name
+    return parts[parts.length - 1];
   }
   
   return projectPath;
 }
 
+/**
+ * Get all projects with their sessions
+ * @returns {Promise<Project[]>} Array of projects with sessions
+ */
 async function getProjects() {
   const claudeDir = path.join(process.env.HOME, '.claude', 'projects');
   const config = await loadProjectConfig();
@@ -70,9 +179,64 @@ async function getProjects() {
         const projectPath = path.join(claudeDir, entry.name);
         
         // Get display name from config or generate one
+        // Handle leading dash by ensuring it becomes a leading slash
+        const fullPath = entry.name.startsWith('-') 
+          ? '/' + entry.name.substring(1).replace(/-/g, '/')
+          : entry.name.replace(/-/g, '/');
         const customName = config[entry.name]?.displayName;
-        const autoDisplayName = await generateDisplayName(entry.name);
-        const fullPath = entry.name.replace(/-/g, '/');
+        const autoDisplayName = await generateDisplayName(entry.name, fullPath);
+        
+        // Try to find the actual project path
+        let actualProjectPath = fullPath;
+        
+        // Check if the original path exists
+        try {
+          await fs.access(actualProjectPath);
+        } catch {
+          // Try common variations for moved/renamed projects
+          const projectBaseName = path.basename(actualProjectPath);
+          const parentDir = path.dirname(actualProjectPath);
+          const possiblePaths = [
+            actualProjectPath,
+            // Check with different case variations
+            actualProjectPath.replace('/Dev/', '/dev/'),
+            actualProjectPath.replace('/dev/', '/Dev/'),
+            // Check if it's in cc-ui subdirectory
+            path.join('/Users/dmieloch/Dev/experiments/cc-ui', projectBaseName),
+            path.join('/Users/dmieloch/dev/experiments/cc-ui', projectBaseName),
+            // Check with -original suffix
+            path.join(path.dirname(actualProjectPath), `${projectBaseName}-original`),
+            // Check without -original suffix
+            actualProjectPath.replace('-original', ''),
+            // Check current working directory
+            path.join(process.cwd(), projectBaseName),
+            process.cwd(), // Check exact current working directory
+            // For monorepo subdirectories like 'backend', 'frontend', etc.
+            path.join('/Users/dmieloch/Dev/experiments/cc-ui/claudecodeui', projectBaseName),
+            path.join('/Users/dmieloch/dev/experiments/cc-ui/claudecodeui', projectBaseName),
+            // Check in singularityApps locations
+            path.join('/Users/dmieloch/Dev/singularityApps', projectBaseName),
+            path.join('/Users/dmieloch/dev/singularityApps', projectBaseName)
+          ];
+          
+          for (const tryPath of possiblePaths) {
+            try {
+              await fs.access(tryPath);
+              actualProjectPath = tryPath;
+              break;
+            } catch {
+              // Continue to next path
+            }
+          }
+        }
+        
+        // Detect language and monorepo info using the actual project path
+        const language = await detectLanguage(actualProjectPath);
+        const { isMonorepo, monorepoRoot } = await annotateMonorepo(actualProjectPath);
+        
+        // Detect if this is a Git worktree
+        const isWorktree = await detectWorktree(actualProjectPath);
+        const mainRepoPath = isWorktree ? await getMainRepoPath(actualProjectPath) : undefined;
         
         const project = {
           name: entry.name,
@@ -80,6 +244,11 @@ async function getProjects() {
           displayName: customName || autoDisplayName,
           fullPath: fullPath,
           isCustomName: !!customName,
+          language: language,
+          isMonorepo: isMonorepo,
+          monorepoRoot: monorepoRoot,
+          isWorktree: isWorktree,
+          mainRepoPath: mainRepoPath,
           sessions: []
         };
         
@@ -91,8 +260,17 @@ async function getProjects() {
             hasMore: sessionResult.hasMore,
             total: sessionResult.total
           };
+          
+          // Also get the actual most recent session timestamp for sorting
+          if (sessionResult.sessions && sessionResult.sessions.length > 0) {
+            // The first session is already the most recent due to getSessions sorting
+            project.mostRecentActivity = new Date(sessionResult.sessions[0].lastActivity).getTime();
+          } else {
+            project.mostRecentActivity = 0;
+          }
         } catch (e) {
           console.warn(`Could not load sessions for project ${entry.name}:`, e.message);
+          project.mostRecentActivity = 0;
         }
         
         projects.push(project);
@@ -105,7 +283,9 @@ async function getProjects() {
   // Add manually configured projects that don't exist as folders yet
   for (const [projectName, projectConfig] of Object.entries(config)) {
     if (!existingProjects.has(projectName) && projectConfig.manuallyAdded) {
-      const fullPath = projectName.replace(/-/g, '/');
+      const fullPath = projectName.startsWith('-') 
+        ? '/' + projectName.substring(1).replace(/-/g, '/')
+        : projectName.replace(/-/g, '/');
       
       const project = {
         name: projectName,
@@ -114,12 +294,27 @@ async function getProjects() {
         fullPath: fullPath,
         isCustomName: !!projectConfig.displayName,
         isManuallyAdded: true,
-        sessions: []
+        language: 'Unknown', // Cannot detect language without physical path
+        isMonorepo: false,
+        monorepoRoot: undefined,
+        isWorktree: false, // Cannot be a worktree without physical path
+        mainRepoPath: undefined,
+        sessions: [],
+        mostRecentActivity: 0 // No sessions yet
       };
       
       projects.push(project);
     }
   }
+  
+  // Sort projects by most recent session activity (descending)
+  projects.sort((a, b) => {
+    // Use the pre-calculated most recent activity timestamp
+    const aLatest = a.mostRecentActivity || 0;
+    const bLatest = b.mostRecentActivity || 0;
+    
+    return bLatest - aLatest; // Descending order (most recent first)
+  });
   
   return projects;
 }

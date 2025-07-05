@@ -12,6 +12,7 @@ import { Button } from '@/shared-components/Button/Button';
 import { SessionList } from '../SessionList';
 import { cn } from '@/lib/utils';
 import * as S from './ProjectItem.styles';
+import { WorktreeBadge, ProjectLanguageBadge, ProjectMonorepoBadge } from '@/components/WorktreeBadge/WorktreeBadge';
 
 export const ProjectItemWeb = ({
   project,
@@ -58,7 +59,7 @@ export const ProjectItemWeb = ({
         <Button
           variant="ghost"
           className={cn(
-            "w-full justify-between h-auto font-normal hover:bg-accent/50",
+            "w-full justify-between font-normal hover:bg-accent/50 min-h-fit h-auto",
             isSelected && "bg-accent text-accent-foreground"
           )}
           onClick={() => {
@@ -105,13 +106,11 @@ export const ProjectItemWeb = ({
                   <div className="text-sm font-semibold truncate text-foreground" title={project.displayName}>
                     {project.displayName}
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {displayCount} session{displayCount === 1 ? '' : 's'}
-                    {project.fullPath !== project.displayName && (
-                      <span className="ml-1 opacity-60" title={project.fullPath}>
-                        • {project.fullPath.length > 25 ? '...' + project.fullPath.slice(-22) : project.fullPath}
-                      </span>
-                    )}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{displayCount} session{displayCount === 1 ? '' : 's'}</span>
+                    {project.isWorktree && <WorktreeBadge />}
+                    <ProjectLanguageBadge language={project.language} />
+                    <ProjectMonorepoBadge isMonorepo={project.isMonorepo} />
                   </div>
                 </div>
               )}

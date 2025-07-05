@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { SessionList } from '../SessionList';
 import * as S from './ProjectItem.styles';
+import { WorktreeBadge, ProjectLanguageBadge } from '@/components/WorktreeBadge/WorktreeBadge';
 
 export const ProjectItemMobile = ({
   project,
@@ -58,6 +59,7 @@ export const ProjectItemMobile = ({
           isSelected={isSelected}
           onClick={() => onToggleProject(project.name)}
           onTouchEnd={handleTouchClick(() => onToggleProject(project.name))}
+          style={{ position: 'relative' }}
         >
           <S.MobileProjectContent>
             <S.ProjectInfo>
@@ -92,7 +94,8 @@ export const ProjectItemMobile = ({
                   <>
                     <S.ProjectName>{project.displayName}</S.ProjectName>
                     <S.ProjectMeta>
-                      {`${displayCount} session${displayCount === 1 ? '' : 's'}`}
+                      <span>{`${displayCount} session${displayCount === 1 ? '' : 's'}`}</span>
+                      <ProjectLanguageBadge language={project.language} />
                     </S.ProjectMeta>
                   </>
                 )}
@@ -151,6 +154,7 @@ export const ProjectItemMobile = ({
               )}
             </S.ProjectActions>
           </S.MobileProjectContent>
+          {project.isWorktree && <WorktreeBadge isMobile={true} />}
         </S.MobileProjectItem>
       </S.ProjectHeader>
 
