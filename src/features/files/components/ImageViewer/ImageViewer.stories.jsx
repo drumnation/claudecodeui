@@ -2,7 +2,7 @@ import React from 'react';
 import { ImageViewer } from '@/features/files/components/ImageViewer/ImageViewer';
 
 export default {
-  title: 'Features/Files/ImageViewer',
+  title: 'Features/Files/components/ImageViewer',
   component: ImageViewer,
   parameters: {
     docs: {

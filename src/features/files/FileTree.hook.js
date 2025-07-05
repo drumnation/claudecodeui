@@ -8,6 +8,7 @@ import { toggleExpandedDirectory, createFileObject } from '@/features/files/File
 export const useFileTree = (selectedProject) => {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [expandedDirs, setExpandedDirs] = useState(new Set());
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -23,20 +24,24 @@ export const useFileTree = (selectedProject) => {
     if (!selectedProject) return;
     
     setLoading(true);
+    setError(null);
     try {
       const response = await fetch(`/api/projects/${selectedProject.name}/files`);
       
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ File fetch failed:', response.status, errorText);
+        setError(`Failed to load files: ${response.status} ${errorText || response.statusText}`);
         setFiles([]);
         return;
       }
       
       const data = await response.json();
       setFiles(data);
+      setError(null);
     } catch (error) {
       console.error('❌ Error fetching files:', error);
+      setError(`Failed to connect to server: ${error.message}`);
       setFiles([]);
     } finally {
       setLoading(false);
@@ -68,6 +73,7 @@ export const useFileTree = (selectedProject) => {
   return {
     files,
     loading,
+    error,
     expandedDirs,
     selectedFile,
     selectedImage,

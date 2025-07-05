@@ -94,8 +94,19 @@ export const Default = {
 
 export const Loading = {
   args: {
-    selectedProject: null
-  }
+    selectedProject: {
+      name: 'loading-project',
+      path: '/path/to/loading'
+    }
+  },
+  decorators: [
+    (Story) => {
+      // Mock a fetch that never resolves to keep loading state
+      // @ts-ignore
+      window.fetch = async () => new Promise(() => {}); // Never resolves
+      return <Story />;
+    }
+  ]
 };
 
 export const Empty = {

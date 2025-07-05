@@ -1,5 +1,5 @@
 import React from 'react';
-import { Folder, FolderOpen, File, FileText, FileCode } from 'lucide-react';
+import { Folder, FolderOpen, File, FileText, FileCode, AlertCircle, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/shared-components/ScrollArea';
 import { CodeEditor } from '@/shared-components/CodeEditor';
 import { ImageViewer } from '@/features/files/components/ImageViewer';
@@ -11,6 +11,7 @@ export const FileTree = ({ selectedProject }) => {
   const {
     files,
     loading,
+    error,
     expandedDirs,
     selectedFile,
     selectedImage,
@@ -101,16 +102,40 @@ export const FileTree = ({ selectedProject }) => {
 
   if (loading) {
     return (
-      <S.LoadingContainer>
-        <S.LoadingText>Loading files...</S.LoadingText>
-      </S.LoadingContainer>
+      <S.Container>
+        <S.LoadingContainer>
+          <S.LoadingStateContainer>
+            <S.LoadingStateIcon>
+              <S.LoadingIcon>
+                <Loader2 className="w-full h-full" />
+              </S.LoadingIcon>
+            </S.LoadingStateIcon>
+            <S.LoadingStateTitle>Loading files</S.LoadingStateTitle>
+            <S.LoadingStateDescription>
+              Fetching project structure...
+            </S.LoadingStateDescription>
+          </S.LoadingStateContainer>
+        </S.LoadingContainer>
+      </S.Container>
     );
   }
 
   return (
     <S.Container>
       <ScrollArea className="flex-1 p-4">
-        {files.length === 0 ? (
+        {error ? (
+          <S.ErrorStateContainer>
+            <S.ErrorStateIcon>
+              <S.ErrorIcon>
+                <AlertCircle className="w-full h-full" />
+              </S.ErrorIcon>
+            </S.ErrorStateIcon>
+            <S.ErrorStateTitle>Failed to load files</S.ErrorStateTitle>
+            <S.ErrorStateMessage>
+              {error}
+            </S.ErrorStateMessage>
+          </S.ErrorStateContainer>
+        ) : files.length === 0 ? (
           <S.EmptyStateContainer>
             <S.EmptyStateIcon>
               <S.EmptyFolderIcon>
