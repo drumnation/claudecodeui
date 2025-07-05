@@ -1,17 +1,24 @@
-// QuickSettingsPanel.stories.jsx
+// QuickSettingsPanel.mobile.stories.jsx
 import React, { useState } from 'react';
 import { QuickSettingsPanel } from '@/features/chat/components/QuickSettingsPanel/QuickSettingsPanel';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 
 export default {
-  title: 'Features/Chat/components/QuickSettingsPanel',
+  title: 'Features/Chat/Components/Mobile/QuickSettingsPanel',
   component: QuickSettingsPanel,
   parameters: {
-    layout: 'fullscreen',
+    layout: 'padded',
     docs: {
+      autodocs: true,
       description: {
-        component: 'A slide-out settings panel that provides quick access to appearance and behavior settings including dark mode, tool display options, view options, and whisper dictation modes.'
+        component: 'Mobile version of a slide-out settings panel that provides quick access to appearance and behavior settings including dark mode, tool display options, view options, and whisper dictation modes.'
       }
+    }
+  },
+  globals: {
+    viewport: {
+      value: 'iphone12',
+      isRotated: false
     }
   },
   decorators: [
@@ -102,7 +109,7 @@ Default.args = {
   autoExpandTools: true,
   showRawParameters: false,
   autoScrollToBottom: true,
-  isMobile: false
+  isMobile: true
 };
 
 export const Open = Template.bind({});
@@ -111,14 +118,13 @@ Open.args = {
   isOpen: true
 };
 
-
 export const WithAllSettingsEnabled = Template.bind({});
 WithAllSettingsEnabled.args = {
   isOpen: true,
   autoExpandTools: true,
   showRawParameters: true,
   autoScrollToBottom: true,
-  isMobile: false
+  isMobile: true
 };
 
 export const DarkMode = Template.bind({});
@@ -126,68 +132,30 @@ DarkMode.args = {
   ...Default.args,
   isOpen: true
 };
-DarkMode.parameters = {
-  backgrounds: { default: 'dark' }
-};
 DarkMode.decorators = [
-  (Story) => (
-    <ThemeProvider defaultTheme="dark">
-      <div style={{ height: '100vh', position: 'relative', backgroundColor: '#1a1a1a' }}>
-        <Story />
-      </div>
-    </ThemeProvider>
-  )
+  (Story) => {
+    React.useEffect(() => {
+      document.documentElement.classList.add('dark');
+      return () => {
+        document.documentElement.classList.remove('dark');
+      };
+    }, []);
+    
+    return (
+      <ThemeProvider>
+        <div style={{ height: '100vh', position: 'relative' }}>
+          <Story />
+        </div>
+      </ThemeProvider>
+    );
+  }
 ];
 
-export const InteractiveDemo = () => {
-  const [isOpen, setIsOpen] = useState(true);
-  const [autoExpandTools, setAutoExpandTools] = useState(true);
-  const [showRawParameters, setShowRawParameters] = useState(false);
-  const [autoScrollToBottom, setAutoScrollToBottom] = useState(true);
-
-  return (
-    <div style={{ 
-      height: '100vh', 
-      backgroundColor: '#f5f5f5',
-      padding: '20px',
-      boxSizing: 'border-box'
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        padding: '20px',
-        borderRadius: '8px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        maxWidth: '600px'
-      }}>
-        <h2 style={{ marginBottom: '20px' }}>Interactive QuickSettingsPanel Demo</h2>
-        <p style={{ marginBottom: '10px' }}>Current Settings:</p>
-        <ul style={{ marginBottom: '20px' }}>
-          <li>Panel Open: {isOpen ? 'Yes' : 'No'}</li>
-          <li>Auto-expand Tools: {autoExpandTools ? 'Yes' : 'No'}</li>
-          <li>Show Raw Parameters: {showRawParameters ? 'Yes' : 'No'}</li>
-          <li>Auto-scroll to Bottom: {autoScrollToBottom ? 'Yes' : 'No'}</li>
-        </ul>
-        <p>Click the tab on the right to toggle the settings panel!</p>
-      </div>
-      
-      <QuickSettingsPanel
-        isOpen={isOpen}
-        onToggle={setIsOpen}
-        autoExpandTools={autoExpandTools}
-        onAutoExpandChange={setAutoExpandTools}
-        showRawParameters={showRawParameters}
-        onShowRawParametersChange={setShowRawParameters}
-        autoScrollToBottom={autoScrollToBottom}
-        onAutoScrollChange={setAutoScrollToBottom}
-        isMobile={false}
-      />
-    </div>
-  );
-};
-InteractiveDemo.parameters = {
-  docs: {
-    description: {
-      story: 'A fully interactive demo showing how settings persist and update in real-time.'
-    }
-  }
+export const InteractiveDemo = Template.bind({});
+InteractiveDemo.args = {
+  isOpen: false,
+  autoExpandTools: true,
+  showRawParameters: false,
+  autoScrollToBottom: true,
+  isMobile: true
 };

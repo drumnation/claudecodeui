@@ -1,7 +1,71 @@
-import React from 'react';
-import { BrowserRouter } from 'react-router-dom';
+import React, { useEffect } from 'react';
 import { ThemeProvider } from '../src/contexts/ThemeContext';
+import { INITIAL_VIEWPORTS } from 'storybook/viewport';
 import '../src/index.css';
+
+// Storybook theme wrapper that syncs with the toolbar
+const StorybookThemeWrapper = ({ theme, children }) => {
+  useEffect(() => {
+    const root = document.documentElement;
+    
+    // Clear any saved theme preference for Storybook
+    localStorage.removeItem('theme');
+    
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else if (theme === 'light') {
+      root.classList.remove('dark');
+    } else if (theme === 'auto') {
+      // Check system preference
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+    }
+  }, [theme]);
+  
+  return children;
+};
+
+// Global fetch mock for Storybook
+const originalFetch = window.fetch;
+
+// Function to get mock data based on story context
+const getMockData = (url) => {
+  if (url === '/api/projects') {
+    // Check if custom behavior is set for this story
+    if (window.__storybookFetchBehavior === 'error') {
+      throw new Error('Network error: Unable to connect to server');
+    }
+    if (window.__storybookFetchBehavior === 'loading') {
+      return new Promise(() => {}); // Never resolves
+    }
+    
+    // Return custom data if set, otherwise empty array
+    return {
+      ok: true,
+      json: async () => window.__storybookProjectsData || []
+    };
+  }
+  
+  // Default response for other API endpoints
+  return {
+    ok: true,
+    json: async () => ({})
+  };
+};
+
+window.fetch = async (url, options) => {
+  // Only mock API calls
+  if (url && url.includes('/api/')) {
+    return getMockData(url);
+  }
+  
+  // For non-API calls, use original fetch
+  return originalFetch(url, options);
+};
 
 /** @type { import('@storybook/react-vite').Preview } */
 const preview = {
@@ -18,9 +82,28 @@ const preview = {
       // 'error' - fail CI on a11y violations
       // 'off' - skip a11y checks entirely
       test: "todo"
+    },
+    
+    viewport: {
+      options: INITIAL_VIEWPORTS,
     }
   },
   globalTypes: {
+    theme: {
+      name: 'Theme',
+      description: 'Global theme for components',
+      defaultValue: 'light',
+      toolbar: {
+        icon: 'circlehollow',
+        items: [
+          { value: 'light', title: 'Light', icon: 'sun' },
+          { value: 'dark', title: 'Dark', icon: 'moon' },
+          { value: 'auto', title: 'Auto', icon: 'browser' }
+        ],
+        showName: true,
+        dynamicTitle: true
+      }
+    },
     outline: {
       name: 'Outline',
       description: 'Show outlines around elements for debugging',
@@ -30,20 +113,6 @@ const preview = {
         items: [
           { value: false, title: 'Hide outlines' },
           { value: true, title: 'Show outlines' }
-        ],
-        showName: true
-      }
-    },
-    viewport: {
-      name: 'Viewport',
-      description: 'Viewport for responsive testing',
-      defaultValue: 'responsive',
-      toolbar: {
-        icon: 'tablet',
-        items: [
-          { value: 'responsive', title: 'Responsive' },
-          { value: 'mobile', title: 'Mobile' },
-          { value: 'tablet', title: 'Tablet' }
         ],
         showName: true
       }
@@ -60,38 +129,21 @@ const preview = {
         ],
         showName: true
       }
-    },
-    backgrounds: {
-      name: 'Background',
-      description: 'Background color for the preview',
-      defaultValue: 'default',
-      toolbar: {
-        icon: 'paintbrush',
-        items: [
-          { value: 'default', title: 'Default' },
-          { value: 'light', title: 'Light' },
-          { value: 'dark', title: 'Dark' }
-        ],
-        showName: true
-      }
     }
   },
   decorators: [
-    (Story) => {
+    (Story, context) => {
+      const { theme } = context.globals;
+      
       return React.createElement(
         React.StrictMode,
         null,
         React.createElement(
-          ThemeProvider,
-          null,
+          StorybookThemeWrapper,
+          { theme },
           React.createElement(
-            BrowserRouter,
-            { 
-              future: { 
-                v7_startTransition: true,
-                v7_relativeSplatPath: true 
-              } 
-            },
+            ThemeProvider,
+            null,
             React.createElement(
               'div',
               { id: 'root', className: 'h-full' },

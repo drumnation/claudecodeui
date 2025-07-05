@@ -2,18 +2,21 @@ import React from 'react';
 import { SessionList } from './SessionList';
 
 export default {
-  title: 'Features/Projects/components/Web/SessionList',
+  title: 'Features/Projects/components/Mobile/SessionList',
   component: SessionList,
   parameters: {
     layout: 'padded',
-    viewport: {
-      defaultViewport: 'responsive'
-    },
     docs: {
       autodocs: true,
       description: {
-        component: 'Web version of SessionList displays all sessions for a project with management capabilities.'
+        component: 'Mobile version of SessionList displays all sessions for a project with management capabilities.'
       }
+    }
+  },
+  globals: {
+    viewport: {
+      value: 'iphone12',
+      isRotated: false
     }
   }
 };
@@ -46,7 +49,7 @@ const mockSessions = [
 ];
 
 const Template = (args) => (
-  <div style={{ width: '100%', maxWidth: '600px', backgroundColor: '#f5f5f5', padding: '1rem' }}>
+  <div style={{ width: '100%', maxWidth: '400px', backgroundColor: '#f5f5f5', padding: '1rem' }}>
     <SessionList {...args} />
   </div>
 );
@@ -107,4 +110,3 @@ NoMoreSessions.args = {
   ...Default.args,
   hasMore: false
 };
-

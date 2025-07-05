@@ -2,15 +2,21 @@ import React from 'react';
 import { NewProjectModal } from './NewProjectModal';
 
 export default {
-  title: 'Features/Projects/components/Web/NewProjectModal',
+  title: 'Features/Projects/components/Mobile/NewProjectModal',
   component: NewProjectModal,
   parameters: {
     layout: 'fullscreen',
     docs: {
       autodocs: true,
       description: {
-        component: 'NewProjectModal provides a form to create new projects with both desktop and mobile layouts.'
+        component: 'Mobile version of NewProjectModal provides a touch-friendly form to create new projects.'
       }
+    }
+  },
+  globals: {
+    viewport: {
+      value: 'iphone12',
+      isRotated: false
     }
   },
   argTypes: {
@@ -80,4 +86,3 @@ LongPath.args = {
   ...Default.args,
   newProjectPath: '/Users/developer/projects/very/long/path/to/my/new/project/folder'
 };
-

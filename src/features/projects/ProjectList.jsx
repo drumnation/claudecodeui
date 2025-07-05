@@ -24,6 +24,7 @@ export const ProjectList = ({
   onSessionDelete,
   onProjectDelete,
   isLoading,
+  error,
   onRefresh,
   onShowSettings
 }) => {
@@ -118,7 +119,6 @@ export const ProjectList = ({
             </S.LogoWrapper>
             <S.TitleWrapper>
               <S.MobileTitle>Claude Code UI</S.MobileTitle>
-              <S.MobileSubtitle>Projects</S.MobileSubtitle>
             </S.TitleWrapper>
           </S.LogoSection>
           <S.ActionButtons>
@@ -159,6 +159,17 @@ export const ProjectList = ({
                 Fetching your Claude projects and sessions
               </S.LoadingText>
             </S.LoadingState>
+          ) : error ? (
+            <S.EmptyState>
+              <S.EmptyIcon>
+                <Folder className="w-6 h-6 text-destructive" />
+              </S.EmptyIcon>
+              <S.EmptyTitle>Failed to load projects</S.EmptyTitle>
+              <S.EmptyText>
+                {error}<br />
+                Try refreshing
+              </S.EmptyText>
+            </S.EmptyState>
           ) : projects.length === 0 ? (
             <S.EmptyState>
               <S.EmptyIcon>
@@ -166,7 +177,8 @@ export const ProjectList = ({
               </S.EmptyIcon>
               <S.EmptyTitle>No projects found</S.EmptyTitle>
               <S.EmptyText>
-                Run Claude CLI in a project directory to get started
+                Run Claude CLI in a project directory to<br />
+                get started
               </S.EmptyText>
             </S.EmptyState>
           ) : (

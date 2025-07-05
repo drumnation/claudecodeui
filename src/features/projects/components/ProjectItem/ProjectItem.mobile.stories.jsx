@@ -2,15 +2,21 @@ import React from 'react';
 import { ProjectItem } from './ProjectItem';
 
 export default {
-  title: 'Features/Projects/components/Web/ProjectItem',
+  title: 'Features/Projects/components/Mobile/ProjectItem',
   component: ProjectItem,
   parameters: {
     layout: 'padded',
     docs: {
       autodocs: true,
       description: {
-        component: 'ProjectItem displays a single project with its sessions and management controls. This component automatically adapts between web and mobile layouts.'
+        component: 'Mobile version of ProjectItem displays a single project with its sessions and management controls.'
       }
+    }
+  },
+  globals: {
+    viewport: {
+      value: 'iphone12',
+      isRotated: false
     }
   },
   argTypes: {
@@ -176,4 +182,3 @@ Loading.args = {
   initialSessionsLoaded: new Set(),
   loadingSessions: { 'claude-code-ui': true }
 };
-

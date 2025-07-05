@@ -21,6 +21,7 @@ export const App = () => {
     isMobile,
     sidebarOpen,
     isLoadingProjects,
+    projectsError,
     isInputFocused,
     showToolsSettings,
     showQuickSettings,
@@ -74,6 +75,7 @@ export const App = () => {
               onSessionDelete={handleSessionDelete}
               onProjectDelete={handleProjectDelete}
               isLoading={isLoadingProjects}
+              error={projectsError}
               onRefresh={handleSidebarRefresh}
               onShowSettings={() => setShowToolsSettings(true)}
             />
@@ -110,6 +112,7 @@ export const App = () => {
               onSessionDelete={handleSessionDelete}
               onProjectDelete={handleProjectDelete}
               isLoading={isLoadingProjects}
+              error={projectsError}
               onRefresh={handleSidebarRefresh}
               onShowSettings={() => setShowToolsSettings(true)}
             />

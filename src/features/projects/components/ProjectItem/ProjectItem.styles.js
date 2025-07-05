@@ -2,20 +2,20 @@ import styled from '@emotion/styled';
 import tw from 'twin.macro';
 
 export const ProjectContainer = styled.div`
-  ${tw`md:space-y-1`}
+  ${tw`md:space-y-3`}
 `;
 
 export const ProjectHeader = styled.div`
   ${tw``}
 `;
 
-// Mobile styles
+// Project Item styles (used for both mobile and desktop)
 export const MobileProjectWrapper = styled.div`
-  ${tw`md:hidden`}
+  ${tw``}
 `;
 
 export const MobileProjectItem = styled.div`
-  ${tw`p-3 mx-3 my-1 rounded-lg bg-card border border-border/50 active:scale-[0.98] transition-all duration-150`}
+  ${tw`p-3 mx-3 my-3 rounded-lg bg-card border border-border/50 active:scale-[0.98] transition-all duration-150 cursor-pointer hover:border-border/70`}
   ${props => props.isSelected && tw`bg-primary/5 border-primary/20`}
 `;
 
@@ -95,9 +95,13 @@ export const DesktopDeleteAction = styled(DesktopHoverActions)`
   ${tw`hover:bg-red-50 dark:hover:bg-red-900/20`}
 `;
 
+export const DesktopEditAction = styled(DesktopHoverActions)`
+  ${tw`hover:bg-gray-50 dark:hover:bg-gray-900/20`}
+`;
+
 // Sessions container
 export const SessionsContainer = styled.div`
-  ${tw`ml-3 space-y-1 border-l border-border pl-3`}
+  ${tw`ml-3 space-y-2 border-l border-border pl-3 pt-3 pb-3`}
 `;
 
 export const SessionsLoading = styled.div`
@@ -125,7 +129,7 @@ export const SkeletonBarSmall = styled.div`
 `;
 
 export const NoSessionsText = styled.div`
-  ${tw`py-2 px-3 text-left`}
+  ${tw`py-3 px-4 text-left`}
 `;
 
 export const NoSessionsLabel = styled.p`

@@ -3,7 +3,7 @@
  * Manages state and side effects for the main content area
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   processServerMessage, 
   shouldRequestScripts,
@@ -19,14 +19,20 @@ export const useMainContent = (selectedProject, ws, sendMessage, messages) => {
   const [availableScripts, setAvailableScripts] = useState([]);
   const [serverLogs, setServerLogs] = useState([]);
 
+  // Track if we've already requested scripts for this project
+  const requestedScriptsRef = useRef(null);
+
   // Load available scripts when project changes
   useEffect(() => {
-    if (shouldRequestScripts(selectedProject, ws)) {
-      console.log('📡 Requesting scripts for project:', selectedProject.fullPath);
-      sendMessage(createServerScriptsMessage(selectedProject.fullPath));
-      sendMessage(createServerStatusMessage(selectedProject.fullPath));
+    const projectPath = selectedProject?.fullPath;
+    
+    if (shouldRequestScripts(selectedProject, ws) && requestedScriptsRef.current !== projectPath) {
+      console.log('📡 Requesting scripts for project:', projectPath);
+      requestedScriptsRef.current = projectPath;
+      sendMessage(createServerScriptsMessage(projectPath));
+      sendMessage(createServerStatusMessage(projectPath));
     }
-  }, [selectedProject, ws, sendMessage]);
+  }, [selectedProject?.fullPath, ws, sendMessage]);
 
   // Handle server-related WebSocket messages
   useEffect(() => {

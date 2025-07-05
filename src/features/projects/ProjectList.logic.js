@@ -22,6 +22,15 @@ export const formatTimeAgo = (dateString, currentTime) => {
   return date.toLocaleDateString();
 };
 
+export const isSessionActive = (session, currentTime) => {
+  if (!session.lastActivity) return false;
+  const date = new Date(session.lastActivity);
+  const now = currentTime;
+  const diffInMs = now - date;
+  const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+  return diffInMinutes <= 10;
+};
+
 export const filterProjects = (projects, searchTerm) => {
   if (!searchTerm) return projects;
   

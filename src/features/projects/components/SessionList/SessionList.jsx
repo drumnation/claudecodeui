@@ -2,6 +2,7 @@ import React from 'react';
 import { SessionItem } from '../SessionItem';
 import { Button } from '@/shared-components/Button/Button';
 import { Plus, ChevronDown } from 'lucide-react';
+import { isSessionActive } from '../../ProjectList.logic';
 import * as S from './SessionList.styles';
 
 export const SessionList = ({
@@ -54,6 +55,8 @@ export const SessionList = ({
         <S.EmptyState>
           <S.EmptyText>No sessions yet</S.EmptyText>
         </S.EmptyState>
+        
+        {/* New Session Button - Mobile optimized */}
         <S.NewSessionMobile>
           <S.NewSessionButton
             onClick={() => {
@@ -65,15 +68,6 @@ export const SessionList = ({
             New Session
           </S.NewSessionButton>
         </S.NewSessionMobile>
-        <Button
-          variant="default"
-          size="sm"
-          className="hidden md:flex w-full justify-start gap-2 mt-1 h-8 text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground transition-colors"
-          onClick={() => onNewSession(project)}
-        >
-          <Plus className="w-3 h-3" />
-          New Session
-        </Button>
       </>
     );
   }
@@ -86,6 +80,7 @@ export const SessionList = ({
           session={session}
           project={project}
           isSelected={selectedSession?.id === session.id}
+          isActive={isSessionActive(session, currentTime)}
           isEditing={editingSession === session.id}
           editingSessionName={editingSessionName}
           isGeneratingSummary={generatingSummary[`${project.name}-${session.id}`]}
@@ -128,6 +123,7 @@ export const SessionList = ({
         </S.LoadMoreButton>
       )}
       
+      {/* New Session Button - Mobile optimized */}
       <S.NewSessionMobile>
         <S.NewSessionButton
           onClick={() => {
@@ -139,16 +135,6 @@ export const SessionList = ({
           New Session
         </S.NewSessionButton>
       </S.NewSessionMobile>
-      
-      <Button
-        variant="default"
-        size="sm"
-        className="hidden md:flex w-full justify-start gap-2 mt-1 h-8 text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground transition-colors"
-        onClick={() => onNewSession(project)}
-      >
-        <Plus className="w-3 h-3" />
-        New Session
-      </Button>
     </S.SessionsWrapper>
   );
 };

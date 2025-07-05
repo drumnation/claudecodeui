@@ -2,15 +2,21 @@ import React from 'react';
 import { SessionItem } from './SessionItem';
 
 export default {
-  title: 'Features/Projects/components/Web/SessionItem',
+  title: 'Features/Projects/components/Mobile/SessionItem',
   component: SessionItem,
   parameters: {
     layout: 'padded',
     docs: {
       autodocs: true,
       description: {
-        component: 'SessionItem displays a single session with its information and controls. This component automatically adapts between web and mobile layouts.'
+        component: 'Mobile version of SessionItem displays a single session with its information and controls.'
       }
+    }
+  },
+  globals: {
+    viewport: {
+      value: 'iphone12',
+      isRotated: false
     }
   }
 };
@@ -120,4 +126,3 @@ LongSummary.args = {
     summary: 'This is a very long session summary that should be truncated properly in the UI to prevent layout issues'
   }
 };
-

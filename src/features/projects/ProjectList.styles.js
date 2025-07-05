@@ -14,7 +14,7 @@ export const DesktopHeader = styled.div`
 `;
 
 export const MobileHeader = styled.div`
-  ${tw`md:hidden p-3 border-b border-border`}
+  ${tw`md:hidden p-3 border-b border-border flex items-center justify-between`}
 `;
 
 export const LogoSection = styled.div`
@@ -58,11 +58,11 @@ export const ProjectsSection = styled.div`
 `;
 
 export const ProjectsList = styled.div`
-  ${tw`md:space-y-1 pb-safe-area-inset-bottom`}
+  ${tw`md:space-y-3 pb-safe-area-inset-bottom min-h-full flex flex-col`}
 `;
 
 export const LoadingState = styled.div`
-  ${tw`text-center py-12 md:py-8 px-4`}
+  ${tw`flex-1 flex flex-col items-center justify-center text-center px-4`}
 `;
 
 export const LoadingIcon = styled.div`
@@ -82,7 +82,7 @@ export const LoadingText = styled.p`
 `;
 
 export const EmptyState = styled.div`
-  ${tw`text-center py-12 md:py-8 px-4`}
+  ${tw`flex-1 flex flex-col items-center justify-center text-center px-4`}
 `;
 
 export const EmptyIcon = styled.div`

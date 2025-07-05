@@ -2,11 +2,11 @@ import styled from '@emotion/styled';
 import tw from 'twin.macro';
 
 export const SessionsWrapper = styled.div`
-  ${tw`space-y-1`}
+  ${tw`space-y-2.5`}
 `;
 
 export const LoadingSkeletons = styled.div`
-  ${tw`space-y-1`}
+  ${tw`space-y-2.5`}
 `;
 
 export const SessionSkeleton = styled.div`
@@ -55,7 +55,7 @@ export const Spinner = styled.div`
 `;
 
 export const NewSessionMobile = styled.div`
-  ${tw`md:hidden px-3 pb-2`}
+  ${tw`px-3 pb-2`}
 `;
 
 export const NewSessionButton = styled.button`

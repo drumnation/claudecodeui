@@ -12,6 +12,7 @@ export const Sidebar = ({
   onSessionDelete,
   onProjectDelete,
   isLoading,
+  error,
   onRefresh,
   onShowSettings
 }) => {
@@ -27,6 +28,7 @@ export const Sidebar = ({
         onSessionDelete={onSessionDelete}
         onProjectDelete={onProjectDelete}
         isLoading={isLoading}
+        error={error}
         onRefresh={onRefresh}
         onShowSettings={onShowSettings}
       />

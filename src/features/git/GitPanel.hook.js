@@ -57,7 +57,9 @@ export const useGitPanel = (selectedProject) => {
     
     setIsLoading(true);
     try {
-      const data = await gitApi.fetchStatus(selectedProject.name);
+      // Convert project path to the format expected by the server
+      const projectName = selectedProject.fullPath.replace(/\//g, '-');
+      const data = await gitApi.fetchStatus(projectName);
       
       if (data) {
         setGitStatus(data);
@@ -88,7 +90,8 @@ export const useGitPanel = (selectedProject) => {
 
   const fetchBranches = async () => {
     try {
-      const branches = await gitApi.fetchBranches(selectedProject.name);
+      const projectName = selectedProject.fullPath.replace(/\//g, '-');
+      const branches = await gitApi.fetchBranches(projectName);
       setBranches(branches);
     } catch (error) {
       console.error('Error fetching branches:', error);
@@ -97,7 +100,8 @@ export const useGitPanel = (selectedProject) => {
 
   const switchBranch = async (branchName) => {
     try {
-      const data = await gitApi.switchBranch(selectedProject.name, branchName);
+      const projectName = selectedProject.fullPath.replace(/\//g, '-');
+      const data = await gitApi.switchBranch(projectName, branchName);
       
       if (data.success) {
         setCurrentBranch(branchName);
@@ -116,7 +120,8 @@ export const useGitPanel = (selectedProject) => {
     
     setIsCreatingBranch(true);
     try {
-      const data = await gitApi.createBranch(selectedProject.name, newBranchName);
+      const projectName = selectedProject.fullPath.replace(/\//g, '-');
+      const data = await gitApi.createBranch(projectName, newBranchName);
       
       if (data.success) {
         setCurrentBranch(newBranchName.trim());
@@ -137,7 +142,8 @@ export const useGitPanel = (selectedProject) => {
 
   const fetchFileDiff = async (filePath) => {
     try {
-      const diff = await gitApi.fetchFileDiff(selectedProject.name, filePath);
+      const projectName = selectedProject.fullPath.replace(/\//g, '-');
+      const diff = await gitApi.fetchFileDiff(projectName, filePath);
       
       if (diff) {
         setGitDiff(prev => ({
@@ -152,7 +158,8 @@ export const useGitPanel = (selectedProject) => {
 
   const fetchRecentCommits = async () => {
     try {
-      const commits = await gitApi.fetchRecentCommits(selectedProject.name);
+      const projectName = selectedProject.fullPath.replace(/\//g, '-');
+      const commits = await gitApi.fetchRecentCommits(projectName);
       setRecentCommits(commits);
     } catch (error) {
       console.error('Error fetching commits:', error);
@@ -161,7 +168,8 @@ export const useGitPanel = (selectedProject) => {
 
   const fetchCommitDiff = async (commitHash) => {
     try {
-      const diff = await gitApi.fetchCommitDiff(selectedProject.name, commitHash);
+      const projectName = selectedProject.fullPath.replace(/\//g, '-');
+      const diff = await gitApi.fetchCommitDiff(projectName, commitHash);
       
       if (diff) {
         setCommitDiffs(prev => ({
@@ -177,7 +185,8 @@ export const useGitPanel = (selectedProject) => {
   const generateCommitMessage = async () => {
     setIsGeneratingMessage(true);
     try {
-      const data = await gitApi.generateCommitMessage(selectedProject.name, Array.from(selectedFiles));
+      const projectName = selectedProject.fullPath.replace(/\//g, '-');
+      const data = await gitApi.generateCommitMessage(projectName, Array.from(selectedFiles));
       
       if (data.message) {
         setCommitMessage(data.message);
@@ -196,7 +205,8 @@ export const useGitPanel = (selectedProject) => {
     
     setIsCommitting(true);
     try {
-      const data = await gitApi.commit(selectedProject.name, commitMessage, Array.from(selectedFiles));
+      const projectName = selectedProject.fullPath.replace(/\//g, '-');
+      const data = await gitApi.commit(projectName, commitMessage, Array.from(selectedFiles));
       
       if (data.success) {
         // Reset state after successful commit

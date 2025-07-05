@@ -51,11 +51,6 @@ export const LivePreviewPanel = ({
     onClearLogs
   });
 
-  // Debug logging for scripts
-  useEffect(() => {
-    console.log('📦 Available scripts:', availableScripts);
-    console.log('📁 Selected project:', selectedProject);
-  }, [availableScripts, selectedProject]);
 
   return (
     <Container>

@@ -10,7 +10,7 @@
     "client:dev": "vite serve --host --port 8766 --force --clearScreen false",
     "client": "vite --host --port 8766",
     "dev": "npm run clean:dist && concurrently --kill-others \"npm run server:dev\" \"npm run client:dev\" \"npm run ngrok\" \"npm run storybook\"",
-    "fix:imports":  "node scripts/fixImports.js",
+    "fix:imports": "node scripts/fixImports.js",
     "list:imports": "node scripts/listBrokenImports.js",
     "ngrok": "node scripts/start-ngrok.js",
     "preview": "vite preview",

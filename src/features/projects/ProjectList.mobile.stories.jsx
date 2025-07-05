@@ -2,16 +2,19 @@ import React from 'react';
 import { ProjectList } from './ProjectList';
 
 export default {
-  title: 'Features/Projects',
+  title: 'Features/Projects/Mobile',
   component: ProjectList,
   parameters: {
     layout: 'fullscreen',
     docs: {
       autodocs: true,
       description: {
-        component: 'The ProjectList component displays all projects and their sessions with management capabilities.'
+        component: 'Mobile version of ProjectList displays all projects and their sessions with touch-friendly interactions.'
       }
     }
+  },
+  globals: {
+    viewport: { value: 'iphone12', isRotated: false },
   },
   argTypes: {
     projects: {
@@ -114,8 +117,8 @@ const mockProjects = [
 export const Default = {
   args: {
     projects: mockProjects,
-    selectedProject: mockProjects[0],
-    selectedSession: mockProjects[0].sessions[0],
+    selectedProject: null,
+    selectedSession: null,
     isLoading: false
   }
 };
@@ -155,9 +158,8 @@ export const WithActiveSession = {
       },
       ...mockProjects.slice(1)
     ],
-    selectedProject: mockProjects[0],
+    selectedProject: null,
     selectedSession: null,
     isLoading: false
   }
 };
-

@@ -37,7 +37,8 @@ export const useFileTree = (selectedProject) => {
       }
       
       const data = await response.json();
-      setFiles(data);
+      // Ensure data is an array
+      setFiles(Array.isArray(data) ? data : []);
       setError(null);
     } catch (error) {
       console.error('❌ Error fetching files:', error);

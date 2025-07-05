@@ -32,12 +32,13 @@ export const MobileOverlay = styled.div`
 `;
 
 export const MobileModal = styled.div`
-  ${tw`absolute bottom-0 left-0 right-0 bg-card rounded-t-lg border-t border-border p-4 space-y-4`}
+  ${tw`absolute left-0 right-0 bg-card rounded-t-lg border-t border-border p-4 space-y-4`}
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 48px);
   animation: slide-up 0.3s ease-out;
   
   @keyframes slide-up {
     from {
-      transform: translateY(100%);
+      transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px) + 48px));
     }
     to {
       transform: translateY(0);

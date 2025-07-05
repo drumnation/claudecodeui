@@ -2,13 +2,25 @@ import React from 'react';
 import { ClaudeStatus } from '@/features/chat/components/ClaudeStatus';
 
 export default {
-  title: 'Features/Chat/components/ClaudeStatus',
+  title: 'Features/Chat/Components/Mobile/ClaudeStatus',
   component: ClaudeStatus,
   parameters: {
-    layout: 'centered',
+    layout: 'padded',
     backgrounds: {
       default: 'dark',
     },
+    docs: {
+      autodocs: true,
+      description: {
+        component: 'Mobile version of ClaudeStatus component for showing Claude processing state.'
+      }
+    }
+  },
+  globals: {
+    viewport: {
+      value: 'iphone12',
+      isRotated: false
+    }
   },
   argTypes: {
     isLoading: {
@@ -26,9 +38,9 @@ export default {
   },
 };
 
-// Base template
+// Base template optimized for mobile
 const Template = (args) => (
-  <div style={{ width: '800px' }}>
+  <div style={{ width: '100%', maxWidth: '400px' }}>
     <ClaudeStatus {...args} />
   </div>
 );
@@ -77,6 +89,17 @@ HighTokenCount.args = {
   onAbort: () => console.log('Aborted'),
 };
 
+// Processing on mobile
+export const Processing = Template.bind({});
+Processing.args = {
+  isLoading: true,
+  status: {
+    text: 'Processing',
+    tokens: 500,
+    can_interrupt: true,
+  },
+  onAbort: () => console.log('Aborted'),
+};
 
 // Not loading (hidden)
 export const NotLoading = Template.bind({});

@@ -1,20 +1,23 @@
 import React from 'react';
 import { App } from './App';
-import { ThemeProvider } from '@/contexts/ThemeContext';
+import { MemoryRouter } from 'react-router-dom';
+
+// Wrap App component with MemoryRouter for all stories
+const AppWithRouter = (props) => (
+  <MemoryRouter initialEntries={[props.initialRoute || '/']}>
+    <App {...props} />
+  </MemoryRouter>
+);
 
 export default {
   title: 'App/App',
-  component: App,
+  component: AppWithRouter,
   parameters: {
     layout: 'fullscreen',
   },
-  decorators: [
-    (Story) => (
-      <ThemeProvider>
-        <Story />
-      </ThemeProvider>
-    ),
-  ],
+  argTypes: {
+    chromatic: { disableSnapshot: true },
+  },
 };
 
 // Mock WebSocket connection
@@ -42,6 +45,22 @@ export const Default = {
       },
     },
   },
+  decorators: [
+    (Story) => {
+      // Set up empty projects before component mounts
+      window.__storybookProjectsData = [];
+      window.__storybookFetchBehavior = null;
+      
+      React.useEffect(() => {
+        return () => {
+          delete window.__storybookProjectsData;
+          delete window.__storybookFetchBehavior;
+        };
+      }, []);
+      
+      return <Story />;
+    },
+  ],
 };
 
 export const WithProjects = {
@@ -53,83 +72,98 @@ export const WithProjects = {
       },
     },
   },
-  play: async () => {
-    // Mock fetch to return sample projects
-    global.fetch = async (url) => {
-      if (url === '/api/projects') {
-        return {
-          json: async () => [
+  decorators: [
+    (Story) => {
+      // Set up projects data before component mounts
+      window.__storybookProjectsData = [
+        {
+          name: 'my-react-app',
+          displayName: 'My React App',
+          fullPath: '/Users/demo/projects/my-react-app',
+          sessionMeta: { total: 3, recent: 2 },
+          sessions: [
             {
-              name: 'my-react-app',
-              displayName: 'My React App',
-              fullPath: '/Users/demo/projects/my-react-app',
-              sessionMeta: { total: 3, recent: 2 },
-              sessions: [
-                {
-                  id: 'session-1',
-                  title: 'Implement authentication',
-                  created_at: '2024-01-01T10:00:00Z',
-                  updated_at: '2024-01-01T11:00:00Z',
-                  summary: 'Added JWT authentication',
-                },
-                {
-                  id: 'session-2',
-                  title: 'Fix navigation bugs',
-                  created_at: '2024-01-02T10:00:00Z',
-                  updated_at: '2024-01-02T11:00:00Z',
-                  summary: 'Fixed router issues',
-                },
-              ],
+              id: 'session-1',
+              title: 'Implement authentication',
+              created_at: '2024-01-01T10:00:00Z',
+              updated_at: '2024-01-01T11:00:00Z',
+              lastActivity: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+              summary: 'Added JWT authentication',
+              messageCount: 24,
+              isActive: false,
             },
             {
-              name: 'backend-api',
-              displayName: 'Backend API',
-              fullPath: '/Users/demo/projects/backend-api',
-              sessionMeta: { total: 1, recent: 1 },
-              sessions: [
-                {
-                  id: 'session-3',
-                  title: 'Add user endpoints',
-                  created_at: '2024-01-03T10:00:00Z',
-                  updated_at: '2024-01-03T11:00:00Z',
-                  summary: 'Created REST API endpoints',
-                },
-              ],
+              id: 'session-2',
+              title: 'Fix navigation bugs',
+              created_at: '2024-01-02T10:00:00Z',
+              updated_at: '2024-01-02T11:00:00Z',
+              lastActivity: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 minutes ago
+              summary: 'Fixed router issues',
+              messageCount: 15,
+              isActive: false,
             },
           ],
+        },
+        {
+          name: 'backend-api',
+          displayName: 'Backend API',
+          fullPath: '/Users/demo/projects/backend-api',
+          sessionMeta: { total: 1, recent: 1 },
+          sessions: [
+            {
+              id: 'session-3',
+              title: 'Add user endpoints',
+              created_at: '2024-01-03T10:00:00Z',
+              updated_at: '2024-01-03T11:00:00Z',
+              lastActivity: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5 minutes ago
+              summary: 'Created REST API endpoints',
+              messageCount: 8,
+              isActive: true,
+            },
+          ],
+        },
+      ];
+      window.__storybookFetchBehavior = null;
+      
+      React.useEffect(() => {
+        return () => {
+          delete window.__storybookProjectsData;
+          delete window.__storybookFetchBehavior;
         };
-      }
-      return { json: async () => ({}) };
-    };
-  },
+      }, []);
+      
+      return <Story />;
+    },
+  ],
 };
 
-export const MobileView = {
-  name: 'Mobile View',
+
+export const LightMode = {
+  name: 'Light Mode',
   parameters: {
-    viewport: {
-      defaultViewport: 'mobile1',
-    },
+    backgrounds: { default: 'light' },
     docs: {
       description: {
-        story: 'App layout on mobile devices with hamburger menu',
+        story: 'App layout with light theme enabled',
       },
     },
   },
-};
-
-export const TabletView = {
-  name: 'Tablet View',
-  parameters: {
-    viewport: {
-      defaultViewport: 'tablet',
+  decorators: [
+    (Story) => {
+      document.documentElement.classList.remove('dark');
+      window.__storybookProjectsData = [];
+      window.__storybookFetchBehavior = null;
+      
+      React.useEffect(() => {
+        return () => {
+          delete window.__storybookProjectsData;
+          delete window.__storybookFetchBehavior;
+        };
+      }, []);
+      
+      return <Story />;
     },
-    docs: {
-      description: {
-        story: 'App layout on tablet devices',
-      },
-    },
-  },
+  ],
 };
 
 export const DarkMode = {
@@ -144,10 +178,18 @@ export const DarkMode = {
   },
   decorators: [
     (Story) => {
+      document.documentElement.classList.add('dark');
+      window.__storybookProjectsData = [];
+      window.__storybookFetchBehavior = null;
+      
       React.useEffect(() => {
-        document.documentElement.classList.add('dark');
-        return () => document.documentElement.classList.remove('dark');
+        return () => {
+          document.documentElement.classList.remove('dark');
+          delete window.__storybookProjectsData;
+          delete window.__storybookFetchBehavior;
+        };
       }, []);
+      
       return <Story />;
     },
   ],
@@ -162,10 +204,20 @@ export const Loading = {
       },
     },
   },
-  play: async () => {
-    // Mock fetch to simulate loading
-    global.fetch = () => new Promise(() => {}); // Never resolves
-  },
+  decorators: [
+    (Story) => {
+      // Set loading behavior before component mounts
+      window.__storybookFetchBehavior = 'loading';
+      
+      React.useEffect(() => {
+        return () => {
+          delete window.__storybookFetchBehavior;
+        };
+      }, []);
+      
+      return <Story />;
+    },
+  ],
 };
 
 export const ErrorState = {
@@ -177,12 +229,20 @@ export const ErrorState = {
       },
     },
   },
-  play: async () => {
-    // Mock fetch to simulate error
-    global.fetch = async () => {
-      throw new Error('Failed to fetch projects');
-    };
-  },
+  decorators: [
+    (Story) => {
+      // Set error behavior before component mounts
+      window.__storybookFetchBehavior = 'error';
+      
+      React.useEffect(() => {
+        return () => {
+          delete window.__storybookFetchBehavior;
+        };
+      }, []);
+      
+      return <Story />;
+    },
+  ],
 };
 
 export const WithActiveSession = {
@@ -195,39 +255,40 @@ export const WithActiveSession = {
     },
   },
   decorators: [
-    (Story) => (
-      <MemoryRouter initialEntries={['/session/session-1']}>
-        <Story />
-      </MemoryRouter>
-    ),
-  ],
-  play: async () => {
-    // Mock fetch to return sample projects
-    global.fetch = async (url) => {
-      if (url === '/api/projects') {
-        return {
-          json: async () => [
+    (Story) => {
+      // Set up projects data before component mounts
+      window.__storybookProjectsData = [
+        {
+          name: 'my-react-app',
+          displayName: 'My React App',
+          fullPath: '/Users/demo/projects/my-react-app',
+          sessionMeta: { total: 1, recent: 1 },
+          sessions: [
             {
-              name: 'my-react-app',
-              displayName: 'My React App',
-              fullPath: '/Users/demo/projects/my-react-app',
-              sessionMeta: { total: 1, recent: 1 },
-              sessions: [
-                {
-                  id: 'session-1',
-                  title: 'Implement authentication',
-                  created_at: '2024-01-01T10:00:00Z',
-                  updated_at: '2024-01-01T11:00:00Z',
-                  summary: 'Added JWT authentication',
-                },
-              ],
+              id: 'session-1',
+              title: 'Implement authentication',
+              created_at: '2024-01-01T10:00:00Z',
+              updated_at: '2024-01-01T11:00:00Z',
+              lastActivity: new Date().toISOString(), // Just now
+              summary: 'Added JWT authentication',
+              messageCount: 24,
+              isActive: true,
             },
           ],
+        },
+      ];
+      window.__storybookFetchBehavior = null;
+      
+      React.useEffect(() => {
+        return () => {
+          delete window.__storybookProjectsData;
+          delete window.__storybookFetchBehavior;
         };
-      }
-      return { json: async () => ({}) };
-    };
-  },
+      }, []);
+      
+      return <Story args={{ initialRoute: '/session/session-1' }} />;
+    },
+  ],
 };
 
 export const WithSettingsOpen = {
@@ -239,15 +300,74 @@ export const WithSettingsOpen = {
       },
     },
   },
-  play: async () => {
-    // Wait for app to load
-    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-    await delay(100);
-    
-    // Find and click settings button
-    const settingsButton = canvasElement.querySelector('[aria-label*="Settings"]');
-    if (settingsButton) {
-      settingsButton.click();
-    }
+  decorators: [
+    (Story) => {
+      // Set up empty projects data before component mounts
+      window.__storybookProjectsData = [];
+      window.__storybookFetchBehavior = null;
+      
+      React.useEffect(() => {
+        // Wait for component to mount and then click the settings button
+        const timer = setTimeout(() => {
+          const settingsButton = document.querySelector('button:has(span:contains("Tools Settings"))') || 
+                                 document.querySelector('[aria-label*="Settings"]') ||
+                                 Array.from(document.querySelectorAll('button')).find(btn => 
+                                   btn.textContent.includes('Tools Settings')
+                                 );
+          if (settingsButton) {
+            settingsButton.click();
+          }
+        }, 100);
+        
+        return () => {
+          clearTimeout(timer);
+          delete window.__storybookProjectsData;
+          delete window.__storybookFetchBehavior;
+        };
+      }, []);
+      
+      return <Story />;
+    },
+  ],
+};
+
+export const WithQuickSettingsOpen = {
+  name: 'With Quick Settings Panel Open',
+  parameters: {
+    docs: {
+      description: {
+        story: 'App layout with quick settings panel expanded',
+      },
+    },
   },
+  decorators: [
+    (Story) => {
+      // Set up empty projects data before component mounts
+      window.__storybookProjectsData = [];
+      window.__storybookFetchBehavior = null;
+      
+      React.useEffect(() => {
+        // Wait for component to mount and then click the quick settings button
+        const timer = setTimeout(() => {
+          const quickSettingsButton = document.querySelector('[aria-label="Open settings panel"]') ||
+                                     document.querySelector('button[title*="settings"]') ||
+                                     Array.from(document.querySelectorAll('button')).find(btn => {
+                                       const svg = btn.querySelector('svg');
+                                       return svg && !btn.textContent.trim();
+                                     });
+          if (quickSettingsButton) {
+            quickSettingsButton.click();
+          }
+        }, 100);
+        
+        return () => {
+          clearTimeout(timer);
+          delete window.__storybookProjectsData;
+          delete window.__storybookFetchBehavior;
+        };
+      }, []);
+      
+      return <Story />;
+    },
+  ],
 };

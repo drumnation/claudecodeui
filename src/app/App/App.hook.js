@@ -17,6 +17,7 @@ export const useApp = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [selectedSession, setSelectedSession] = useState(null);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+  const [projectsError, setProjectsError] = useState(null);
   
   // UI state
   const [activeTab, setActiveTab] = useState('chat');
@@ -66,7 +67,13 @@ export const useApp = () => {
   const fetchProjects = useCallback(async () => {
     try {
       setIsLoadingProjects(true);
+      setProjectsError(null);
       const response = await fetch('/api/projects');
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch projects: ${response.statusText}`);
+      }
+      
       const data = await response.json();
       
       setProjects(prevProjects => {
@@ -91,6 +98,8 @@ export const useApp = () => {
       });
     } catch (error) {
       console.error('Error fetching projects:', error);
+      setProjectsError(error.message || 'Failed to load projects');
+      setProjects([]);
     } finally {
       setIsLoadingProjects(false);
     }
@@ -126,7 +135,8 @@ export const useApp = () => {
         
         if (selectedProject) {
           const updatedSelectedProject = updatedProjects.find(p => p.name === selectedProject.name);
-          if (updatedSelectedProject) {
+          if (updatedSelectedProject && updatedSelectedProject.fullPath !== selectedProject.fullPath) {
+            // Only update if the project path has changed
             setSelectedProject(updatedSelectedProject);
             
             if (selectedSession) {
@@ -352,6 +362,7 @@ export const useApp = () => {
     isMobile,
     sidebarOpen,
     isLoadingProjects,
+    projectsError,
     isInputFocused,
     showToolsSettings,
     showQuickSettings,

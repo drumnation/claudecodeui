@@ -2,10 +2,22 @@ import React, { useState, useRef } from 'react';
 import { InputArea } from './InputArea';
 
 export default {
-  title: 'Features/Chat/components/InputArea',
+  title: 'Features/Chat/Components/Mobile/InputArea',
   component: InputArea,
   parameters: {
-    layout: 'fullscreen',
+    layout: 'padded',
+    docs: {
+      autodocs: true,
+      description: {
+        component: 'Mobile version of InputArea component with touch-friendly interactions and mobile keyboard support.'
+      }
+    }
+  },
+  globals: {
+    viewport: {
+      value: 'iphone12',
+      isRotated: false
+    }
   },
 };
 
@@ -124,7 +136,7 @@ const Template = (args) => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', backgroundColor: '#f3f4f6' }}>
+    <div style={{ minHeight: '400px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', backgroundColor: '#f3f4f6' }}>
       <div style={{ flex: 1 }} />
       <InputArea
         {...args}
@@ -203,19 +215,9 @@ WithClaudeStatus.args = {
   },
 };
 
-
-export const DarkMode = Template.bind({});
-DarkMode.parameters = {
-  backgrounds: { default: 'dark' },
-};
-DarkMode.decorators = [
-  (Story) => (
-    <div className="dark" style={{ minHeight: '100vh', backgroundColor: '#1f2937' }}>
-      <Story />
-    </div>
-  ),
-];
-DarkMode.args = {
+export const TouchOptimized = Template.bind({});
+TouchOptimized.args = {
   isLoading: false,
   claudeStatus: null,
+  input: '',
 };

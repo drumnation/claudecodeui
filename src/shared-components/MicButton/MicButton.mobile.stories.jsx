@@ -3,10 +3,22 @@ import { MicButton } from '@/shared-components/MicButton/MicButton';
 import { RecordingStates } from '@/shared-components/MicButton/MicButton.logic';
 
 export default {
-  title: 'Shared Components/MicButton',
+  title: 'Shared Components/Mobile/MicButton',
   component: MicButton,
   parameters: {
     layout: 'centered',
+    docs: {
+      autodocs: true,
+      description: {
+        component: 'Mobile version of MicButton component with touch-friendly interactions.'
+      }
+    }
+  },
+  globals: {
+    viewport: {
+      value: 'iphone12',
+      isRotated: false
+    }
   },
   argTypes: {
     onTranscript: { action: 'transcript received' },
@@ -14,7 +26,7 @@ export default {
   }
 };
 
-// Default story
+// Default mobile story
 export const Default = {
   args: {
     className: ''
@@ -28,7 +40,7 @@ export const WithCustomClass = {
   }
 };
 
-// Interactive story for testing different states
+// Interactive story for testing different states on mobile
 export const InteractiveStates = {
   render: (args) => {
     const [currentState, setCurrentState] = React.useState(RecordingStates.IDLE);
@@ -72,28 +84,28 @@ export const InteractiveStates = {
     };
     
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', alignItems: 'center' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center' }}>
         <MockedMicButton {...args} />
         
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <button onClick={() => setCurrentState(RecordingStates.IDLE)}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', width: '100%', maxWidth: '300px' }}>
+          <button onClick={() => setCurrentState(RecordingStates.IDLE)} style={{ padding: '0.5rem', fontSize: '0.875rem' }}>
             Set Idle
           </button>
-          <button onClick={() => setCurrentState(RecordingStates.RECORDING)}>
+          <button onClick={() => setCurrentState(RecordingStates.RECORDING)} style={{ padding: '0.5rem', fontSize: '0.875rem' }}>
             Set Recording
           </button>
-          <button onClick={() => setCurrentState(RecordingStates.TRANSCRIBING)}>
+          <button onClick={() => setCurrentState(RecordingStates.TRANSCRIBING)} style={{ padding: '0.5rem', fontSize: '0.875rem' }}>
             Set Transcribing
           </button>
-          <button onClick={() => setCurrentState(RecordingStates.PROCESSING)}>
+          <button onClick={() => setCurrentState(RecordingStates.PROCESSING)} style={{ padding: '0.5rem', fontSize: '0.875rem' }}>
             Set Processing
           </button>
-          <button onClick={() => setShowError(!showError)}>
+          <button onClick={() => setShowError(!showError)} style={{ padding: '0.5rem', fontSize: '0.875rem', gridColumn: '1 / -1' }}>
             Toggle Error
           </button>
         </div>
         
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: 'center', fontSize: '0.875rem' }}>
           <p>Current State: <strong>{currentState}</strong></p>
           <p>Error Shown: <strong>{showError ? 'Yes' : 'No'}</strong></p>
         </div>
@@ -102,7 +114,7 @@ export const InteractiveStates = {
   }
 };
 
-// Story showing all states side by side
+// Story showing all states in mobile layout
 export const AllStates = {
   render: (args) => {
     const states = [
@@ -113,11 +125,11 @@ export const AllStates = {
     ];
     
     return (
-      <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '1rem' }}>
         {states.map(({ state, label }) => (
           <div key={state} style={{ textAlign: 'center' }}>
             <MicButtonMock {...args} forcedState={state} />
-            <p style={{ marginTop: '0.5rem' }}>{label}</p>
+            <p style={{ marginTop: '0.5rem', fontSize: '0.875rem' }}>{label}</p>
           </div>
         ))}
       </div>
@@ -165,4 +177,3 @@ const MicButtonMock = ({ forcedState, forcedError, ...props }) => {
   
   return <MockedMicButton {...props} />;
 };
-

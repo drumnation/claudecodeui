@@ -3,15 +3,22 @@ import { ToolsSettings } from '@/features/settings/ToolsSettings';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 
 export default {
-  title: 'Features/Settings/Tools',
+  title: 'Features/Settings/Mobile/ToolsSettings',
   component: ToolsSettings,
   tags: ['autodocs'],
   parameters: {
-    layout: 'fullscreen',
+    layout: 'padded',
     docs: {
+      autodocs: true,
       description: {
-        component: 'A comprehensive settings modal for managing tool permissions, appearance preferences, and allowed/disallowed tools configuration.'
+        component: 'Mobile version of comprehensive settings modal for managing tool permissions, appearance preferences, and allowed/disallowed tools configuration.'
       }
+    }
+  },
+  globals: {
+    viewport: {
+      value: 'iphone12',
+      isRotated: false
     }
   },
   decorators: [
@@ -57,7 +64,11 @@ export const WithConfiguredTools = {
         }));
       }, []);
       
-      return <Story />;
+      return (
+        <ThemeProvider>
+          <Story />
+        </ThemeProvider>
+      );
     }
   ]
 };
@@ -76,11 +87,14 @@ export const DarkMode = {
         };
       }, []);
       
-      return <Story />;
+      return (
+        <ThemeProvider>
+          <Story />
+        </ThemeProvider>
+      );
     }
   ]
 };
-
 
 // Closed state
 export const Closed = {

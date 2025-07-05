@@ -78,6 +78,10 @@ export const FileTree = ({ selectedProject }) => {
   };
 
   const renderFileTree = (items, level = 0) => {
+    if (!Array.isArray(items)) {
+      console.error('FileTree: items is not an array', items);
+      return null;
+    }
     return items.map((item) => (
       <S.FileTreeItem key={item.path}>
         <S.FileButton
@@ -135,7 +139,7 @@ export const FileTree = ({ selectedProject }) => {
               {error}
             </S.ErrorStateMessage>
           </S.ErrorStateContainer>
-        ) : files.length === 0 ? (
+        ) : !Array.isArray(files) || files.length === 0 ? (
           <S.EmptyStateContainer>
             <S.EmptyStateIcon>
               <S.EmptyFolderIcon>

@@ -2,14 +2,14 @@ import React from 'react';
 import { ProjectList } from './ProjectList';
 
 export default {
-  title: 'Features/Projects',
+  title: 'Features/Projects/Web',
   component: ProjectList,
   parameters: {
     layout: 'fullscreen',
     docs: {
       autodocs: true,
       description: {
-        component: 'The ProjectList component displays all projects and their sessions with management capabilities.'
+        component: 'Web version of ProjectList displays all projects and their sessions with hover-based interactions.'
       }
     }
   },
@@ -160,4 +160,3 @@ export const WithActiveSession = {
     isLoading: false
   }
 };
-

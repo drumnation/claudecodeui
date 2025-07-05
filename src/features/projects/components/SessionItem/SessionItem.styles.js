@@ -2,7 +2,7 @@ import styled from '@emotion/styled';
 import tw from 'twin.macro';
 
 export const SessionContainer = styled.div`
-  ${tw`relative`}
+  ${tw`relative py-1`}
 `;
 
 // Mobile styles
@@ -11,14 +11,14 @@ export const MobileWrapper = styled.div`
 `;
 
 export const MobileSessionItem = styled.div`
-  ${tw`p-2 mx-3 my-0.5 rounded-md bg-card border active:scale-[0.98] transition-all duration-150 relative`}
+  ${tw`p-2 mx-3 my-0 rounded-md bg-card border active:scale-[0.98] transition-all duration-150 relative`}
   ${props => props.isSelected && tw`bg-primary/5 border-primary/20`}
   ${props => props.isActive && !props.isSelected && tw`border-green-500/30 bg-green-50/5 dark:bg-green-900/5`}
   ${props => !props.isSelected && !props.isActive && tw`border-border/30`}
 `;
 
 export const SessionContent = styled.div`
-  ${tw`flex items-center gap-2`}
+  ${tw`flex items-center gap-3`}
 `;
 
 export const SessionIcon = styled.div`
@@ -37,7 +37,7 @@ export const SessionTitle = styled.div`
 `;
 
 export const SessionMeta = styled.div`
-  ${tw`flex items-center gap-1 mt-0.5`}
+  ${tw`flex items-center gap-1.5 mt-1`}
 `;
 
 export const TimeIcon = styled.div`
@@ -102,7 +102,7 @@ export const DesktopWrapper = styled.div`
 `;
 
 export const DesktopHoverActions = styled.div`
-  ${tw`absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1 opacity-0 transition-all duration-200`}
+  ${tw`absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1.5 opacity-0 transition-all duration-200`}
   
   @media (hover: hover) {
     .group:hover & {
