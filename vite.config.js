@@ -4,11 +4,14 @@ import react from '@vitejs/plugin-react';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
-import { consoleForwardPlugin } from 'vite-console-forward-plugin';
+import macrosPlugin from 'vite-plugin-babel-macros';
 const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
-export default defineConfig({
+export default defineConfig(async () => {
+  const { consoleForwardPlugin } = await import('vite-console-forward-plugin');
+  
+  return {
   plugins: [
     react({
       babel: {
@@ -25,6 +28,7 @@ export default defineConfig({
         ]
       }
     }),
+    macrosPlugin(),
     consoleForwardPlugin()
   ],
   server: {
@@ -88,4 +92,5 @@ export default defineConfig({
       }
     }]
   }
+  };
 });
