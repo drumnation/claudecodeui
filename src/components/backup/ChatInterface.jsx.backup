@@ -23,6 +23,10 @@ import CommandMenu from './CommandMenu';
 import ClaudeLogo from './ClaudeLogo';
 import ClaudeStatus from './ClaudeStatus';
 import { MicButton } from './MicButton';
+import NoProjectSelected from './ChatInterface/components/NoProjectSelected';
+import ScrollToBottomButton from './ChatInterface/components/ScrollToBottomButton';
+import MessageStates from './ChatInterface/components/MessageStates';
+import HintTexts from './ChatInterface/components/HintTexts';
 
 // Memoized message component to prevent unnecessary re-renders
 const MessageComponent = memo(({ message, index, prevMessage, createDiff, onFileOpen, onShowSettings, autoExpandTools, showRawParameters }) => {
@@ -1897,13 +1901,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
 
   // Don't render if no project is selected
   if (!selectedProject) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center text-gray-500 dark:text-gray-400">
-          <p>Select a project to start chatting with Claude</p>
-        </div>
-      </div>
-    );
+    return <NoProjectSelected />;
   }
 
   return (
@@ -1921,23 +1919,11 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto overflow-x-hidden px-0 py-3 sm:p-4 space-y-3 sm:space-y-4 relative"
       >
-        {isLoadingSessionMessages && chatMessages.length === 0 ? (
-          <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
-            <div className="flex items-center justify-center space-x-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
-              <p>Loading session messages...</p>
-            </div>
-          </div>
-        ) : chatMessages.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center text-gray-500 dark:text-gray-400 px-6 sm:px-4">
-              <p className="font-bold text-lg sm:text-xl mb-3">Start a conversation with Claude</p>
-              <p className="text-sm sm:text-base leading-relaxed">
-                Ask questions about your code, request changes, or get help with development tasks
-              </p>
-            </div>
-          </div>
-        ) : (
+        <MessageStates 
+          isLoadingSessionMessages={isLoadingSessionMessages} 
+          chatMessages={chatMessages} 
+        />
+        {chatMessages.length > 0 && (
           <>
             {chatMessages.length > 100 && (
               <div className="text-center text-gray-500 dark:text-gray-400 text-sm py-2 border-b border-gray-200 dark:border-gray-700">
