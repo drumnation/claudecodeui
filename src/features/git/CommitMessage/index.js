@@ -1,0 +1,1 @@
+export { CommitMessage } from './CommitMessage';

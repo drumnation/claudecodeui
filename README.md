@@ -153,6 +153,45 @@ The UI automatically discovers Claude Code projects from `~/.claude/projects/` a
 ### Frontend (React + Vite)
 - **React 18** - Modern component architecture with hooks
 - **CodeMirror** - Advanced code editor with syntax highlighting
+- **Bulletproof React Architecture** - Scalable component structure with separation of concerns
+- **Emotion + Twin.macro** - CSS-in-JS with Tailwind utilities
+- **Storybook** - Component documentation and testing
+
+### Project Structure
+
+The project follows a bulletproof React architecture with clear separation of concerns:
+
+```
+src/
+├── app/                 # Application entry point
+├── features/           # Feature-based modules
+├── layouts/           # Layout components
+├── components/        # Shared UI components
+├── shared-components/ # Reusable atomic components
+└── ...
+```
+
+Each component follows a consistent structure:
+- `.jsx` - UI-only component with JSX
+- `.hook.js` - Custom hook for state management
+- `.logic.js` - Pure functions and business logic
+- `.styles.js` - Emotion styled components with Tailwind
+- `.stories.jsx` - Storybook documentation
+
+See [Architecture Documentation](docs/architecture/bulletproof-react.md) for detailed guidelines.
+
+### Import Management
+
+All imports use absolute paths with the `@/` alias:
+
+```javascript
+import { Button } from '@/shared-components/Button';
+import { useAuth } from '@/hooks/useAuth';
+```
+
+Available scripts for import management:
+- `npm run fix:imports` - Convert relative imports to @/ aliases
+- `npm run list:imports` - List any broken imports
 
 
 

@@ -1,0 +1,207 @@
+feature: Git Version Control
+description: Visual Git interface for managing version control operations
+
+epics:
+  - name: Repository Status
+    stories:
+      - title: View file changes
+        as_a: Developer
+        i_want_to: See all modified files in my repository
+        so_that: I can understand what has changed
+        acceptance_criteria:
+          - Shows modified, added, deleted, renamed files
+          - Displays untracked files separately
+          - Updates automatically when files change
+          - Shows file count badges
+          - Color codes by status type
+          - Groups staged vs unstaged
+
+      - title: Refresh repository status
+        as_a: Developer
+        i_want_to: Manually refresh the Git status
+        so_that: I can see the latest changes
+        acceptance_criteria:
+          - Refresh button visible
+          - Loading state during refresh
+          - Updates all file statuses
+          - Preserves selection state
+          - Shows last update time
+          - Auto-refresh every 5 seconds
+
+  - name: File Operations
+    stories:
+      - title: View file diffs
+        as_a: Developer
+        i_want_to: See what changed in each file
+        so_that: I can review my modifications
+        acceptance_criteria:
+          - Click file to expand diff
+          - Syntax highlighting in diff
+          - Shows added/removed lines
+          - Line numbers displayed
+          - Can collapse diff view
+          - Word wrap toggle for long lines
+
+      - title: Select files for commit
+        as_a: Developer
+        i_want_to: Choose which files to include
+        so_that: I can make focused commits
+        acceptance_criteria:
+          - Checkbox on each file
+          - Select/deselect all option
+          - Visual feedback on selection
+          - Selected count displayed
+          - Persists during refresh
+          - Keyboard shortcuts work
+
+      - title: Stage and unstage files
+        as_a: Developer
+        i_want_to: Control which changes are staged
+        so_that: I can prepare commits properly
+        acceptance_criteria:
+          - Stage individual files
+          - Stage all changes
+          - Unstage files
+          - Visual staging status
+          - Preserves diff view state
+
+  - name: Branch Management
+    stories:
+      - title: Switch branches
+        as_a: Developer
+        i_want_to: Change to a different branch
+        so_that: I can work on different features
+        acceptance_criteria:
+          - Dropdown shows all branches
+          - Current branch highlighted
+          - Search branches by name
+          - Loading state during switch
+          - Success/error feedback
+          - Updates file list after switch
+
+      - title: Create new branch
+        as_a: Developer
+        i_want_to: Create a new branch
+        so_that: I can start new work
+        acceptance_criteria:
+          - New branch button visible
+          - Modal for branch name input
+          - Name validation rules
+          - Creates from current branch
+          - Auto-switches to new branch
+          - Shows in branch list immediately
+
+      - title: View current branch
+        as_a: Developer
+        i_want_to: See which branch I'm on
+        so_that: I know my working context
+        acceptance_criteria:
+          - Branch name always visible
+          - Icon indicates branch type
+          - Truncates long names
+          - Tooltip shows full name
+          - Updates after operations
+
+  - name: Commit Operations
+    stories:
+      - title: Write commit message
+        as_a: Developer
+        i_want_to: Describe my changes
+        so_that: I can document my work
+        acceptance_criteria:
+          - Multi-line text input
+          - Character count indicator
+          - Placeholder text guidance
+          - Persists during typing
+          - Clears after commit
+          - Supports markdown
+
+      - title: Generate commit message
+        as_a: Developer
+        i_want_to: Get AI-suggested commit message
+        so_that: I can save time and follow conventions
+        acceptance_criteria:
+          - Generate button visible
+          - Uses selected file context
+          - Loading state during generation
+          - Can edit generated message
+          - Follows conventional commits
+          - Error handling for failures
+
+      - title: Use voice for commit message
+        as_a: Developer
+        i_want_to: Dictate my commit message
+        so_that: I can commit hands-free
+        acceptance_criteria:
+          - Microphone button visible
+          - Visual recording indicator
+          - Real-time transcription
+          - Can edit transcribed text
+          - Error handling for no mic
+          - Stop recording option
+
+      - title: Create commit
+        as_a: Developer
+        i_want_to: Save my changes to Git
+        so_that: I can preserve my work
+        acceptance_criteria:
+          - Commit button enabled when ready
+          - Validates message not empty
+          - Shows progress during commit
+          - Success feedback
+          - Clears selection after
+          - Updates history immediately
+
+  - name: Commit History
+    stories:
+      - title: View recent commits
+        as_a: Developer
+        i_want_to: See commit history
+        so_that: I can track project progress
+        acceptance_criteria:
+          - Shows last 10 commits
+          - Displays hash, message, author
+          - Relative timestamps
+          - Load more option
+          - Chronological order
+          - Current branch only
+
+      - title: View commit details
+        as_a: Developer
+        i_want_to: See what changed in a commit
+        so_that: I can understand past work
+        acceptance_criteria:
+          - Click to expand commit
+          - Shows full diff
+          - Lists changed files
+          - Copy commit hash
+          - Link to files
+          - Collapse when done
+
+  - name: Mobile Experience
+    stories:
+      - title: Use Git on mobile
+        as_a: Mobile developer
+        i_want_to: Access Git features on small screens
+        so_that: I can work from anywhere
+        acceptance_criteria:
+          - Responsive layout
+          - Touch-friendly controls
+          - Swipe gestures work
+          - Readable diff text
+          - Optimized spacing
+          - Full functionality maintained
+
+  - name: Error Handling
+    stories:
+      - title: Handle Git errors
+        as_a: Developer
+        i_want_to: Understand when operations fail
+        so_that: I can fix issues
+        acceptance_criteria:
+          - Clear error messages
+          - Suggests solutions
+          - Retry options
+          - Doesn't lose state
+          - Logs for debugging
+          - Timeout handling

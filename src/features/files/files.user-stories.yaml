@@ -1,0 +1,194 @@
+feature: Files Explorer
+description: File navigation and viewing system for project exploration
+
+epics:
+  - name: File Navigation
+    stories:
+      - title: Browse directory tree
+        as_a: User
+        i_want_to: Navigate through my project's file structure
+        so_that: I can explore and understand the codebase
+        acceptance_criteria:
+          - Can see root directory contents
+          - Can expand/collapse directories
+          - File icons match file types
+          - Current path shows in breadcrumbs
+          - Smooth animations on expand/collapse
+
+      - title: Search for files
+        as_a: User
+        i_want_to: Search for files by name
+        so_that: I can quickly find what I need
+        acceptance_criteria:
+          - Search box accessible at top of tree
+          - Real-time filtering as I type
+          - Highlights matching portions
+          - Can search by partial name
+          - Case-insensitive search
+          - Shows file path in results
+
+      - title: Navigate with keyboard
+        as_a: User
+        i_want_to: Use keyboard shortcuts to navigate
+        so_that: I can browse files efficiently
+        acceptance_criteria:
+          - Arrow keys move selection
+          - Enter opens/closes directories
+          - Space selects files
+          - Home/End jump to first/last
+          - Type-ahead to jump to files
+
+  - name: File Viewing
+    stories:
+      - title: Preview text files
+        as_a: User
+        i_want_to: View file contents without opening editor
+        so_that: I can quickly inspect files
+        acceptance_criteria:
+          - Click file to preview
+          - Syntax highlighting for code
+          - Line numbers displayed
+          - Can select and copy text
+          - Handles large files gracefully
+
+      - title: View images
+        as_a: User
+        i_want_to: View image files in the browser
+        so_that: I can inspect visual assets
+        acceptance_criteria:
+          - Supports PNG, JPG, GIF, SVG, WebP
+          - Shows image dimensions
+          - Shows file size
+          - Can zoom in/out
+          - Can pan large images
+          - Fit to window option
+
+      - title: Handle binary files
+        as_a: User
+        i_want_to: See appropriate message for binary files
+        so_that: I know why content isn't displayed
+        acceptance_criteria:
+          - Shows file type and size
+          - Suggests appropriate action
+          - Doesn't attempt to display
+          - Can still copy path
+          - Shows file metadata
+
+  - name: File Operations
+    stories:
+      - title: Copy file path
+        as_a: User
+        i_want_to: Copy the full path of a file
+        so_that: I can reference it elsewhere
+        acceptance_criteria:
+          - Right-click shows context menu
+          - Copy path option available
+          - Copies absolute path
+          - Success feedback shown
+          - Works on files and directories
+
+      - title: Send file to chat
+        as_a: User
+        i_want_to: Send file contents to Claude
+        so_that: I can discuss the code
+        acceptance_criteria:
+          - Context menu has "Send to chat" option
+          - File contents appear in message
+          - Includes file path reference
+          - Works for text files
+          - Shows error for binary files
+
+      - title: Open in editor
+        as_a: User
+        i_want_to: Open files in my code editor
+        so_that: I can edit them
+        acceptance_criteria:
+          - Double-click opens in editor
+          - Context menu option available
+          - Opens at correct line if specified
+          - Works with system default editor
+          - Error handling if editor fails
+
+  - name: Image Viewer
+    stories:
+      - title: Zoom images
+        as_a: User
+        i_want_to: Zoom in and out of images
+        so_that: I can inspect details
+        acceptance_criteria:
+          - Zoom buttons in toolbar
+          - Mouse wheel zooming
+          - Pinch to zoom on touch
+          - Zoom percentage displayed
+          - Min/max zoom limits
+          - Smooth zoom animations
+
+      - title: Pan large images
+        as_a: User
+        i_want_to: Move around zoomed images
+        so_that: I can see different parts
+        acceptance_criteria:
+          - Click and drag to pan
+          - Cursor changes to indicate pan
+          - Bounds checking at edges
+          - Smooth panning motion
+          - Works with touch gestures
+
+      - title: Fit image to window
+        as_a: User
+        i_want_to: Quickly fit image to view
+        so_that: I can see the whole image
+        acceptance_criteria:
+          - Fit button in toolbar
+          - Keyboard shortcut (0 key)
+          - Maintains aspect ratio
+          - Centers in viewport
+          - Updates on window resize
+
+  - name: File Watching
+    stories:
+      - title: See file changes
+        as_a: User
+        i_want_to: See when files are modified
+        so_that: I stay aware of changes
+        acceptance_criteria:
+          - Modified files highlighted
+          - Change indicator icon
+          - Updates in real-time
+          - Can refresh manually
+          - Shows last modified time
+
+      - title: Handle file deletions
+        as_a: User
+        i_want_to: See when files are deleted
+        so_that: I don't reference missing files
+        acceptance_criteria:
+          - Deleted files removed from tree
+          - Smooth removal animation
+          - Parent directory updates
+          - Handles open file deletion
+          - No errors on deletion
+
+  - name: Performance
+    stories:
+      - title: Handle large directories
+        as_a: User
+        i_want_to: Browse directories with many files
+        so_that: I can work with any project size
+        acceptance_criteria:
+          - Virtual scrolling for long lists
+          - Pagination or lazy loading
+          - Responsive UI during load
+          - Search remains fast
+          - Memory usage controlled
+
+      - title: Quick file preview
+        as_a: User
+        i_want_to: See file contents instantly
+        so_that: I can work efficiently
+        acceptance_criteria:
+          - Preview loads in <500ms
+          - Progressive loading for large files
+          - Cancellable requests
+          - Caches recent previews
+          - Preloads on hover

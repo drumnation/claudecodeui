@@ -1,0 +1,219 @@
+feature: Settings Management
+description: Configuration and preferences for Claude Code UI
+
+epics:
+  - name: Tool Permissions
+    stories:
+      - title: View available tools
+        as_a: User
+        i_want_to: See all available Claude tools
+        so_that: I can understand capabilities
+        acceptance_criteria:
+          - Shows all tool cards
+          - Displays tool names clearly
+          - Shows tool descriptions
+          - Indicates enabled/disabled state
+          - Groups by category
+          - Shows security indicators
+
+      - title: Enable/disable tools
+        as_a: User
+        i_want_to: Control which tools Claude can use
+        so_that: I can manage security and functionality
+        acceptance_criteria:
+          - Toggle switch on each tool
+          - Instant visual feedback
+          - State persists on reload
+          - Can enable/disable all
+          - Shows confirmation for risky tools
+          - Updates take effect immediately
+
+      - title: Configure allowed tools
+        as_a: Power user
+        i_want_to: Specify custom allowed tools
+        so_that: I can fine-tune permissions
+        acceptance_criteria:
+          - Text input for tool names
+          - Comma-separated list support
+          - Validates tool names
+          - Shows current list
+          - Can clear all
+          - Saves automatically
+
+      - title: Configure disallowed tools
+        as_a: Security-conscious user
+        i_want_to: Block specific tools
+        so_that: I can prevent unwanted operations
+        acceptance_criteria:
+          - Text input for blocked tools
+          - Overrides other permissions
+          - Shows warning badge
+          - Validates input
+          - Persists settings
+          - Clear explanation provided
+
+  - name: Appearance
+    stories:
+      - title: Toggle dark mode
+        as_a: User
+        i_want_to: Switch between themes
+        so_that: I can work comfortably
+        acceptance_criteria:
+          - Theme toggle accessible
+          - Smooth transition animation
+          - Updates all components
+          - Persists preference
+          - Respects system theme
+          - No layout shift
+
+      - title: Configure UI density
+        as_a: User
+        i_want_to: Adjust interface spacing
+        so_that: I can see more or less content
+        acceptance_criteria:
+          - Density options (compact/normal/comfortable)
+          - Preview changes live
+          - Affects all components
+          - Saves preference
+          - Mobile responsive
+          - Maintains usability
+
+  - name: Behavioral Settings
+    stories:
+      - title: Skip permission prompts
+        as_a: Experienced user
+        i_want_to: Disable confirmation dialogs
+        so_that: I can work faster
+        acceptance_criteria:
+          - Toggle for skip permissions
+          - Warning about implications
+          - Takes effect immediately
+          - Can re-enable anytime
+          - Persists setting
+          - Respects critical operations
+
+      - title: Configure auto-save
+        as_a: User
+        i_want_to: Control automatic saving
+        so_that: I don't lose work
+        acceptance_criteria:
+          - Auto-save toggle
+          - Interval configuration
+          - Visual save indicator
+          - Manual save option
+          - Conflict handling
+          - Performance impact minimal
+
+      - title: Set notification preferences
+        as_a: User
+        i_want_to: Control notifications
+        so_that: I'm not distracted
+        acceptance_criteria:
+          - Notification categories
+          - Enable/disable per type
+          - Sound settings
+          - Desktop notifications
+          - In-app notifications
+          - Do not disturb mode
+
+  - name: Settings Management
+    stories:
+      - title: Save settings
+        as_a: User
+        i_want_to: Persist my preferences
+        so_that: They're retained between sessions
+        acceptance_criteria:
+          - Auto-save on change
+          - Manual save button
+          - Success confirmation
+          - Error handling
+          - No data loss
+          - Fast save operation
+
+      - title: Reset to defaults
+        as_a: User
+        i_want_to: Restore default settings
+        so_that: I can start fresh
+        acceptance_criteria:
+          - Reset button visible
+          - Confirmation required
+          - Lists what will change
+          - Instant reset
+          - Can undo (planned)
+          - Clears local storage
+
+      - title: Import/export settings
+        as_a: User
+        i_want_to: Transfer settings between devices
+        so_that: I have consistent experience
+        acceptance_criteria:
+          - Export to JSON file
+          - Import from file
+          - Validates import data
+          - Merge or replace options
+          - Error handling
+          - Success feedback
+
+  - name: Modal Interface
+    stories:
+      - title: Open settings modal
+        as_a: User
+        i_want_to: Access settings easily
+        so_that: I can make changes quickly
+        acceptance_criteria:
+          - Settings button visible
+          - Opens with animation
+          - Keyboard shortcut (Cmd+,)
+          - Remembers last section
+          - Loading state if needed
+          - Responsive sizing
+
+      - title: Navigate settings sections
+        as_a: User
+        i_want_to: Find specific settings
+        so_that: I can configure efficiently
+        acceptance_criteria:
+          - Clear section headers
+          - Visual separation
+          - Smooth scrolling
+          - Sticky headers
+          - Search functionality (planned)
+          - Breadcrumbs (if nested)
+
+      - title: Close settings modal
+        as_a: User
+        i_want_to: Dismiss settings when done
+        so_that: I can return to work
+        acceptance_criteria:
+          - X button in corner
+          - Click outside to close
+          - Escape key closes
+          - Confirms unsaved changes
+          - Smooth close animation
+          - Returns focus properly
+
+  - name: Accessibility
+    stories:
+      - title: Navigate with keyboard
+        as_a: User with mobility impairment
+        i_want_to: Use keyboard only
+        so_that: I can access all settings
+        acceptance_criteria:
+          - Tab through all controls
+          - Enter/Space activates
+          - Arrow keys for groups
+          - Focus indicators visible
+          - Skip links available
+          - Logical tab order
+
+      - title: Use with screen reader
+        as_a: User with visual impairment
+        i_want_to: Hear settings described
+        so_that: I can configure independently
+        acceptance_criteria:
+          - ARIA labels complete
+          - Roles properly set
+          - States announced
+          - Descriptions helpful
+          - Landmarks defined
+          - Changes announced

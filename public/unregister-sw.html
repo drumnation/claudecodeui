@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Unregister Service Worker</title>
+</head>
+<body>
+    <h1>Service Worker Cleanup</h1>
+    <button onclick="unregisterAll()">Unregister All Service Workers</button>
+    <div id="status"></div>
+    
+    <script>
+        async function unregisterAll() {
+            const status = document.getElementById('status');
+            
+            if ('serviceWorker' in navigator) {
+                try {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    
+                    if (registrations.length === 0) {
+                        status.innerHTML = '<p>No service workers found.</p>';
+                        return;
+                    }
+                    
+                    status.innerHTML = '<p>Unregistering service workers...</p>';
+                    
+                    for (let registration of registrations) {
+                        await registration.unregister();
+                        console.log('Service worker unregistered:', registration);
+                    }
+                    
+                    status.innerHTML = '<p style="color: green;">All service workers unregistered successfully!</p>';
+                    
+                    // Clear all caches
+                    const cacheNames = await caches.keys();
+                    for (let cacheName of cacheNames) {
+                        await caches.delete(cacheName);
+                        console.log('Cache deleted:', cacheName);
+                    }
+                    
+                    status.innerHTML += '<p style="color: green;">All caches cleared!</p>';
+                    status.innerHTML += '<p>You can now close this page and reload the main app.</p>';
+                    
+                } catch (error) {
+                    status.innerHTML = '<p style="color: red;">Error: ' + error.message + '</p>';
+                }
+            } else {
+                status.innerHTML = '<p>Service workers are not supported in this browser.</p>';
+            }
+        }
+        
+        // Auto-run on page load
+        window.addEventListener('load', () => {
+            const status = document.getElementById('status');
+            status.innerHTML = '<p>Click the button above to unregister all service workers.</p>';
+        });
+    </script>
+</body>
+</html>
