@@ -1,7 +1,7 @@
 import React from 'react';
 import { HintTextDesktop, HintTextMobile } from '@/features/chat/components/HintTexts/HintTexts.styles';
 
-const HintTexts = ({ isInputFocused }) => {
+export const HintTexts = ({ isInputFocused }) => {
   return (
     <>
       {/* Hint text */}
@@ -15,4 +15,3 @@ const HintTexts = ({ isInputFocused }) => {
   );
 };
 
-export default HintTexts;

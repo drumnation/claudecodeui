@@ -1,5 +1,5 @@
 import React from 'react';
-import MessageStates from '@/features/chat/components/MessageStates';
+import { MessageStates } from '@/features/chat/components/MessageStates';
 
 export default {
   title: 'Features/Chat/components/MessageStates',

@@ -9,7 +9,7 @@ import {
   EmptyStateDescription
 } from '@/features/chat/components/MessageStates/MessageStates.styles';
 
-const MessageStates = ({ isLoadingSessionMessages, chatMessages }) => {
+export const MessageStates = ({ isLoadingSessionMessages, chatMessages }) => {
   if (isLoadingSessionMessages && chatMessages.length === 0) {
     return (
       <LoadingContainer>
@@ -35,4 +35,3 @@ const MessageStates = ({ isLoadingSessionMessages, chatMessages }) => {
   return null;
 };
 
-export default MessageStates;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Container, Content, Message } from '@/features/chat/components/NoProjectSelected/NoProjectSelected.styles';
 
-const NoProjectSelected = () => {
+export const NoProjectSelected = () => {
   return (
     <Container>
       <Content>
@@ -11,4 +11,3 @@ const NoProjectSelected = () => {
   );
 };
 
-export default NoProjectSelected;

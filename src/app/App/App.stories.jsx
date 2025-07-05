@@ -1,6 +1,5 @@
 import React from 'react';
 import { App } from './App';
-import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 
 export default {
@@ -12,9 +11,7 @@ export default {
   decorators: [
     (Story) => (
       <ThemeProvider>
-        <MemoryRouter>
-          <Story />
-        </MemoryRouter>
+        <Story />
       </ThemeProvider>
     ),
   ],
@@ -56,7 +53,7 @@ export const WithProjects = {
       },
     },
   },
-  play: async ({ canvasElement }) => {
+  play: async () => {
     // Mock fetch to return sample projects
     global.fetch = async (url) => {
       if (url === '/api/projects') {
@@ -242,7 +239,7 @@ export const WithSettingsOpen = {
       },
     },
   },
-  play: async ({ canvasElement }) => {
+  play: async () => {
     // Wait for app to load
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     await delay(100);

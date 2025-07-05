@@ -27,7 +27,7 @@ import {
  * @param {Function} props.onAbort - Callback to abort current operation
  * @param {boolean} props.isLoading - Whether Claude is currently processing
  */
-function ClaudeStatus({ status, onAbort, isLoading }) {
+export function ClaudeStatus({ status, onAbort, isLoading }) {
   const { elapsedTime, animationPhase, fakeTokens } = useClaudeStatus(isLoading);
   
   if (!isLoading) return null;
@@ -82,4 +82,3 @@ function ClaudeStatus({ status, onAbort, isLoading }) {
   );
 }
 
-export default ClaudeStatus;

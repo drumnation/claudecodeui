@@ -1,5 +1,5 @@
 import React from 'react';
-import ClaudeStatus from '@/features/chat/components/ClaudeStatus';
+import { ClaudeStatus } from '@/features/chat/components/ClaudeStatus';
 
 export default {
   title: 'Features/Chat/components/ClaudeStatus',

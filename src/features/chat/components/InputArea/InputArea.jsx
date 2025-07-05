@@ -1,7 +1,7 @@
 import React from 'react';
 import { ClaudeStatus } from '@/features/chat/components/ClaudeStatus';
 import { MicButton } from '@/shared-components/MicButton';
-import CommandMenu from '@/features/chat/components/CommandMenu';
+import { CommandMenu } from '@/features/chat/components/CommandMenu';
 import { useInputArea } from './InputArea.hook';
 import {
   InputAreaContainer,

@@ -1,5 +1,5 @@
 import React from 'react';
-import HintTexts from '@/features/chat/components/HintTexts';
+import { HintTexts } from '@/features/chat/components/HintTexts';
 
 export default {
   title: 'Features/Chat/components/HintTexts',

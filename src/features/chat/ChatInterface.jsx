@@ -17,7 +17,7 @@
  */
 
 import { memo, useCallback } from 'react';
-import NoProjectSelected from '@/features/chat/components/NoProjectSelected';
+import { NoProjectSelected } from '@/features/chat/components/NoProjectSelected';
 import MessagesArea from '@/features/chat/components/MessagesArea';
 import { InputArea } from '@/features/chat/components/InputArea';
 import { useChatInterface } from '@/features/chat/ChatInterface.hook';

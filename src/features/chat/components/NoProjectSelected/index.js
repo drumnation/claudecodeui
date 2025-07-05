@@ -1,1 +1,1 @@
-export { default } from '.';
+export { NoProjectSelected } from './NoProjectSelected';

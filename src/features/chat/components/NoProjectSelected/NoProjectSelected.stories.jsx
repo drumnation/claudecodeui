@@ -1,5 +1,5 @@
 import React from 'react';
-import NoProjectSelected from '@/features/chat/components/NoProjectSelected';
+import { NoProjectSelected } from '@/features/chat/components/NoProjectSelected';
 
 export default {
   title: 'Features/Chat/components/NoProjectSelected',
