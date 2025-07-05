@@ -2,7 +2,7 @@ import React from 'react';
 import ReadTool from '@/features/chat/components/Tools/ReadTool/ReadTool';
 
 export default {
-  title: 'Features/Chat/Components/Message/Tools/ReadTool',
+  title: 'Features/Chat/components/Tools/ReadTool',
   component: ReadTool,
   parameters: {
     layout: 'padded',

@@ -2,7 +2,7 @@ import React from 'react';
 import EditTool from '@/features/chat/components/Tools/EditTool/EditTool';
 
 export default {
-  title: 'Features/Chat/Components/Message/Tools/EditTool',
+  title: 'Features/Chat/components/Tools/EditTool',
   component: EditTool,
   parameters: {
     layout: 'padded',

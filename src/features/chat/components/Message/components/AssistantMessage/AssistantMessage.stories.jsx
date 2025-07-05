@@ -2,7 +2,7 @@ import React from 'react';
 import AssistantMessage from '@/features/chat/components/Message/components/AssistantMessage/AssistantMessage';
 
 export default {
-  title: 'Features/Chat/Components/Message/AssistantMessage',
+  title: 'Features/Chat/components/Message/AssistantMessage',
   component: AssistantMessage,
   parameters: {
     layout: 'padded',

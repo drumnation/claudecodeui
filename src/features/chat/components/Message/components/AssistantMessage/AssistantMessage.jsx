@@ -1,7 +1,6 @@
 import React, { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { ClaudeLogo } from '@/shared-components/ClaudeLogo';
-import TodoList from '@/features/chat/components/TodoList';
 import * as logic from '@/features/chat/components/Message/components/AssistantMessage/AssistantMessage.logic';
 import * as S from '@/features/chat/components/Message/components/AssistantMessage/AssistantMessage.styles';
 
@@ -9,7 +8,7 @@ import * as S from '@/features/chat/components/Message/components/AssistantMessa
 import BashTool from '@/features/chat/components/Tools/BashTool/BashTool';
 import EditTool from '@/features/chat/components/Tools/EditTool/EditTool';
 import WriteTool from '@/features/chat/components/Tools/WriteTool/WriteTool';
-import TodoWriteTool from '@/features/chat/components/Tools/TodoWriteTool/TodoWriteTool';
+import { TodoWriteTool } from '@/features/chat/components/Tools/TodoWriteTool';
 import ReadTool from '@/features/chat/components/Tools/ReadTool/ReadTool';
 import DefaultTool from '@/features/chat/components/Tools/DefaultTool/DefaultTool';
 

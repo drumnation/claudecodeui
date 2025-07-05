@@ -2,7 +2,7 @@ import React from 'react';
 import BashTool from '@/features/chat/components/Tools/BashTool/BashTool';
 
 export default {
-  title: 'Features/Chat/Components/Message/Tools/BashTool',
+  title: 'Features/Chat/components/Tools/BashTool',
   component: BashTool,
   parameters: {
     layout: 'padded',

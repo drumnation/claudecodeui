@@ -2,7 +2,7 @@ import React from 'react';
 import UserMessage from '@/features/chat/components/Message/components/UserMessage/UserMessage';
 
 export default {
-  title: 'Features/Chat/Components/Message/UserMessage',
+  title: 'Features/Chat/components/Message/UserMessage',
   component: UserMessage,
   parameters: {
     layout: 'centered',

@@ -9,7 +9,7 @@ export const MicButtonContainer = styled.div`
 export const StyledButton = styled.button`
   ${tw`
     flex items-center justify-center
-    w-12 h-12 rounded-full
+    w-10 h-10 rounded-full
     text-white transition-all duration-200
     focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
     dark:ring-offset-gray-800

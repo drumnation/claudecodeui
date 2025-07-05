@@ -2,7 +2,7 @@ import React from 'react';
 import TaskTool from '@/features/chat/components/Tools/TaskTool/TaskTool';
 
 export default {
-  title: 'Features/Chat/Components/Tools/TaskTool',
+  title: 'Features/Chat/components/Tools/TaskTool',
   component: TaskTool,
   parameters: {
     layout: 'padded',

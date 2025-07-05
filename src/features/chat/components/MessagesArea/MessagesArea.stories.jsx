@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import MessagesArea from '@/features/chat/components/MessagesArea/MessagesArea';
 
 export default {
-  title: 'Features/Chat/Components/MessagesArea',
+  title: 'Features/Chat/components/MessagesArea',
   component: MessagesArea,
   parameters: {
     layout: 'fullscreen',

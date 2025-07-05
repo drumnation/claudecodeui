@@ -4,7 +4,7 @@ import { QuickSettingsPanel } from '@/features/chat/components/QuickSettingsPane
 import { ThemeProvider } from '@/contexts/ThemeContext';
 
 export default {
-  title: 'Features/Chat/Components/QuickSettingsPanel',
+  title: 'Features/Chat/components/QuickSettingsPanel',
   component: QuickSettingsPanel,
   parameters: {
     layout: 'fullscreen',

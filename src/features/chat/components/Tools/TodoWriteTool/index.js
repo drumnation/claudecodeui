@@ -1,1 +1,1 @@
-export { default } from './TodoWriteTool';
+export { TodoWriteTool } from './TodoWriteTool';

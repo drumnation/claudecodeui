@@ -1,8 +1,8 @@
 import React from 'react';
-import TodoWriteTool from '@/features/chat/components/Tools/TodoWriteTool/TodoWriteTool';
+import { TodoWriteTool } from './TodoWriteTool';
 
 export default {
-  title: 'Features/Chat/Components/Message/Tools/TodoWriteTool',
+  title: 'Features/Chat/components/Tools/TodoWriteTool',
   component: TodoWriteTool,
   parameters: {
     layout: 'padded',

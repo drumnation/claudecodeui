@@ -2,7 +2,7 @@ import React from 'react';
 import ScrollToBottomButton from '@/features/chat/components/ScrollToBottomButton/ScrollToBottomButton';
 
 export default {
-  title: 'Features/Chat/Components/ScrollToBottomButton',
+  title: 'Features/Chat/components/ScrollToBottomButton',
   component: ScrollToBottomButton,
   parameters: {
     layout: 'centered',

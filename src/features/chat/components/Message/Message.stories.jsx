@@ -23,7 +23,7 @@ const mockCreateDiff = (oldStr, newStr) => {
 };
 
 export default {
-  title: 'Features/Chat/Components/Message',
+  title: 'Features/Chat/components/Message',
   component: Message,
   parameters: {
     layout: 'padded',

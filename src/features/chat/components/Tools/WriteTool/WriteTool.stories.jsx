@@ -2,7 +2,7 @@ import React from 'react';
 import WriteTool from '@/features/chat/components/Tools/WriteTool/WriteTool';
 
 export default {
-  title: 'Features/Chat/Components/Message/Tools/WriteTool',
+  title: 'Features/Chat/components/Tools/WriteTool',
   component: WriteTool,
   parameters: {
     layout: 'padded',

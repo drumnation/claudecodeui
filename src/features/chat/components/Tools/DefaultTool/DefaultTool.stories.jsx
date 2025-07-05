@@ -2,7 +2,7 @@ import React from 'react';
 import DefaultTool from '@/features/chat/components/Tools/DefaultTool/DefaultTool';
 
 export default {
-  title: 'Features/Chat/Components/Message/Tools/DefaultTool',
+  title: 'Features/Chat/components/Tools/DefaultTool',
   component: DefaultTool,
   parameters: {
     layout: 'padded',

@@ -1,9 +1,9 @@
 import React from 'react';
-import TodoList from '@/features/chat/components/TodoList';
-import * as S from '@/features/chat/components/Tools/TodoWriteTool/TodoWriteTool.styles';
-import { parseToolInput } from '@/features/chat/components/Tools/TodoWriteTool/TodoWriteTool.logic';
+import { TodoList } from './components/TodoList';
+import * as S from './TodoWriteTool.styles';
+import { parseToolInput } from './TodoWriteTool.logic';
 
-const TodoWriteTool = ({ toolInput, autoExpandTools, showRawParameters, renderDefaultTool }) => {
+export const TodoWriteTool = ({ toolInput, autoExpandTools, showRawParameters, renderDefaultTool }) => {
   const input = parseToolInput(toolInput);
   
   if (!input || !input.todos || !Array.isArray(input.todos)) {
@@ -31,4 +31,3 @@ const TodoWriteTool = ({ toolInput, autoExpandTools, showRawParameters, renderDe
   );
 };
 
-export default TodoWriteTool;
