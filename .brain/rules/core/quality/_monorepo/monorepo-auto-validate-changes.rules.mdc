@@ -1,0 +1,315 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Rule: Monorepo Auto-Validation for Scoped Changes
+# Applies To: All agent code changes in monorepo or multi-package projects
+
+## Purpose
+Establish a complete validation loop for monorepo changes that verifies code quality, type safety, and functional correctness after every meaningful change, while minimizing overhead through intelligent scoping.
+
+## Core Principle
+Validation is scoped to affected packages only. The agent must validate all affected work through the complete toolchain before considering any task complete.
+
+## Validation Triggers
+
+### Always Validate After:
+- Feature implementation or modification
+- Bug fixes
+- Code refactoring (structural changes)
+- Dependency updates affecting runtime behavior
+- Configuration changes affecting application logic
+- Branch merges or external code integration
+- Before commits, handoffs, or pull requests
+
+### Skip Validation For:
+- Documentation-only changes
+- Comment additions/modifications
+- Asset additions (images, fonts) without code impact
+
+## Implementation Strategy
+
+### 1. Scope Detection
+```bash
+# Determine affected packages from changed files
+# Example: changes in apps/web/src/Button.tsx → affects apps/web
+# Example: changes in packages/ui/index.ts → affects packages/ui + dependents
+```
+
+**Dependency-aware scoping:**
+- If `packages/ui` changes, also validate packages that depend on it
+- Use workspace tools to detect dependencies:
+  ```bash
+  pnpm list --depth=0 --filter "...{packages/ui}"
+  turbo run build --dry-run --filter="...{packages/ui}"
+  ```
+
+### 2. Multi-Stage Validation Pipeline (Per Package)
+
+For each affected package, execute in sequence:
+
+#### Stage 1: Type Safety Validation
+**Command resolution order:**
+```bash
+# Package-specific (preferred)
+pnpm --filter <package> run typecheck
+pnpm --filter <package> run type-check
+pnpm --filter <package> exec tsc --noEmit
+
+# Fallback to workspace root with path
+cd <package-dir> && pnpm exec tsc --noEmit
+```
+
+#### Stage 2: Code Quality Validation
+**Command resolution order:**
+```bash
+# Package-specific with auto-fix
+pnpm --filter <package> run lint:fix
+pnpm --filter <package> run lint -- --fix
+pnpm --filter <package> exec eslint . --fix
+
+# Format if available
+pnpm --filter <package> run format
+pnpm --filter <package> exec prettier --write .
+```
+
+#### Stage 3: Functional Validation (Tests)
+**Command resolution order:**
+```bash
+# Package-specific test execution
+pnpm --filter <package> run test
+pnpm --filter <package> run test:unit
+pnpm --filter <package> exec vitest
+pnpm --filter <package> exec jest
+
+# Optimized test patterns
+pnpm --filter <package> test -- --changed
+pnpm --filter <package> test -- src/components/Button.test.ts
+```
+
+### 3. Package Script Discovery
+
+**For each affected package:**
+```javascript
+// Read package.json and check for scripts
+const scripts = packageJson.scripts || {};
+const validationCommands = {
+  typecheck: scripts.typecheck || scripts['type-check'] || null,
+  lint: scripts['lint:fix'] || scripts.lint || null,
+  format: scripts.format || scripts.prettier || null,
+  test: scripts.test || scripts['test:unit'] || null
+};
+```
+
+### 4. Intelligent Execution
+
+#### Parallel Execution Strategy
+```bash
+# Run independent validations concurrently per package
+pnpm run -r --parallel --filter <package1> typecheck &
+pnpm run -r --parallel --filter <package2> typecheck &
+wait
+
+# Sequential for dependent stages
+pnpm run -r --filter <affected-packages> lint:fix
+pnpm run -r --filter <affected-packages> test
+```
+
+#### Workspace-Aware Commands
+```bash
+# Turborepo
+turbo run typecheck lint test --filter="...[origin/main]"
+
+# Nx
+nx affected --target=typecheck,lint,test
+
+# Changesets
+pnpm changeset status --verbose
+```
+
+### 5. Failure Response Protocol
+
+**On validation failure in any package:**
+
+1. **HALT** further validation for that package
+2. **CONTINUE** validation for other affected packages
+3. **AGGREGATE** all failures across packages
+4. **REPORT** with package context:
+   ```
+   ❌ Validation failed in 2 packages:
+   
+   📦 apps/web:
+     - ❌ typecheck: Type error in Button.tsx:45
+     - ✅ lint: Passed (3 auto-fixes applied)
+     - ⏭️ test: Skipped due to type errors
+   
+   📦 packages/ui:
+     - ✅ typecheck: Passed
+     - ✅ lint: Passed
+     - ❌ test: 2 tests failed in Button.test.tsx
+   ```
+
+### 6. Missing Tool Handling
+
+**When validation scripts are missing:**
+```typescript
+// Auto-generate package-appropriate scripts
+const suggestedScripts = {
+  typecheck: "tsc --noEmit",
+  lint: "eslint . --fix",
+  test: detectTestRunner(), // vitest, jest, etc.
+  format: "prettier --write ."
+};
+
+// Log and suggest
+console.log(`⚠️ Missing scripts in ${packageName}/package.json:`);
+console.log(`Suggested additions:`, suggestedScripts);
+```
+
+**Auto-fix mode:**
+- Add missing scripts to package.json
+- Install missing devDependencies at workspace root
+- Create minimal config files if needed
+
+### 7. Success Reporting
+
+```
+✅ Validation complete for 3 affected packages (1.2s total)
+
+📦 apps/web (0.5s):
+  - 🔍 typecheck: ✅ 
+  - 🧹 lint: ✅ (3 fixes applied)
+  - 🧪 test: ✅ (15 tests, 92% coverage)
+
+📦 packages/ui (0.4s):
+  - 🔍 typecheck: ✅
+  - 🧹 lint: ✅ 
+  - 🧪 test: ✅ (8 tests, 88% coverage)
+
+📦 packages/utils (0.3s):
+  - 🔍 typecheck: ✅
+  - 🧹 lint: ⚠️ not configured
+  - 🧪 test: ✅ (23 tests, 95% coverage)
+
+📊 Ready for: [commit|review|deployment]
+```
+
+## Advanced Monorepo Features
+
+### Dependency Graph Validation
+```bash
+# Validate in dependency order
+# If A depends on B, validate B first
+pnpm run -r --topological --filter <affected> validate
+```
+
+### Cross-Package Impact Detection
+```javascript
+// Detect public API changes
+const exportedSymbols = analyzeExports('packages/ui/index.ts');
+const consumers = findConsumers(exportedSymbols);
+// Add consumers to validation scope
+```
+
+### Incremental Build Cache
+```bash
+# Use build caches for faster validation
+turbo run test --cache-dir=.turbo
+nx run-many --target=test --skip-nx-cache=false
+```
+
+### Package-Specific Configuration
+```json
+// packages/ui/package.json
+{
+  "validation": {
+    "typecheck": {
+      "extends": "../../tsconfig.base.json",
+      "timeout": 120
+    },
+    "test": {
+      "coverage": {
+        "threshold": 80
+      }
+    }
+  }
+}
+```
+
+## Integration with Monorepo Tools
+
+### Changesets Integration
+```bash
+# Validate packages with pending changesets
+pnpm changeset status --since=origin/main | 
+  grep -E "packages|apps" | 
+  xargs -I {} pnpm --filter {} run validate
+```
+
+### Pre-commit Hooks
+```bash
+# .husky/pre-commit
+affected=$(pnpm affected --base=HEAD~1)
+pnpm run validate --filter="$affected"
+```
+
+### CI/CD Alignment
+```yaml
+# GitHub Actions example
+- name: Validate affected packages
+  run: |
+    pnpm run validate --filter="...[origin/${{ github.base_ref }}]"
+```
+
+## Performance Optimizations
+
+### Smart Caching
+- Cache TypeScript incremental builds
+- Persist ESLint cache between runs
+- Use test result caching for unchanged files
+
+### Minimal Validation Mode
+```bash
+# For quick iterations (local dev)
+VALIDATION_MODE=minimal pnpm validate
+# Only runs: typecheck + critical lint rules
+```
+
+### Watch Mode Integration
+```bash
+# Development mode with continuous validation
+pnpm --filter <package> run dev:validate
+# Runs validation on file changes only
+```
+
+## Best Practices
+
+1. **Scope Accurately**: Use git diff and dependency graphs to determine minimal validation set
+2. **Fail Fast**: Stop package validation on first error, but continue other packages
+3. **Cache Aggressively**: Leverage all available caching mechanisms
+4. **Report Clearly**: Always indicate which package failed and why
+5. **Automate Setup**: Detect and suggest missing validation infrastructure
+6. **Respect Boundaries**: Don't validate outside the monorepo scope
+7. **Optimize for Speed**: Prefer incremental and parallel execution
+
+## Error Recovery
+
+### Stash and Rollback
+```bash
+# On validation failure
+git stash push -m "validation-failed: $(date +%s)"
+git checkout HEAD~1
+# Re-apply incrementally
+```
+
+### Bisect Validation Failures
+```bash
+# Find which change broke validation
+git bisect start
+git bisect bad HEAD
+git bisect good HEAD~10
+git bisect run pnpm validate --filter=<package>
+```
+
+This comprehensive rule ensures thorough validation while respecting monorepo boundaries and optimizing for developer experience through intelligent scoping and parallel execution.

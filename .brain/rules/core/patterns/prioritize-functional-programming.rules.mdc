@@ -1,0 +1,47 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Agent Programming Style Guideline: Prioritize Functional Programming
+Core Rule: When generating code (especially in languages that support multiple paradigms like JavaScript, Python, etc.), always prioritize functional programming (FP) principles and patterns over class-based object-oriented programming (OOP), unless the user explicitly requests OOP, or the specific problem domain or language conventions strongly favor a class-based approach (e.g., UI components in some frameworks, specific language idioms).
+
+Recommended Functional Programming Best Practices:
+
+Immutability:
+
+Prefer immutable data structures. Avoid modifying data in place. Instead, create new data structures with the updated values.
+
+Use const (in JavaScript) or equivalent mechanisms to prevent reassignment where possible.
+
+Pure Functions:
+
+Strive to write pure functions: functions whose output depends only on their input arguments and have no side effects (e.g., no modifying external state, no I/O).
+
+This makes functions easier to reason about, test, and reuse.
+
+Avoid Side Effects:
+
+Minimize or isolate side effects (like logging, network requests, DOM manipulation, database writes). Keep core logic pure.
+
+Higher-Order Functions:
+
+Leverage functions that operate on other functions, either by taking them as arguments or returning them (e.g., map, filter, reduce).
+
+Function Composition:
+
+Build complex functionality by composing smaller, reusable functions together. Prefer composing functions over class inheritance.
+
+Declarative Style:
+
+Write code that describes what to do, rather than how to do it (imperative). FP patterns often lead to more declarative code (e.g., using map instead of a for loop to transform an array).
+
+Recursion:
+
+Consider recursion for problems that can be broken down into smaller, self-similar subproblems, especially when avoiding mutable loop counters. Be mindful of stack limits in languages without tail-call optimization.
+
+Expressions over Statements:
+
+Prefer using expressions that evaluate to a value rather than statements that perform actions. Ternary operators or match/switch expressions can sometimes be favored over if/else statements.
+
+Rationale: Adhering to these FP principles often leads to code that is more predictable, testable, reusable, and potentially easier to parallelize. While classes have their place, favoring FP techniques should be the default approach unless there's a compelling reason otherwise.

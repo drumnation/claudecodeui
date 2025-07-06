@@ -1,0 +1,283 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Documentation Strategy for Agents
+
+<!-- ==================== METADATA ==================== -->
+ruleType: always
+description: >
+  Strategic approach for agents to locate, consume, and leverage documentation in polyrepo projects.
+  Ensures agents can programmatically discover relevant knowledge to enhance task performance
+  and make informed decisions based on existing domain knowledge.
+whenToUse:
+  - Before implementation planning
+  - When facing domain-specific challenges
+  - When encountering unfamiliar code patterns
+  - Before debugging complex issues
+  - When making architecture or design decisions
+  - When enhancing or refactoring existing features
+# =====================================================
+
+## Purpose
+This rule defines how agents should **proactively discover and leverage documentation** before and during tasks. 
+It ensures agents use existing knowledge to make informed decisions, maintain consistency with established patterns, 
+and avoid duplicating work or reinventing solutions.
+
+The key principle is: **Documentation is only valuable if it's actively used to guide implementation**.
+
+## 1. 📚 Documentation Discovery Workflow
+
+### 1.1 Initial Knowledge Gathering Phase
+
+Before starting any substantive task, agents MUST conduct a documentation discovery workflow:
+
+1. **Analyze Task Scope**
+   - Identify key domain concepts in the task
+   - Extract relevant feature names, architectural components, or systems involved
+   - Determine which parts of the codebase will be affected
+
+2. **Documentation Search Priority**
+   - Follow this ordered search pattern:
+
+   ```
+   1. Feature-level docs:      docs/features/<feature-name>/
+   2. Concept docs:            docs/concepts/
+   3. Architectural docs:      docs/architecture/
+      - Especially ADRs:       docs/architecture/adr/
+   4. Technical guides:        docs/guides/
+   5. Root documentation:      README.md, CONTRIBUTING.md
+   ```
+
+3. **Knowledge Corpus Building**
+   - Build a "knowledge corpus" by reading all relevant documentation files
+   - Use index files (e.g., `index.md`) to find related documentation
+   - Follow cross-references between documentation files
+   - Store key insights for reference during implementation
+
+### 1.2 Search Techniques
+
+When searching documentation:
+
+1. **Keyword-Based Search**
+   - Use semantic search over docs/ folder with domain keywords
+   - Look for frontmatter `keywords:` fields in markdown
+   - Search markdown titles and headings
+
+2. **Structure-Based Search**
+   - Scan index.md files for topic listings
+   - Check feature folders matching current task
+   - Look at directory structure for feature names
+
+3. **Content-Guided Traversal**
+   - Follow "Related" or "See Also" links 
+   - Read ADRs referenced in feature docs
+   - Check for requirements or constraints in concept docs
+
+## 2. 🔍 Documentation Interpretation Guidelines
+
+When consuming documentation, agents should:
+
+### 2.1 Extract Mandatory Requirements
+
+- Identify explicit requirements, constraints, or standards
+- Treat architectural decisions (ADRs) as binding guidelines
+- Note specific patterns that must be followed
+
+### 2.2 Recognize Design Patterns
+
+- Look esign patterns in the codebase
+- Identify naming conventions and code organization principles
+- Note component compositione management approaches
+
+### 2Behind Decisions
+
+- Focus on understanding rationales for decisions
+- Note tradeoffs that were previously considered
+- Identify rejected alternatives and understand why
+
+### 2.4 Integrate Multiple Sources
+
+- Resolve apparent conflicts between documentation
+- Consider recency (last-updated dates) when conflicting
+- Give precedence to specific docs over general ones
+
+## 3. 📋 Knowledge Application Process
+
+### 3.1 Planning Phase
+
+Before writing any code, agents MUST:
+
+1. **Reference Discovered Documentation**
+   - Explicitly cite relevant documentation in planning
+   - Quote specific guidance that applies to current task
+   - Acknowledge constraints or patterns to follow
+
+2. **Align with Existing Patterns**
+   - Ensure planned approach aligns with documented patterns
+   - Resolve conflicts between task and established patterns
+   - Note where task requires deviation from existing patterns
+
+3. **Preserve Design Intent**
+   - Demonstrate understanding of original design intent
+   - Explain how planned changes preserve or extend that intent
+   - Highlight any refactoring needed to align with documented approaches
+
+### 3.2 Implementation Phase
+
+During implementation, agents should:
+
+1. **Maintain Traceability**
+   - Add code comments referencing relevant documentation
+   - Use consistent terminology from documentation
+   - Follow naming patterns established in docs
+
+2. **Apply Documented Patterns**
+   - Reuse code patterns documented in guides
+   - Follow architecture layering described in ADRs
+   - Maintain consistency with examples in docs
+
+### 3.3 Documentation Update Phase
+
+After implementation, agents should:
+
+1. **Update Existing Documentation**
+   - Revise docs if implementation revealed gaps
+   - Update examples to include new use cases
+   - Refresh any outdated information
+
+2. **Create New Documentation When:**
+   - Implementing a new feature without existing docs
+   - Establishing a new pattern or approach
+   - Making significant changes to architecture
+
+## 4. 🧠 Agent Self-Improvement Through Documentation
+
+Agents should use documentation to improve their own capabilities:
+
+1. **Knowledge Retention**
+   - Prioritize memory allocation for key architectural concepts
+   - Maintain awareness of project-specific patterns
+   - Remember documentation locations for fast retrieval
+
+2. **Context Awareness**
+   - Use documentation to build contextual understanding
+   - Connect documentation insights to related code
+   - Track relationships between concepts across docs
+
+3. **Adaptive Response**
+   - Modify behavior based on project-specific guidance
+   - Adjust coding style to match documented standards
+   - Refine future searches based on documentation structure
+
+## 5. 📂 Documentation Location Map
+
+The standard documentation structure for a polyrepo project:
+
+```
+PROJECT_ROOT/
+├── README.md                  # Project overview, getting started
+├── CHANGELOG.md               # Version history
+├── docs/                      # Detailed documentation
+│   ├── architecture/          # System architecture
+│   │   └── adr/               # Architecture Decision Records
+│   │       └── index.md       # ADR listing
+│          # Core concepts and patterndex.md           # Concept listing
+│   ├── features/              # Feature-specific documentation
+│   │   ├── feature-a/         # Docs for specific feature
+│   │   └── index.md           # Feature listing
+│   └── guides/                # How-to guides
+│       └── index.md           # Guide listing
+├── .github/                   # GitHub documentation
+└── scripts/                   # May contain docs for build scripts
+```
+
+## 6. 📌 Documentation Quality Assessment
+
+When evaluating documentation quality and completeness, agents should assess:
+
+1. **Recency**
+   - Check last-updated timestamps in frontmatter
+   - Be wary of docs last updated over 12 months ago
+   - Consider changes to referenced code since last update
+
+2. **Completeness**
+   - Look for missing sections or TODOs
+   - Check for unanswered questions within docs
+   - Note gaps between documented features and current codebase
+
+3. **Clarity**
+   - Ensure docs provide clear guidance
+   - Look for specific examples rather than theory
+   - Prefer actionable information over conceptual explanation
+
+4. **Actionability**
+   - Documentation should enable direct action
+   - Should include enough detail to implement patterns
+   - Should provide rationale for decisions
+
+## 7. 🚫 Anti-Patterns to Avoid
+
+1. **Documentation Ignorance**
+   - ❌ NEVER implement features without checking for relevant docs
+   - ❌ NEVER assume no documentation exists without thorough search
+   - ❌ NEVER ignore documented patterns without explicit justification
+
+2. **Shallow Reading**
+   - ❌ NEVER extract snippets without understanding context
+   - ❌ NEVER ignore rationales and explanations
+   - ❌ NEVER focus only on code examples and ignore surrounding text
+
+3. **Documentation Overload**
+   - ❌ AVOID reading all documentation regardless of relevance
+   - ❌ AVOID treating all documentation as equally important
+   - ❌ AVOID prolonged documentation reading at the expense of action
+
+## 8. 🔑 Example Documentation Lookup Strategies
+
+### "Implementing a New Feature" Workflow:
+
+1. Search `docs/features/` for similar features
+2. Check `docs/architecture/adr/` for constraints
+3. Look in `docs/concepts/` for related patterns
+4. Read `docs/guides/` for implementation approaches
+5. Reference READMd setup
+
+### "Fixing a Bug" Wofected feature in `docs/features/`
+2. Look for known limitations or edge cases
+3. Review architectural constraints in ADRs
+4. Check for debugging guides in `docs/guides/`
+5. Look for testing requirements in contribution docs
+
+### "Refactoring Code" Workflow:
+
+1. Check ADRs for architectural boundaries
+2. Review concept docs for pattern definitions
+3. Look for performance considerations in guides
+4. Reference feature docs for critical behaviors to preserve
+5. Check coding standards in contribution docs
+
+## 9. ✅ Documentation Consumption Checklist
+
+Before starting implementation, verify:
+
+- [ ] Searched for documentation in all relevant locations
+- [ ] Read all directly related documentation
+- [ ] Followed cross-references to related topics
+- [ ]equs
+- [ ] Identified established patterns to follow
+- [ ] Understood rationales behind existing decisions
+- [ ] Planned approach aligns with documentation
+- [ ] Cited relevant documentation in planning
+
+## 10. 📊 Documentation Impact Indicators
+
+Signs that documentation has been effectively consumed:
+
+- Implementation follows documented patterns without deviation
+- Code comments reference specific documentation
+- Design decisions align with architectural principles
+- New code maintains consistency with existing patterns
+- Implementation avoids known pitfalls mentioned in docs
+- Questions asked demonstrate awareness of documented concepts

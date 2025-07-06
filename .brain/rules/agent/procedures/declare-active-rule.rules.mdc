@@ -1,0 +1,33 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# `declare-active-rule.rules.mdc`
+
+**Purpose:**  
+Ensure every agent action governed by a rule declares which rule it's using. This promotes transparency, traceability, and effective debugging in rule-driven systems.
+
+---
+
+## ✅ Rule (single line of behavior):
+
+> **When acting on any rule, always start the response with:**  
+> `🔧 Rule: [rule-filename.rules.mdc]`
+
+---
+
+## Example Output:
+
+```
+🔧 Rule: refactor-to-atomic-component.rules.mdc
+
+✅ Wrapped third-party Mantine `Select` in a reusable `MySelect.tsx` component inside `components/inputs`.
+```
+
+---
+
+### Best Practices:
+- Use the *full rule filename* so it’s easy to locate.
+- If multiple rules apply, list each on its own line.
+- This rule applies **whether the rule is agent-requested, always-on, or manually invoked.**

@@ -1,0 +1,72 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Rule: Auto-update Markdown Task Lists
+
+Purpose:
+Ensure the agent updates Markdown task lists in real time as tasks are completed, while recording domain knowledge, relevant context, and self-written notes to preserve continuity and improve future task execution.
+
+Trigger Conditions:
+- Agent is executing or referencing a Markdown task list containing `- [ ]` items
+- A task is completed, partially completed, blocked, or clarified
+- New information, approaches, or lessons are learned that could inform future steps
+
+Behavior:
+
+## 1. Task Status Updating
+
+- After each task:
+  - Mark the task as:
+    - ✅ `- [x]` if complete
+    - 🟡 `- [~]` if partially complete or blocked (use inline explanation)
+  - Append a brief status note if useful:
+    ```md
+    - [x] Fetch user profile from API _(done 2025-04-04 13:12 UTC)_
+    - [~] Deploy to staging _(blocked: waiting on updated .env keys)_
+    ```
+
+## 2. Domain Knowledge Recording
+
+- If any **insight, constraint, pattern, or reusable logic** was discovered while executing a task:
+  - Record this as an indented `> NOTE:` directly below the relevant task
+  - The note should:
+    - Be concise
+    - Reflect learned behavior, structure, or edge cases
+    - Help future agents understand the *why*, not just the *what*
+
+  Example:
+  ```md
+  - [x] Set up Prisma model for UserAccount
+    > NOTE: user accounts are provisioned via third-party OAuth — no password field is needed
+  ```
+
+## 3. Future-Guiding Notes
+
+- If current findings will affect future tasks:
+  - Inline add notes near future tasks using `> CAUTION:` or `> REMINDER:`
+
+  Example:
+  ```md
+  - [ ] Add invite flow to admin dashboard
+    > REMINDER: use `POST /invitations` endpoint from the shared API client
+  ```
+
+## 4. General Task List Integrity
+
+- Do not remove or reorder existing tasks unless explicitly instructed
+- Do not duplicate notes — if knowledge applies broadly, reference the original task/note location
+
+## 5. Agent Context Persistence
+
+- The task list is treated as **primary memory** for agent reasoning
+- Assume that new agents will rely solely on the content of the task list for continuity
+- Treat all updates as part of a growing log that enables **agent transfer of intent, logic, and history**
+
+Formatting Notes:
+- Always preserve readability in Markdown renderers (GitHub, VSCode)
+- Use consistent timestamp formatting: `YYYY-MM-DD HH:mm UTC`
+
+Exclusions:
+- Skip updating tasks marked with `<!-- skip-auto-update -->`

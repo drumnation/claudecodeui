@@ -1,0 +1,51 @@
+---
+description: Overview of the project's directory structure conventions.
+globs:
+alwaysApply: false
+---
+# Project Structure Overview
+# Last Updated: 2025-03-31 10:13:02 AM
+
+## Component Directory Structure
+- root: src/shared-components
+- atoms: src/shared-components/atoms
+- molecules: src/shared-components/molecules
+- organisms: src/shared-components/organisms
+- templates: src/shared-components/templates
+
+## File Location Conventions
+- Stories location: alongside components
+- Stories naming: {ComponentName}.stories.tsx
+- Types location: alongside components
+- Types naming: {ComponentName}.types.ts
+- Styles location: alongside components
+- Styles naming: {ComponentName}.styles.ts
+- Theme type location: src/shared-components/theme.d.ts
+
+## Other Key Directories
+- `.brain/`: Project planning and documentation
+  - `.brain/errors/`: Error tracking and task lists
+  - `.brain/rules/`: Project rules (editable versions)
+- `.cursor/rules/`: Symlinked rules for Cursor AI
+- `app/`: Next.js app directory
+- `src/`: Source code
+  - `src/components/`: Application-specific components
+  - `src/shared-components/`: Reusable component library
+  - `src/styles/`: Global styles
+- `scripts/`: Node.js utility scripts
+- `public/`: Static assets
+
+## Important Files
+- `.cursor/rules/update-rule-symlinks.sh`: Script to update symlinks for rules
+- `.brain/github-projects-plan.md`: Project plan and task tracking
+- `.brain/coding-standards.md`: Coding standards and best practices
+- `.brain/directory-structure.md`: Detailed directory structure
+- `.brain/errors/01-lint-errors.md`: Current lint errors and task list
+- `@changelog.md`: Project changelog
+- `@package.json`: Project dependencies and scripts
+
+## File Organization
+- Each component should have its own folder
+- Related components should be grouped in directories based on functionality
+- Utility functions should be organized in appropriate utility directories
+- Configuration files should be kept at the root level 

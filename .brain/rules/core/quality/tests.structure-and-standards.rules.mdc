@@ -1,0 +1,272 @@
+---
+description: 
+globs: **/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,**/*.e2e.ts
+alwaysApply: false
+---
+# Test Implementation Standards
+
+## 🧭 Testing Philosophy
+
+**Core Principle**: Tests serve as AI's primary interface for verifying that application functionality actually works.
+
+### 🤖 AI Verification Principles
+
+1. **Functional over Implementation**: Test what users experience, not how code is structured
+   - Focus on behavior observable to users or consuming code
+   - Avoid coupling tests to internal implementation details
+   - **AI Goal**: Enable AI to confidently know a feature works for real users
+
+2. **Minimal Mocking in Critical Paths**: Use real systems where possible to verify actual functionality
+   - Mock only external dependencies (HTTP, time, environment variables, databases)
+   - Use real implementations of internal application code
+   - **AI Goal**: Ensure passing tests mean features actually work, not just mocks work
+
+3. **Clear Success/Failure Signals**: Pass = feature works, fail = feature broken
+   - A passing test means the feature works for users
+   - A failing test means something meaningful is broken
+   - Tests should have clear, specific intent
+   - **AI Goal**: Enable reliable feedback loop for AI development cycles
+
+4. **End-to-End Coverage**: Test complete user workflows, not just isolated units
+   - **Unit tests:** Pure functions, isolated utilities, helpers
+   - **Integration tests:** Modules with their actual dependencies
+   - **E2E tests:** Complete workflows from user perspective
+   - **AI Goal**: Verify entire user journeys work, enabling AI to fix and validate holistically
+
+5. **AI Development Feedback Loop**: Tests enable recursive improvement cycles
+   - Small, high-signal suite that runs on every change
+   - Test failure requires investigation, not deletion
+   - **AI Goal**: Support cycle of code change → test → verify → iterate
+
+### 🎯 AI Verification Test Categories
+
+#### **Tier 1: Critical AI Verification Tests**
+Tests that enable AI to verify core functionality:
+- Authentication flows (login, logout, permissions)
+- Core business workflows (purchase, signup, data submission)
+- API endpoints that power user features
+- Database operations for critical data
+- Integration points between services
+
+#### **Tier 2: Feature-Specific Verification**
+Tests that verify specific features work:
+- Form submissions with validation
+- Search and filtering functionality
+- Data display and formatting
+- Navigation and routing
+- Error handling for user scenarios
+
+#### **Tier 3: Implementation Support**
+Tests that support development but don't verify functionality:
+- Utility functions and helpers
+- Component rendering (without interaction)
+- Configuration and setup
+- Edge cases that don't affect normal usage
+
+## 📁 Test File Structure & Naming
+
+| Test Type   | Location Pattern                 | File Naming Pattern               | Runner     | AI Verification Value |
+|-------------|----------------------------------|-----------------------------------|------------|----------------------|
+| Unit        | Co-located with source code      | `<fileName>.unit.test.ts(x)`      | Vitest     | Low (implementation) |
+| Integration | `<pkg>/testing/integration/`     | `<feature>.integration.test.ts(x)`| Vitest     | High (real behavior) |
+| Backend E2E | `<pkg>/testing/e2e/`             | `<scenario>.backend.e2e.test.ts`  | Vitest     | Very High (workflows) |
+| Browser E2E | `<pkg>/testing/e2e/`             | `<scenario>.browser.e2e.ts`       | Playwright | Very High (user flows) |
+
+### File Structure Example
+
+For a package `packages/auth`:
+
+```
+packages/auth/
+├── src/
+│ ├── login.ts
+│ ├── login.unit.test.ts // Unit tests co-located with source
+│ └── utils/
+│ ├── validation.ts
+│ └── validation.unit.test.ts
+├── testing/
+│ ├── integration/
+│ │ └── auth-flow.integration.test.ts // HIGH AI VERIFICATION VALUE
+│ └── e2e/
+│ ├── login-flow.backend.e2e.test.ts // VERY HIGH AI VERIFICATION VALUE
+│ └── signup-flow.browser.e2e.ts     // VERY HIGH AI VERIFICATION VALUE
+```
+
+## 🛠️ Test Implementation Standards
+
+### 🤖 AI Verification Test Patterns
+
+#### **End-to-End Workflow Tests** (Highest AI Value)
+```javascript
+test('user can successfully complete purchase', async () => {
+  // Setup: Start with known state
+  const user = await createTestUser();
+  const product = await createTestProduct({ price: 29.99, stock: 10 });
+  
+  // Execute: Complete user workflow
+  await login(user);
+  await addToCart(product.id, quantity: 2);
+  await proceedToCheckout();
+  
+  const order = await submitOrder({
+    shipping: await fillShippingAddress(),
+    payment: await selectPaymentMethod('test-card')
+  });
+  
+  // Verify: All expected outcomes occurred
+  expect(order.status).toBe('confirmed');
+  expect(order.total).toBe(59.98);
+  
+  // Verify persistence and side effects
+  const savedOrder = await Order.findById(order.id);
+  expect(savedOrder).toBeDefined();
+  
+  const updatedProduct = await Product.findById(product.id);
+  expect(updatedProduct.stock).toBe(8); // Stock decremented
+  
+  // If this passes, AI knows the entire checkout flow works
+});
+```
+
+#### **API Verification Tests** (High AI Value)
+```javascript
+test('search API returns relevant products', async () => {
+  // Setup test data
+  await createTestProduct({ name: 'iPhone 15', category: 'phones' });
+  await createTestProduct({ name: 'Android phone', category: 'phones' });
+  
+  // Execute real API call
+  const response = await api.post('/search', {
+    query: 'iPhone',
+    category: 'phones'
+  });
+  
+  // Verify response structure and relevance
+  expect(response.status).toBe(200);
+  expect(response.data.results).toHaveLength.greaterThan(0);
+  expect(response.data.results[0].name).toContain('iPhone');
+  
+  // If this passes, AI knows search functionality works
+});
+```
+
+#### **Form Validation Tests** (High AI Value)
+```javascript
+test('user registration validates and creates account', async () => {
+  const validData = {
+    email: 'newuser@example.com',
+    password: 'SecurePass123!',
+    firstName: 'John'
+  };
+  
+  // Test successful registration
+  const response = await api.post('/register', validData);
+  expect(response.status).toBe(201);
+  
+  // Verify user was actually created
+  const createdUser = await User.findByEmail(validData.email);
+  expect(createdUser).toBeDefined();
+  
+  // Verify user can login with new credentials
+  const loginResponse = await api.post('/login', {
+    email: validData.email,
+    password: validData.password
+  });
+  expect(loginResponse.status).toBe(200);
+  
+  // Test validation errors
+  const invalidResponse = await api.post('/register', {
+    email: 'invalid-email',
+    password: '123'
+  });
+  expect(invalidResponse.status).toBe(400);
+  
+  // Verify invalid user wasn't created
+  const invalidUser = await User.findByEmail('invalid-email');
+  expect(invalidUser).toBeNull();
+  
+  // If this passes, AI knows registration works correctly
+});
+```
+
+### Common Principles
+- Test descriptions should clearly state what behavior is being tested
+- Arrange-Act-Assert pattern for test structure
+- Each test should focus on a single behavior/scenario
+- Prefer table-driven tests for similar scenarios with different inputs/outputs
+- **AI Focus**: Prioritize tests that verify user-facing functionality
+
+### Unit Tests (Implementation Support)
+- Test individual functions/classes in isolation
+- Mock dependencies explicitly, using dependency injection where possible
+- Focus on edge cases, input validation, and error handling
+- **AI Context**: Lowest verification value - use sparingly for complex logic only
+
+### Integration Tests (High AI Verification Value)
+- Test how multiple units work together
+- Minimize mocks, using real implementations where possible
+- Cover common paths through the system
+- **AI Context**: High value - verify feature components work together
+
+### E2E Tests (Highest AI Verification Value)
+- Focus on key user flows and critical paths
+- Minimize number of E2E tests - prefer faster test types where appropriate
+- Use page objects or similar patterns to abstract UI interaction details
+- **AI Context**: Highest value - enable AI to verify complete user workflows
+
+## ⚠️ Agent Execution Guidelines
+
+**For AI agents executing test commands**: Always use non-interactive forms to avoid hanging:
+
+```bash
+# ✅ Agent-safe commands
+pnpm test:run              # Instead of pnpm test (if watch mode default)
+pnpm test:ci               # CI-specific non-interactive
+npx vitest run             # Instead of npx vitest
+npx playwright test        # Playwright is non-interactive by default
+
+# ❌ Avoid these (interactive/watch modes)
+pnpm test                  # May default to watch mode
+npx vitest                 # Defaults to watch mode
+```
+
+## 🚫 Common Anti-patterns to Avoid
+
+### General Anti-patterns
+- **Snapshot testing overuse:** Only use for UI component structure verification, not logic
+- **Implementation testing:** Don't test internal methods or state directly
+- **Overlapping tests:** Don't duplicate coverage across test types
+- **Brittle assertions:** Avoid overly specific assertions that break with minor changes
+
+### AI Verification Anti-patterns
+- **Over-mocking critical paths:** Mocking so much that passing tests don't guarantee functionality works
+- **Testing implementation details:** Tests that pass when code is broken but structure unchanged
+- **No end-to-end coverage:** Only unit tests, no verification of complete user workflows
+- **Unclear failure signals:** Tests that fail for reasons unrelated to user-facing functionality
+
+## 🧰 Framework-Specific Guidance
+
+### Vitest Configuration
+For proper configuration, see:
+- Unit tests: `@kit/testing/unit`
+- Integration tests: `@kit/testing/integration`
+- Backend E2E tests: `@kit/testing/e2e`
+
+### Playwright Configuration
+For browser testing:
+- Standard setup: `@kit/testing/playwright`
+- Advanced non-UI flows: `@kit/testing/playwright-backend`
+
+## 🎯 AI Development Success Metrics
+
+**Goal**: Tests enable AI to reliably verify functionality through automated execution
+
+**Indicators of Success**:
+- ✅ Passing tests mean features work for real users
+- ✅ Failing tests indicate actual broken functionality
+- ✅ AI can confidently iterate based on test feedback
+- ✅ Test suite covers critical user workflows end-to-end
+- ✅ Minimal false positives (tests passing when features broken)
+- ✅ Minimal false negatives (tests failing when features work)
+
+**Reference**: See testing prompts at `packages/brain-sync-prompts/prompts/testing/` for detailed implementation guidance

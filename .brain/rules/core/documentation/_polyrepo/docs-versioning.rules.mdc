@@ -1,0 +1,278 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Polyrepo README & CHANGELOG Management
+
+<!-- ==================== METADATA ==================== -->
+whenToUse:
+  - Setting up a new project
+  - Making significant changes to a project
+  - Releasing a new version
+  - Adding features, fixing bugs, or making breaking changes
+description: >
+  Comprehensive standards for documentation lifecycle in single-repository projects: README maintenance, 
+  CHANGELOG updates, and version management. Ensures consistent documentation and versioning.
+# =====================================================
+
+## Related Rules:
+# - Consider with: contributing.rules.mdc (for open source projects)
+# - Supports: documentation-strategy.rules.mdc (general docs structure)
+
+## Purpose
+Ensure that single-repository projects maintain complete, accurate, and well-structured documentation 
+through properly maintained README and CHANGELOG files tied to semantic versioning practices.
+This rule provides a unified approach to:
+
+1. Maintaining a comprehensive `README.md` that accurately reflects the project's current state
+2. Tracking all changes through a standardized `CHANGELOG.md` format
+3. Ensuring version numbers are consistent between documentation and code
+
+## 1. Documentation File Validation (MANDATORY)
+
+Every project MUST maintain these fundamental files:
+
+| File | Purpose | Required Sections |
+|------|---------|-------------------|
+| `README.md` | Project description, installation, usage | Overview, Installation, Usage, API (if applicable) |
+| `CHANGELOG.md` | Version history, release notes | Unreleased, Previous Versions |
+| `package.json` | Project metadata, dependencies | name, version (must follow SemVer) |
+
+### Automated Validation
+
+When working on any project, the agent MUST:
+
+1. Check for the existence of all required files
+2. If any file is missing, automatically create it using the templates in section 6
+3. Report the creation: "Created missing [filename]"
+4. Never consider a task complete until documentation is valid and up-to-date
+
+## 2. README.md Requirements
+
+### Content Structure
+
+Every project README must include:
+
+1. **Title and Description** - Clear explanation of project purpose
+2. **Installation** - How to install/use the project
+3. **Usage Examples** - Code snippets showing common use cases
+4. **API Documentation** - For libraries/tools
+5. **Dependencies** - Key external dependencies
+6. **License** - The software license
+
+### README Update Triggers
+
+Update the README whenever:
+
+- Adding new features or API methods
+- Changing usage patterns or requirements
+- Modifying supported options/configuration
+- Revising dependencies
+- Making breaking changes
+- Updating installation or environment setup
+
+## 3. CHANGELOG.md Requirements
+
+### Format Standard
+
+Follow the [Keep a Changelog](mdc:https:/keepachangelog.com/en/1.0.0) format:
+
+```md
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](mdc:https:/keepachangelog.com/en/1.0.0),
+and this project adheres to [Semantic Versioning](mdc:https:/semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- New feature X
+
+### Changed
+- Updated dependency Y
+
+## [1.0.0] - YYYY-MM-DD
+
+### Added
+- Initial release
+```
+
+### Entry Categories
+
+Group changes into these categories:
+
+- **Added** - New features
+- **Changed** - Changes to existing functionality
+- **Deprecated** - Features that will be removed
+- **Removed** - Features that were removed
+- **Fixed** - Bug fixes
+- **Security** - Vulnerability fixes
+
+### Changelog Update Process
+
+1. Always add changes to `[Unreleased]` section first
+2. When releasing a version, rename `[Unreleased]` to `[x.y.z] - YYYY-MM-DD`
+3. Add a new empty `[Unreleased]` section at the top
+4. Include links to version comparison when possible (e.g., GitHub compare view)
+
+## 4. Versioning Standards
+
+### Semantic Versioning
+
+All projects MUST follow [SemVer 2.0.0](mdc:https:/semver.org):
+
+- **MAJOR** (`x.0.0`) - Incompatible API changes
+- **MINOR** (`0.x.0`) - Backwards-compatible functionality
+- **PATCH** (`0.0.x`) - Backwards-compatible bug fixes
+
+### Version Synchronization
+
+Ensure version numbers are synchronized between:
+- CHANGELOG.md entries
+- package.json "version" field
+- Any version references in README.md
+
+## 5. Documentation Workflow
+
+### When Making Project Changes
+
+1. **Update Changelog** - Add entries to `[Unreleased]` section
+2. **Update README** - If the changes affect usage, API, or behavior
+3. **Ensure Consistency** - Verify all documentation is aligned with changes
+
+### When Releasing Versions
+
+1. **Get Current Date** - Use `date +'%Y-%m-%d'` to generate the current date
+2. **Prepare Version** - Move `[Unreleased]` changes to new version section
+3. **Update package.json** - Bump version field according to SemVer rules
+4. **Update README** - Update any version references or version-specific docs
+5. **Commit Format** - `chore: release x.y.z`
+
+### Version Validation
+
+Before completing a version update, validate:
+- CHANGELOG.md version matches package.json version
+- [Unreleased] section exists (or is cleared during release)
+- Date format is correct (YYYY-MM-DD)
+
+## 6. File Templates for New Projects
+
+### README.md Template
+
+```md
+# Project Name
+
+Brief description of what this project does.
+
+## Installation
+
+```bash
+npm install project-name
+# or
+yarn add project-name
+```
+
+## Usage
+
+```javascript
+import { something } from 'project-name';
+
+// Usage example
+const result = something();
+```
+
+## API
+
+### `functionName(param1, param2)`
+
+Description of what the function does.
+
+**Parameters:**
+- `param1` (type): Description
+- `param2` (type): Description
+
+**Returns:**
+- (returnType): Description
+
+## Dependencies
+
+- List key dependencies here
+
+## License
+
+MIT
+```
+
+### CHANGELOG.md Template
+
+```md
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](mdc:https:/keepachangelog.com/en/1.0.0),
+and this project adheres to [Semantic Versioning](mdc:https:/semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- Initial implementation
+```
+
+## 7. Agent Behavior
+
+### For Every Task
+
+1. **Assess Documentation Impact**:
+   - Do changes affect usage/API docs in README?
+   - Are there changes that should be noted in CHANGELOG?
+
+2. **Update Documentation**:
+   - Add clear, concise entries to CHANGELOG.md under [Unreleased]
+   - Update README.md if API, usage, or setup changed
+   - Use accurate, specific language describing changes
+
+3. **For Version Releases**:
+   - Update CHANGELOG with release date: `date +'%Y-%m-%d'`
+   - Update package.json version
+   - Ensure version references are consistent
+
+4. **Commit Documentation Updates**:
+   - Include documentation updates in feature/fix commits
+   - For standalone doc updates: `docs: update README with new API details`
+   - For releases: `chore: release x.y.z`
+
+## 8. Pre-Completion Checklist
+
+Before marking any task complete, verify:
+
+- [ ] CHANGELOG.md contains entries for all changes
+- [ ] README.md reflects current installation and usage
+- [ ] Version numbers are consistent across changelog and package.json
+- [ ] Documentation is clear, accurate and follows project conventions
+
+## 9. Version Bump Command Reference
+
+For version bumps, use npm's built-in tools:
+
+```bash
+# For patch version (0.0.x):
+npm version patch --no-git-tag-version
+
+# For minor version (0.x.0):
+npm version minor --no-git-tag-version
+
+# For major version (x.0.0):
+npm version major --no-git-tag-version
+```
+
+## 10. Extra Guidelines for Open Source Projects
+
+- Add contributing instructions (CONTRIBUTING.md)
+- Include code of conduct (CODE_OF_CONDUCT.md)
+- Document PR process and issue templates
+- Consider adding examples folder with sample usage
+- Link to documentation site if available

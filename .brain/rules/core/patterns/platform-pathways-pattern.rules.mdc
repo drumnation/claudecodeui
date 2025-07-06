@@ -1,0 +1,69 @@
+---
+description: The Platform Pathways Pattern is ideal when you need to add mobile support to an existing desktop-first React application while minimizing refactoring and maintaining a clear, scalable structure for handling platform-specific implementations at different levels of complexity.
+globs: 
+alwaysApply: false
+---
+/**
+ * PLATFORM PATHWAYS PATTERN
+ * 
+ * A pragmatic approach for organizing platform-specific components
+ * when retrofitting mobile support to desktop-first React applications.
+ */
+
+// RULE 1: COMPONENT ORGANIZATION
+// - Main component (entry point): ComponentName.tsx
+// - Web implementation: ComponentName.web.tsx 
+// - Mobile implementation: ComponentName.mobile.tsx
+// - Shared logic: ComponentName.logic.tsx
+// - Shared styles: ComponentName.styles.ts
+// - Mobile-specific styles (only when needed): ComponentName.mobile.styles.ts
+
+// RULE 2: WHEN TO CREATE PLATFORM-SPECIFIC FILES
+// Level 1: Inline Responsive (No Separation)
+// - For minor UI adjustments, use responsive CSS within shared styles
+// - Example: TechnologyList with overflow-x for mobile scrolling
+
+// Level 2: Style Separation
+// - For significant styling differences, create mobile-specific style file
+// - Keep component logic unified
+
+// Level 3: Full Component Separation
+// - For major layout/behavior differences, create platform-specific components
+// - Extract shared logic into ComponentName.logic.tsx
+
+// RULE 3: ENTRY POINT PATTERN
+// The main component file should detect platform and render accordingly:
+
+// Example: ComponentName.tsx
+import { useMediaQuery } from '@mantine/hooks';
+import { useMantineTheme } from '@mantine/core';
+import { ComponentNameProps } from './ComponentName.types';
+import { ComponentNameMobile } from './ComponentName.mobile';
+import { ComponentNameWeb } from './ComponentName.web';
+
+export const ComponentName: React.FC<ComponentNameProps> = (props) => {
+  const theme = useMantineTheme();
+  const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
+  
+  return isMobile ? <ComponentNameMobile {...props} /> : <ComponentNameWeb {...props} />;
+};
+
+// RULE 4: SHARED LOGIC EXTRACTION
+// Move common logic to separate files to avoid duplication:
+// - ComponentName.logic.tsx: For complex rendering logic
+// - ComponentName.hook.ts: For shared state management
+// - ComponentName.utils.ts: For utility functions
+
+// RULE 5: SUBCOMPONENT STRATEGY
+// - Only create mobile versions for subcomponents that need significant changes
+// - For subcomponents with minor styling differences, use media queries
+// - Use the same pattern consistently at each component level that needs separation
+
+// RULE 6: KEEP EXISTING STYLES INTACT
+// - Don't extract desktop styles to web-specific files
+// - Add mobile-specific styles in separate files when needed
+// - Use media queries within shared styles for responsive adjustments
+
+// RULE 7: DOCUMENTATION
+// - At the top of each component, document which pattern level is being used
+// - Note any significant platform differences for future maintainers

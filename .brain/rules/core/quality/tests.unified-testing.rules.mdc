@@ -1,0 +1,203 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: A unified, AI-first testing process combining TDD, practical standards, and a skill-jack-driven workflow into a single, actionable guide.
+globs: ['**/*.test.ts','**/*.test.tsx','**/*.spec.ts','**/*.spec.tsx','**/*.e2e.ts']
+alwaysApply: true
+---
+
+## 🚨 UNIFIED TEST CREATION PROCESS (Single Integrated Flow)
+
+This 5-step process is the single source of truth for creating any new test. It integrates the TDD philosophy with the practical application of skill-jacks.
+
+### 🧭 **STEP 1: ORIENT & DECIDE**
+
+**Goal:** Establish the "why" and "what" of your test.
+
+1.  **Absorb the Philosophy:** First, read the core testing philosophy to align your mindset. This is non-negotiable.
+    * **Read:** `.brain/skill-jacks/testing/creation/ai-verification-tdd-workflow.skill-jack.ts`
+2.  **Choose Test Type:** Based on the goal of providing maximum AI confidence, select the single best test type for the behavior you need to verify.
+    * **Ask:** *"Which test type most effectively proves this specific behavior from an end-user or consumer's perspective?"*
+    * **Read:** `.brain/skill-jacks/testing/patterns/test-strategy-selection.skill-jack.ts` to guide your decision between:
+        * **Unit Test:** For pure functions or isolated logic.
+        * **Integration Test:** For interactions between several internal modules.
+        * **Backend E2E Test:** For a complete user workflow via APIs or CLI, without a browser.
+        * **Browser E2E Test:** For a full user journey in a browser.
+
+### 🎯 **STEP 2: SCAFFOLD**
+
+**Goal:** Create the test file and an empty, pending test case.
+
+1.  **Determine File Path:** Use the table below to determine the correct location and name for your test file.
+| Test Type        | Path Template (relative to package root) | File Name Pattern                     | Runner      |
+|:-----------------|:-------------------------------------------|:--------------------------------------|:------------|
+| **Unit** | `<same-dir-as-source>`                     | `<sourceName>.unit.test.ts(x)`        | Vitest      |
+| **Integration** | `testing/integration/`                     | `<module>.integration.test.ts(x)`     | Vitest      |
+| **Backend E2E** | `testing/e2e/`                             | `<scenario>.backend.e2e.test.ts`      | Vitest      |
+| **Browser E2E** | `testing/e2e/`                             | `<scenario>.browser.e2e.ts`           | Playwright  |
+2.  **Create an Empty Failing Test:** Populate the new file with a `test.todo()` or an empty test block.
+    * *Example:* `test.todo('should successfully register a new user via the API');`
+
+### 🔴 **STEP 3: RED**
+
+**Goal:** Write a failing test that clearly expresses the desired behavior.
+
+1.  **Consult the Pattern:** Before writing code, read the relevant skill-jack(s) for your chosen test type to understand the correct patterns (e.g., Test Object Model, Page Object Model). Refer to the **Quick Reference Menu** below for the exact file paths.
+2.  **Write the Assertion:** Implement the test case. Focus on the final, observable outcome and write a specific assertion that will fail because the feature code doesn't exist yet.
+
+### 🟢 **STEP 4: GREEN**
+
+**Goal:** Write the minimum amount of application code required to make the test pass.
+
+1.  **Implement the Feature:** Write just enough code to satisfy the test's assertion. Do not add extra logic or handle edge cases yet.
+2.  **Verify the Pass:** Run the specific test file to confirm it now passes.
+    * **Run:** `pnpm test:run path/to/your/new-test.ts`
+
+### 🔧 **STEP 5: REFACTOR**
+
+**Goal:** Clean up the implementation and test code while keeping all tests green.
+
+1.  **Improve the Code:** Refactor both the application code and the test code. Improve names, remove duplication, and simplify logic.
+2.  **Maintain the Safety Net:** After each significant change, run the full test suite to ensure you haven't broken existing functionality.
+    * **Run:** `pnpm test:run`
+3.  **Repeat:** Continue the Red-Green-Refactor cycle until the feature is complete.
+
+---
+
+## 📚 Quick Reference: Skill-Jack Menu
+
+Use this menu to find the correct skill-jack for your chosen test type in the **RED** step.
+
+### Core Patterns (Essential)
+| Test Type          | Skill-Jack(s) to Read                                                                                                                                                              |
+|:-------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Unit/Integration** | `.brain/skill-jacks/testing/core-patterns/unit-test-first-principles.skill-jack.ts`<br>`.brain/skill-jacks/testing/core-patterns/vitest-test-object-model.skill-jack.ts`          |
+| **Browser E2E** | `.brain/skill-jacks/testing/core-patterns/playwright-browser-e2e.skill-jack.ts`<br>`.brain/skill-jacks/testing/core-patterns/playwright-pom-patterns.skill-jack.ts`                 |
+| **Backend E2E** | `.brain/skill-jacks/testing/core-patterns/backend-api-e2e.skill-jack.ts`                                                                                                             |
+| **CLI E2E** | `.brain/skill-jacks/testing/core-patterns/cli-application-e2e.skill-jack.ts`                                                                                                         |
+| **Component** | `.brain/skill-jacks/testing/core-patterns/storybook-component-testing.skill-jack.ts`                                                                                                 |
+
+### Specific Techniques (Specialized Scenarios)
+| Scenario         | Skill-Jack to Read                                                                                 |
+|:-----------------|:---------------------------------------------------------------------------------------------------|
+| **Async Code** | `.brain/skill-jacks/testing/specific-techniques/async-testing-patterns.skill-jack.ts`                |
+| **Databases** | `.brain/skill-jacks/testing/specific-techniques/database-testing-patterns.skill-jack.ts`             |
+| **Performance** | `.brain/skill-jacks/testing/specific-techniques/performance-testing-strategies.skill-jack.ts`        |
+| **Security** | `.brain/skill-jacks/testing/specific-techniques/security-testing-patterns.skill-jack.ts`             |
+| **API Contracts**| `.brain/skill-jacks/testing/specific-techniques/api-contract-testing.skill-jack.ts`                  |
+
+---
+
+## ⚡ Other Mandatory Workflows
+
+These processes are mandatory for their respective tasks.
+
+### **Test Execution**
+1.  **ORIENT:** Read `.brain/skill-jacks/testing/execution/test-execution-strategies.skill-jack.ts`
+2.  **DECIDE:** Determine the scope (e.g., single test, suite, full CI/CD run).
+3.  **SETUP:** Prepare the environment and required dependencies.
+4.  **EXECUTE:** Run the tests with appropriate monitoring.
+
+### **Test Debugging**
+1.  **ORIENT:** Read `.brain/skill-jacks/testing/debugging/test-debugging-strategies.skill-jack.ts`
+2.  **DECIDE:** Characterize the failure type (e.g., logic error, environment issue, timing problem).
+3.  **ISOLATE:** Apply a systematic debugging approach to find the root cause.
+4.  **FIX:** Implement the solution and verify with the test.
+
+### **Test Quality Analysis**
+1.  **ORIENT:** Read `.brain/skill-jacks/testing/quality/test-quality-analysis.skill-jack.ts`
+2.  **ASSESS:** Evaluate tests against AI verification confidence and maintainability criteria.
+3.  **MEASURE:** Analyze metrics like code coverage, performance, and flakiness.
+4.  **IMPROVE:** Generate and apply specific recommendations for improvement.
+
+---
+
+## 📋 Test Implementation Standards
+
+### 🧭 Testing Philosophy
+1.  **Test real use, not implementation details.**
+    -   Focus on behavior observable to users or consuming code.
+    -   Avoid coupling tests to internal implementation details.
+2.  **Mock only external dependencies.**
+    -   Mock HTTP, time, environment variables, databases.
+    -   Use real implementations of internal application code.
+3.  **One-to-One Principle:**
+    -   A passing test means the feature works.
+    -   A failing test means something is broken.
+    -   Tests should have clear, specific intent.
+4.  **Test Type Selection:**
+    -   **Unit tests:** Pure functions, isolated utilities, helpers.
+    -   **Integration tests:** Modules with their actual dependencies.
+    -   **E2E tests:** Complete workflows from the user's perspective.
+5.  **Small, high-signal suite that runs on every change.**
+6.  **Test failure requires investigation, not deletion.**
+
+### 📁 Test File Structure & Naming
+| Test Type   | Location Pattern                 | File Naming Pattern               | Runner     |
+|:------------|:---------------------------------|:----------------------------------|:-----------|
+| Unit        | Co-located with source code      | `<fileName>.unit.test.ts(x)`      | Vitest     |
+| Integration | `<pkg>/testing/integration/`     | `<feature>.integration.test.ts(x)`| Vitest     |
+| Backend E2E | `<pkg>/testing/e2e/`             | `<scenario>.backend.e2e.test.ts`  | Vitest     |
+| Browser E2E | `<pkg>/testing/e2e/`             | `<scenario>.browser.e2e.ts`       | Playwright |
+
+#### File Structure Example
+For a package `packages/auth`:
+```
+packages/auth/
+├── src/
+│   ├── login.ts
+│   ├── login.unit.test.ts              // Unit tests co-located with source
+│   └── utils/
+│       ├── validation.ts
+│       └── validation.unit.test.ts
+├── testing/
+│   ├── integration/
+│   │   └── auth-flow.integration.test.ts
+│   └── e2e/
+│       ├── login-flow.backend.e2e.test.ts
+│       └── signup-flow.browser.e2e.ts
+```
+
+### 🛠️ Test Implementation Standards
+-   **Clarity:** Test descriptions should clearly state what behavior is being tested.
+-   **Structure:** Use the Arrange-Act-Assert pattern for test structure.
+-   **Focus:** Each test should focus on a single behavior or scenario.
+-   **Data:** Prefer table-driven tests for similar scenarios with different inputs/outputs.
+
+### 🚫 Common Anti-patterns to Avoid
+-   **Snapshot overuse:** Only use for UI component structure verification, not for application logic.
+-   **Implementation testing:** Do not test internal methods or state directly. Focus on the public interface.
+-   **Overlapping tests:** Do not duplicate coverage across different test types.
+-   **Brittle assertions:** Avoid overly specific assertions that break with minor, unrelated changes.
+
+### 🧰 Framework-Specific Guidance
+For proper configuration, see:
+-   **Unit tests:** `@kit/testing/unit`
+-   **Integration tests:** `@kit/testing/integration`
+-   **Backend E2E tests:** `@kit/testing/e2e`
+-   **Playwright (Browser):** `@kit/testing/playwright`
+-   **Playwright (Backend):** `@kit/testing/playwright-backend`
+
+---
+
+## ⚠️ AGENT COMPLIANCE & VALIDATION
+
+### Key Directives
+* **NEVER** skip the 5-step process for test creation.
+* **ALWAYS** begin with the `ORIENT & DECIDE` step.
+* **NEVER** write implementation code before a failing test (the **RED** step).
+* **ALWAYS** use the full, exact file paths provided in the Quick Reference menu to read skill-jacks.
+* **ALWAYS** use the Test Object Model (TOM) or Page Object Model (POM) patterns as guided by the skill-jacks.
+* **NEVER** guess at file paths; use the exact paths listed.
+
+### Validation Checklist
+- [ ] Did I follow the 5-step `ORIENT -> SCAFFOLD -> RED -> GREEN -> REFACTOR` process exactly?
+- [ ] Did I read the philosophy skill-jack in Step 1?
+- [ ] Did I read the correct pattern skill-jack from the menu in Step 3?
+- [ ] Does my test verify behavior, not implementation?
+- [ ] Is the final code clean and the entire test suite 100% green?
+- [ ] Does the test provide high AI verification confidence?
+```

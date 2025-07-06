@@ -1,0 +1,1 @@
+You seem to be waiting for an external event or resource. Identify what you are waiting for. Is there a way to verify if that resource is available or if the event has occurred? Are your checks or conditions in the code correctly implemented? 

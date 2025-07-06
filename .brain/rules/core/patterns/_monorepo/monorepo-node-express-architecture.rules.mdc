@@ -1,0 +1,176 @@
+---
+description: When generating or refactoring TypeScript/Node-Express code in a pnpm monorepo, always follow this single, cohesive rule:
+globs: 
+alwaysApply: false
+---
+## **Cursor Agent Rule: Modular Monorepo Architecture & Enforcement**
+
+**Objective:** Maintain a highly modular, consistent, and maintainable TypeScript/Node.js/Express codebase within a pnpm monorepo, optimized for AI agent processing and developer productivity.
+
+**Core Principle:** Strict adherence to separation of concerns via bounded contexts, standardized naming, and automated enforcement.
+
+### **1\. Monorepo & Project Structure**
+
+* **Layout:** Use pnpm workspaces.  
+  / (root)  
+  ├─ package.json        \# defines workspaces: \["apps/\*", "packages/\*"\]  
+  ├─ pnpm-workspace.yaml  
+  ├─ tsconfig.base.json  \# Base TS config with path aliases  
+  ├─ apps/  
+  │   └─ server/         \# Main Express application  
+  │       ├─ src/  
+  │       ├─ package.json  
+  │       └─ tsconfig.json \# Extends tsconfig.base.json  
+  └─ packages/  
+      ├─ auth/           \# Example reusable package (e.g., auth logic)  
+      ├─ database/       \# Example shared DB connectors/models  
+      └─ utils/          \# Example shared utility functions
+
+* **Package Decision:** Move code to /packages/\* if:  
+  * It's reused across multiple applications (/apps/\*).  
+  * It requires independent versioning and release cycles.  
+* **Application Structure (apps/server/src):**  
+  src/  
+  ├─ modules/            \# Feature-specific bounded contexts  
+  │   └─ \<feature\>/      \# e.g., user, post, order  
+  │       ├─ \<feature\>.\<role\>.ts \# (controller, service, repo, etc.)  
+  │       ├─ \<feature\>.test.ts  
+  │       └─ index.ts          \# Barrel file exporting public API ONLY  
+  ├─ shared/             \# Code shared \*within\* this app only  
+  │   ├─ logging/  
+  │   ├─ errors/  
+  │   └─ validation/       \# Shared validation schemas/logic  
+  ├─ infra/              \# Infrastructure concerns (lowest level)  
+  │   ├─ http/             \# Express server setup, middleware registration  
+  │   │   ├─ server.ts  
+  │   │   └─ routes.ts       \# Aggregates routes from modules  
+  │   └─ db/               \# Database connection setup, migrations  
+  │       └─ prisma.client.ts \# Or other ORM/DB client setup  
+  └─ main.ts             \# Application entry point: bootstrap, DI container setup
+
+### **2\. File Naming & Content Conventions**
+
+* **Filename Pattern:** Strictly use \<feature\>.\<role\>.ts.  
+* **Role Suffixes:** controller, service, repo (repository/data access), schema (validation, e.g., Zod), dto (Data Transfer Object), types, middleware, util, test.  
+* **Single Responsibility:** Each file must address only *one* concern corresponding to its role suffix.  
+  * \*.controller.ts: Handle HTTP request/response cycle, input validation (using DTOs/Schemas), delegate to services. **No business logic.**  
+  * \*.service.ts: Contain core business logic, orchestrate calls to repositories or other services.  
+  * \*.repo.ts: Abstract data persistence logic (database queries, external API calls).  
+  * \*.schema.ts: Define validation schemas (e.g., Zod) for input/output.  
+  * \*.dto.ts: Define plain data structures for transferring data (often validated by schemas).  
+  * \*.types.ts: Define TypeScript interfaces/types specific to the feature module.  
+  * \*.middleware.ts: Express middleware specific to a feature or shared.  
+  * \*.util.ts: Pure helper functions specific to a feature or shared.  
+  * \*.test.ts: Unit/integration tests for the corresponding feature module files.  
+* **Barrel Exports (index.ts):** Each module (/modules/\<feature\>) **must** have an index.ts that explicitly exports only the necessary public API elements (e.g., controllers for routes, service interfaces if needed elsewhere). **Avoid export \***.
+
+### **3\. Size & Complexity Limits (Enforced via Linting)**
+
+* **Max File Length:** 500 lines (eslint: max-lines-per-file).  
+* **Max Function Length:** 75 lines (eslint: max-lines-per-function).  
+* **Cyclomatic Complexity:** ≤ 10 (eslint: complexity).  
+* **Nesting Depth:** ≤ 4 (eslint: max-depth).  
+* **Action:** If limits are exceeded, refactor immediately by extracting logic into smaller, focused functions or new files following the naming convention.
+
+### 4. Dependency Management & Coupling
+
+* **Dependency Injection (DI): Mandatory.**  
+  *Use a *functional* DI approach—no classes or decorators.*
+
+  * **Allowed toolkits (pick one):**  
+    * `effect` Context/Layer  
+    * `fp-ts` Reader / ReaderTaskEither  
+    * Any lightweight, function-first injector (e.g. `typed-inject` used with plain functions).
+
+  * **Services & Repositories** **must** be *pure factory functions* that return a value with callable methods, e.g.
+
+    ```ts
+    // makeUserRepo.ts
+    export const makeUserRepo = (deps: { db: DbClient }) => ({
+      list: () => deps.db.query<User[]>('SELECT * FROM users'),
+    });
+    ```
+
+  * **Controllers / Routes** **must** be curried functions that take their dependencies first, then runtime params:
+
+    ```ts
+    // makeGetUsers.ts
+    export const makeGetUsers =
+      (userRepo: ReturnType<typeof makeUserRepo>) =>
+        async (_req, res) => res.json(await userRepo.list());
+    ```
+
+  * **Composition root** wires *concrete* implementations once per app / test:
+
+    ```ts
+    import { Layer, Effect } from 'effect';
+    import { makeUserRepo } from './repos/makeUserRepo';
+
+    const DbLive = Layer.succeed<DbClient>({ ... });
+
+    const AppLayer = Layer.effectContext(({ db }) => ({
+      userRepo: makeUserRepo({ db }),
+    })).merge(DbLive);
+
+    export const program = mainEffect.provide(AppLayer);
+    ```
+
+* **Path Aliases:** *(unchanged—keep tsconfig paths to avoid ../../../)*  
+  ```json
+  {
+    "compilerOptions": {
+      "baseUrl": ".",
+      "paths": {
+        "@server/*": ["apps/server/src/*"],
+        "@shared/*": ["apps/server/src/shared/*"],
+        "@<feature>/*": ["apps/server/src/modules/<feature>/*"],
+        "@pkg/auth/*": ["packages/auth/src/*"]
+      }
+    }
+  }
+
+  }
+
+* **Imports:** Use named imports. Avoid default exports where possible, except for the main application instance or framework-required defaults.
+
+### **5\. Error Handling & Logging**
+
+* **Centralized Errors:** Define custom application errors (e.g., AppError, ValidationError) extending Error in shared/errors/. Include an ErrorMapper or similar utility.  
+* **Error Middleware:** Implement a single, global error handling middleware in infra/http/ that catches all errors, maps them using the ErrorMapper, and sends a standardized JSON error response. Controllers **must** wrap async route handlers with a utility function that catches promise rejections and passes them to next().  
+* **Logging:** Use a structured logger (e.g., pino) initialized in shared/logging/.  
+  * Inject or create child loggers per module/service with appropriate context (e.g., module name).  
+  * **Ban console.log, console.error, etc.** (enforce via eslint: no-console).
+
+### **6\. Validation**
+
+* **Schema-Based:** Use a library like Zod or Yup for defining validation schemas in \*.schema.ts files.  
+* **DTOs:** Use \*.dto.ts files for defining data shapes for API requests/responses.  
+* **Application:** Validate incoming request data (body, query, params) in controllers (or dedicated middleware) using schemas before passing data to services. Services should expect validated, domain-appropriate data types.
+
+### **7\. Testing**
+
+* **Co-location:** Test files (\<feature\>.test.ts) **must** reside within the same module folder as the code they test.  
+* **Coverage:** Enforce minimum test coverage thresholds per package/module via CI (e.g., jest \--coverage). Aim for high coverage on services and critical utilities.  
+* **Types:** Write unit tests for services, utils, and repositories (using mocks for external dependencies like databases). Write integration tests for controllers/routes, testing the flow through middleware, service, and repository layers (potentially hitting a test database).
+
+### **8\. Code Generation & Scaffolding**
+
+* **Mandatory Scaffolding:** Use a scaffolding tool (e.g., Plop.js, Hygen) to generate the standard file/folder structure for new features (pnpm run generate feature \<name\>).  
+* **Template Updates:** The scaffold templates **must** be kept up-to-date with the ruleset.  
+* **PR Enforcement:** Pull requests adding new features manually (without using the generator) **should** be rejected unless the generator itself is being updated in the same PR.
+
+### **9\. Duplication & Orphan Prevention (Enforced via CI)**
+
+* **DRY Principle:** Before writing new code, **always** search the monorepo (apps/\* and packages/\*) for existing, reusable logic. Extract shared logic into shared/ or a dedicated packages/ library.  
+* **CI Checks:**  
+  * depcheck: Fail build on unused dependencies.  
+  * eslint-plugin-unused-imports: Fail build on unused imports/variables.  
+  * Custom Script/Lint Rule (Optional but Recommended): Detect unreferenced .ts files within src/ that aren't index.ts or main.ts.
+
+### **10\. Versioning & Releases (for /packages/\*)**
+
+* **SemVer:** All shared libraries in /packages/\* **must** follow Semantic Versioning.  
+* **Changesets:** Use changesets (or similar tool) to manage versioning and generate changelogs for packages. Every PR modifying a package **must** include a changeset file.  
+* **Automated Releases:** Set up CI/CD pipelines to automatically publish changed packages based on changeset information.
+
+**Agent Instruction:** Apply these rules rigorously when creating new files, refactoring existing code, or adding features. Prioritize modularity, consistency, and adherence to defined patterns and limits. Use the scaffolding tool for new features. Report violations found during refactoring tasks.

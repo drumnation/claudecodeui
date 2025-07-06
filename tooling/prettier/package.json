@@ -1,0 +1,25 @@
+{
+  "name": "@kit/prettier-config",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./index.js",
+  "exports": "./index.js",
+  "scripts": {
+    "clean": "rm -rf .turbo node_modules dist *.js *.d.ts",
+    "build": "tsc",
+    "preformat": "pnpm run build",
+    "format": "prettier --check \"**/*.{ts,mjs,json}\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "@kit/tsconfig": "workspace:*",
+    "typescript": "^5.7.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5.7.3",
+    "@types/node": "^22.14.1"
+  },
+  "prettier": "./index.js"
+}

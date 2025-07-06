@@ -1,0 +1,1 @@
+Consider the data structures you're using within the loop. Are they the most efficient choice for the operations you're performing? Could using a different data structure (e.g., a set instead of a list) improve performance? 

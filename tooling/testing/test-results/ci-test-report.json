@@ -1,0 +1,53 @@
+{
+  "status": "FAIL",
+  "duration": 1726,
+  "timestamp": "2025-07-02T02:57:53.767Z",
+  "results": [
+    {
+      "name": "storybook",
+      "passed": false,
+      "duration": 32,
+      "retries": 0
+    },
+    {
+      "name": "unit",
+      "passed": false,
+      "duration": 34,
+      "retries": 0
+    },
+    {
+      "name": "integration",
+      "passed": false,
+      "duration": 31,
+      "retries": 0
+    },
+    {
+      "name": "e2e",
+      "passed": false,
+      "duration": 32,
+      "retries": 0
+    },
+    {
+      "name": "playwright",
+      "passed": false,
+      "duration": 583,
+      "retries": 0
+    },
+    {
+      "name": "storybook-run",
+      "passed": false,
+      "duration": 494,
+      "retries": 0
+    },
+    {
+      "name": "playwright-storybook",
+      "passed": false,
+      "duration": 550,
+      "retries": 0
+    }
+  ],
+  "coverage": {
+    "average": null,
+    "threshold": 85
+  }
+}

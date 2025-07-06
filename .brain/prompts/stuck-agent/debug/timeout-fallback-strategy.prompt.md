@@ -1,0 +1,1 @@
+If the resource you're waiting for isn't available, is there a fallback or alternative course of action you can take? Implement a timeout mechanism to prevent indefinite waiting. 

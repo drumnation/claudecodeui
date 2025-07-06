@@ -1,0 +1,1 @@
+Step through your code execution one line at a time, paying close attention to how variables change within the loop. Visualize this process if possible. Can you pinpoint where the logic deviates from your intended behavior?

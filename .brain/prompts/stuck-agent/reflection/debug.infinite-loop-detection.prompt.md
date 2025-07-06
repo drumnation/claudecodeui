@@ -1,0 +1,1 @@
+You appear to be repeating the same sequence of actions. Identify the condition that's supposed to terminate this loop. Is it being evaluated correctly? What are the current values of the variables involved in this condition, and how are they changing (or not changing) with each iteration?

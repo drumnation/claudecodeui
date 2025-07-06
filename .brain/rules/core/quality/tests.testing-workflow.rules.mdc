@@ -1,0 +1,145 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Testing Workflow Rules - MANDATORY FOR ALL TESTING TASKS
+
+<!-- ==================== METADATA ==================== -->
+alwaysApply: true
+description: >
+  Mandatory 4-step workflow for all testing tasks. Short, simple, and designed 
+  for high agent compliance. No exceptions.
+whenToUse:
+  - Creating any test
+  - Running tests
+  - Debugging failed tests  
+  - Analyzing test quality
+# =====================================================
+
+## 🚨 EVERY TESTING TASK: Follow This 4-Step Process
+
+### 📝 **TEST CREATION** (Most Common)
+```
+1. 🧭 ORIENT: Read .brain/skill-jacks/testing/creation/ai-verification-tdd-workflow.skill-jack.ts
+   └── Sets philosophy: Tests must provide AI confidence
+
+2. 🎯 DECIDE: Read .brain/skill-jacks/testing/patterns/test-strategy-selection.skill-jack.ts
+   └── Choose test type: E2E vs Integration vs Unit
+
+3. 🔧 SETUP: Read .brain/skill-jacks/testing/tooling/vitest-patterns.skill-jack.ts
+   └── Get tool foundation and configuration
+
+4. 🎨 IMPLEMENT: Read specific pattern skill-jack based on step 2 decision:
+   ├── E2E Browser → .brain/skill-jacks/testing/core-patterns/playwright-browser-e2e.skill-jack.ts
+   │                + .brain/skill-jacks/testing/core-patterns/playwright-pom-patterns.skill-jack.ts
+   ├── E2E Backend → .brain/skill-jacks/testing/core-patterns/backend-api-e2e.skill-jack.ts
+   ├── E2E CLI → .brain/skill-jacks/testing/core-patterns/cli-application-e2e.skill-jack.ts
+   ├── Unit/Integration → .brain/skill-jacks/testing/core-patterns/unit-test-first-principles.skill-jack.ts
+   │                    + .brain/skill-jacks/testing/core-patterns/vitest-test-object-model.skill-jack.ts
+   ├── Component → .brain/skill-jacks/testing/core-patterns/storybook-component-testing.skill-jack.ts
+   ├── Async → .brain/skill-jacks/testing/specific-techniques/async-testing-patterns.skill-jack.ts
+   ├── Database → .brain/skill-jacks/testing/specific-techniques/database-testing-patterns.skill-jack.ts
+   ├── Performance → .brain/skill-jacks/testing/specific-techniques/performance-testing-strategies.skill-jack.ts
+   ├── Security → .brain/skill-jacks/testing/specific-techniques/security-testing-patterns.skill-jack.ts
+   └── API Contracts → .brain/skill-jacks/testing/specific-techniques/api-contract-testing.skill-jack.ts
+```
+
+### ⚡ **TEST EXECUTION**
+```
+1. 🧭 ORIENT: Read .brain/skill-jacks/testing/execution/test-execution-strategies.skill-jack.ts
+2. 🎯 DECIDE: Scope (single test, suite, CI/CD)
+3. 🔧 SETUP: Environment and dependencies
+4. 🚀 EXECUTE: Run with monitoring
+```
+
+### 🔍 **TEST DEBUGGING**  
+```
+1. 🧭 ORIENT: Read .brain/skill-jacks/testing/debugging/test-debugging-strategies.skill-jack.ts
+2. 🎯 DECIDE: Failure type (logic, environment, timing)
+3. 🔧 ISOLATE: Systematic debugging approach
+4. 🛠️ FIX: Apply solution and verify
+```
+
+### 📊 **TEST QUALITY ANALYSIS**
+```
+1. 🧭 ORIENT: Read .brain/skill-jacks/testing/quality/test-quality-analysis.skill-jack.ts
+2. 🎯 ASSESS: AI verification confidence, maintainability
+3. 🔧 MEASURE: Coverage, performance, flakiness
+4. 📈 IMPROVE: Specific recommendations
+```
+
+## 📁 COMPLETE SKILL JACK MENU
+
+### 🎯 Core Patterns (Essential - use these most often)
+```
+.brain/skill-jacks/testing/core-patterns/unit-test-first-principles.skill-jack.ts
+.brain/skill-jacks/testing/core-patterns/vitest-test-object-model.skill-jack.ts
+.brain/skill-jacks/testing/core-patterns/vitest-strategic-mocking.skill-jack.ts
+.brain/skill-jacks/testing/core-patterns/playwright-browser-e2e.skill-jack.ts
+.brain/skill-jacks/testing/core-patterns/playwright-pom-patterns.skill-jack.ts
+.brain/skill-jacks/testing/core-patterns/backend-api-e2e.skill-jack.ts
+.brain/skill-jacks/testing/core-patterns/cli-application-e2e.skill-jack.ts
+.brain/skill-jacks/testing/core-patterns/storybook-component-testing.skill-jack.ts
+```
+
+### 🎯 Specific Techniques (Specialized scenarios)
+```
+.brain/skill-jacks/testing/specific-techniques/async-testing-patterns.skill-jack.ts
+.brain/skill-jacks/testing/specific-techniques/database-testing-patterns.skill-jack.ts
+.brain/skill-jacks/testing/specific-techniques/performance-testing-strategies.skill-jack.ts
+.brain/skill-jacks/testing/specific-techniques/security-testing-patterns.skill-jack.ts
+.brain/skill-jacks/testing/specific-techniques/api-contract-testing.skill-jack.ts
+```
+
+### 🛠️ Support & Workflow
+```
+.brain/skill-jacks/testing/creation/ai-verification-tdd-workflow.skill-jack.ts
+.brain/skill-jacks/testing/patterns/test-strategy-selection.skill-jack.ts
+.brain/skill-jacks/testing/tooling/vitest-patterns.skill-jack.ts
+.brain/skill-jacks/testing/debugging/test-debugging-strategies.skill-jack.ts
+.brain/skill-jacks/testing/execution/test-execution-strategies.skill-jack.ts
+.brain/skill-jacks/testing/quality/test-quality-analysis.skill-jack.ts
+.brain/skill-jacks/testing/visual/visual-testing-patterns.skill-jack.ts
+```
+
+## ⚠️ AGENT COMPLIANCE RULES
+
+### NEVER:
+- Skip the orientation step (step 1)
+- Jump directly to implementation
+- Ignore the decision framework
+- Write tests without TOM/POM patterns
+- Guess at file paths - use the exact paths listed above
+
+### ALWAYS:
+- Read skill-jacks in the specified order using full file paths
+- Use the philosophy from ai-verification-tdd-workflow
+- Choose test type using test-strategy-selection
+- Implement using specific pattern skill-jacks with full paths
+
+### FILE PATH REQUIREMENTS:
+- Always use full paths starting with .brain/skill-jacks/testing/
+- Read multiple files when specified (e.g., playwright-browser-e2e + playwright-pom-patterns)
+- Reference this menu if unsure which skill jack to use
+
+### VALIDATE:
+- [ ] Followed 4-step process?
+- [ ] Used correct file paths?
+- [ ] Used appropriate skill-jacks?
+- [ ] Test provides AI verification confidence?
+- [ ] Used TOM/POM patterns?
+
+## 🎯 WHY THIS WORKS FOR AGENTS
+
+1. **4 Steps Maximum** - Easy to remember and follow
+2. **Full File Paths** - No guessing where files are located
+3. **Complete Menu** - All available skill jacks listed with paths
+4. **Same Pattern** - Consistent across all testing tasks
+5. **Clear Branches** - "Choose your own adventure" at step 4 with exact paths
+6. **Philosophy First** - Quality mindset from the start
+7. **Short Rule** - High compliance probability
+
+---
+
+**Remember: This process takes 2 minutes but saves hours of debugging and rework.** 

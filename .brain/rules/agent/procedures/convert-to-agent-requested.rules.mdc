@@ -1,0 +1,62 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Rule: Convert Rule to Agent-Requested (Meta Optimization)
+
+Purpose:
+Evaluate existing rule files to determine whether they are good candidates to be converted to `agent-requested` with a specific `trigger` description. This helps reduce rule context bloat while preserving precise behavior.
+
+How to Use:
+Run this rule against:
+- A specific rule file
+- A folder of rules (e.g., `core/documentation/`, `tools/git/`)
+
+Agent Behavior:
+
+1. Analyze the rule’s:
+   - Purpose and scope
+   - Trigger conditions
+   - Usage patterns
+   - Specificity (how narrow or general its use case is)
+
+2. Determine viability of agent-requested conversion:
+   - ✅ If the rule is used in **specific, identifiable user scenarios**, and has **clear input signals** (e.g., “a screenshot is attached”, “a new file was just scaffolded”, “user is generating a changelog”)
+   - ❌ If the rule is broadly applicable or needs to always be active (e.g., linting, architecture rules, code quality)
+
+3. If viable as agent-requested, return:
+   ruleType: agent-requested
+   trigger: [Concise trigger description]
+   
+4. If **not** viable, recommend either:
+   - ruleType: always → if it must always be active (e.g. code quality rules)
+   - ruleType: auto-attached → if it can be inferred from matching file globs
+   - ruleType: manual → if it’s extremely niche and should only be included when explicitly requested
+
+5. If recommending `manual`, explain:
+   ```txt
+   ruleType: manual
+   reason: Rule is only relevant in rare or edge-case workflows. Explicit invocation ensures clarity and avoids context clutter.
+
+Examples:
+
+✅ Can convert:
+```txt
+ruleType: agent-requested
+trigger: The user provides a screenshot of a UI and requests a layout or style change.
+```
+
+❌ Cannot convert:
+```txt
+ruleType: always
+reason: This rule applies universally to all TypeScript files for naming conventions and should always be present.
+```
+
+Usage Recommendations:
+- Run periodically to identify optimization opportunities
+- Especially useful for repositories with >30 rules and limited token context space
+
+Note:
+- This rule evaluates `.rules.mdc` structure only. It does not evaluate file globs or matching heuristics directly.
+- Future upgrades can include confidence scoring or auto-mod suggestions

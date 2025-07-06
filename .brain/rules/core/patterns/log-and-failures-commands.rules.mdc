@@ -1,0 +1,109 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## 🚨 CRITICAL: Error Task Lists & Server Logs - USE THESE FIRST! 🚨
+
+**MANDATORY BEHAVIOR: Before running ANY server or validation command, ALWAYS check the existing error task lists and server logs FIRST.**
+
+### 📋 Error Task Lists (Located in `_errors/` directory)
+
+The monorepo maintains real-time error task lists that are automatically updated. These files contain:
+
+1. **`_errors/errors.typecheck-failures.md`** - TypeScript compilation errors
+2. **`_errors/errors.test-failures.md`** - Failed tests with real-time feedback
+3. **`_errors/errors.lint-failures.md`** - ESLint issues (auto-fix already applied)
+4. **`_errors/errors.format-failures.md`** - Prettier formatting issues (auto-fix already applied)
+5. **`_errors/validation-summary.md`** - Overall validation status
+
+**WHY THIS MATTERS:**
+
+- ✅ **PREVENTS** multiple agents from running the same validations simultaneously
+- ✅ **SAVES TIME** - validations can take 2-5 minutes to complete
+- ✅ **PROVIDES CONTEXT** - includes batch-fixing strategies and exact error locations
+- ✅ **TRACKS PROGRESS** - shows run count, git branch, and timestamps
+
+**HOW TO USE:**
+
+```bash
+# First, ALWAYS check existing error reports:
+cat _errors/errors.typecheck-failures.md    # For TypeScript errors
+cat _errors/errors.test-failures.md         # For test failures
+cat _errors/errors.lint-failures.md         # For lint issues
+cat _errors/errors.format-failures.md       # For format issues
+cat _errors/validation-summary.md           # For overall status
+
+# Only run validation if reports are stale or missing:
+pnpm brain:validate                         # Runs all validations in parallel
+pnpm brain:typecheck-failures              # Updates TypeScript errors only
+pnpm brain:test-failures                   # Updates test failures only
+pnpm brain:lint-failures                   # Updates lint issues only
+pnpm brain:format-failures                 # Updates format issues only
+```
+
+### 📜 Server Logs (Located in `_logs/` directory)
+
+The monorepo streams real-time server logs to files, allowing multiple agents to monitor servers without conflicts:
+
+1. **`_logs/financial-api.log`** - Backend API server
+2. **`_logs/financial-ui.log`** - Frontend development server
+3. **`_logs/financial-lead-agent.log`** - Lead agent server
+4. **`_logs/financial-simulation-agent.log`** - Simulation agent server
+
+**WORKFLOW FOR SERVER ISSUES:**
+
+```bash
+# 1. First, check if server is already running by viewing logs:
+tail -f _logs/financial-api.log           # Watch API logs
+tail -n 50 _logs/financial-ui.log        # View last 50 lines of UI logs
+
+# 2. Monitor all servers simultaneously:
+pnpm dev:with-logs                        # Starts servers with log monitoring
+
+# 3. View logs in separate terminal:
+pnpm brain:logs                           # Opens log monitoring dashboard
+```
+
+### 🎯 Agent Collaboration Best Practices
+
+1. **BEFORE starting any task:**
+
+   - Check `_errors/` for current validation status
+   - Check `_logs/` for server status
+   - Only run commands if data is stale (>10 minutes old)
+
+2. **WHEN fixing errors:**
+
+   - Use the checkbox lists in error files as your task list
+   - Follow the batch-fixing strategies provided
+   - Update progress by re-running only the specific validation
+
+3. **WHEN debugging servers:**
+
+   - Read logs FIRST before restarting servers
+   - Use `pnpm dev:with-logs` to see all servers at once
+   - Logs are cleared on startup, so historical issues are preserved
+
+4. **PARALLEL AGENT COORDINATION:**
+   - Multiple agents can read the same error files simultaneously
+   - Only ONE agent should run validations at a time
+   - Use git commits to communicate completed fixes
+
+### 🔧 Key Features of Error Task Lists
+
+- **Turbo Caching**: All validations use turbo for speed
+- **Auto-Fix**: Lint and format scripts apply fixes automatically
+- **Real-Time Feedback**: Test runner shows currently executing tests
+- **Batch Strategies**: Groups similar errors for efficient fixing
+- **Git Integration**: Shows branch and commit for context
+- **Run Counting**: Tracks how many times validations have run
+
+### ⚡ Performance Tips
+
+- `pnpm brain:validate` runs ALL validations in parallel (~2-3 minutes)
+- Individual validation scripts are faster when targeting specific issues
+- Turbo caching means subsequent runs are much faster
+- Auto-fix for lint/format eliminates most manual work
+
+**REMEMBER: Reading existing reports takes seconds. Running validations takes minutes. ALWAYS read first!**

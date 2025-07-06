@@ -1,0 +1,81 @@
+---
+description: 
+globs: packages/ui/src/**/*
+alwaysApply: false
+---
+# Rule: Storybook-First Component Composition
+
+## Purpose:
+Enforce a design and implementation methodology where all UI components are built in isolation and documented in Storybook *before* they are used in any application screen or feature.
+
+This approach supports testable, composable, visually validated components ideal for scalable development and AI-assisted iteration.
+
+---
+
+## Scope:
+Applies to all UI components within the `components/`, `ui/`, or `shared/` directories in frontend projects.
+
+---
+
+## Agent Behavior:
+
+1. **Build UI Components in Isolation First**
+   - Do not begin page/screen-level implementation until all required atomic or reusable components are complete.
+   - Each component must be implemented independently of the app context.
+
+2. **Create Full Storybook Coverage**
+   - Every component must have a `.stories.tsx` file that includes:
+     - 🟢 Default case
+     - 🚧 Edge cases (e.g., loading, error, empty state)
+     - 🎨 Variants (e.g., size, theme, disabled)
+     - 📱 Responsive views (optional)
+   - Stories must serve as living documentation.
+
+3. **Wrap External UI Libraries**
+   - If using design libraries (e.g. shadcn/ui, MUI, Radix), create thin wrappers:
+     - Enforce project-wide props/interfaces
+     - Customize styling consistently
+     - Enable override and extension
+
+4. **Add Snapshot or Visual Regression Testing (if enabled)**
+   - If snapshot tooling (e.g. Storybook + Chromatic, Percy, or Playwright visual) is configured:
+     - Each Storybook story is treated as a visual contract.
+     - Run snapshot tests for each story to detect style/layout regressions.
+
+5. **Verify Component Behavior**
+   - Write functional interaction tests for interactivity (e.g., Storybook interaction tests, Playwright + story).
+   - No mocking unless interacting with an external service or system boundary.
+
+6. **Document Design Intent and Usage**
+   - Use Storybook docs or comments to describe:
+     - When/where to use the component
+     - Important design constraints or accessibility concerns
+     - Behavior on various screen sizes or themes
+
+7. **Support Atomic Design and Reusability**
+   - Structure components to support atomic principles:
+     - Atoms (Button, Input)
+     - Molecules (FormField, Card)
+     - Organisms (Modal, Sidebar)
+   - Organize files and stories accordingly for composability.
+
+---
+
+## Outcome:
+When followed correctly, this rule ensures:
+- The UI can be visually and behaviorally validated before integration
+- Regression detection is visual and precise
+- Design tokens, styling, and component logic are isolated and composable
+- AI agents can safely update UI code with immediate visual feedback
+
+---
+
+## Notes:
+- Storybook-first is a **pre-app strategy**. It may be followed by page/story assembly plans or E2E testing.
+- This pattern pairs well with the `auto-test-validation.rules.mdc` rule and `functional-validation-test.rules.mdc`.
+
+---
+
+## Related Prompts:
+- `.brain/prompts/testing/generate-storybook-snapshots.prompt.md` (optional)
+- `.brain/prompts/testing/create-visual-regression-checks.prompt.md` (optional)

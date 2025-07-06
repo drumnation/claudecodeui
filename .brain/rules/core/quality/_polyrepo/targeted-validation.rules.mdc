@@ -1,0 +1,85 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Rule: Polyrepo Auto Validation (Test + Typecheck + Lint)
+
+## Purpose
+Ensure that in a polyrepo (single-package repository) environment, the agent always validates changes to the codebase by running appropriate test, typecheck, and lint commands for the current project — using the most idiomatic command names available, and gracefully handling variations.
+
+## Trigger
+This rule activates after the agent:
+- Implements any change to source code
+- Modifies or creates tests
+- Completes a feature, bugfix, or refactor task
+- Prepares code for commit, handoff, or pull request
+
+## Behavior
+
+### 1. Validate Tests, Types, and Linting for the Current Project
+Run all applicable validation steps, in the following order:
+
+#### ✅ Run Type Checking
+Try each of the following, in order:
+```bash
+pnpm run typecheck
+pnpm run type-check
+pnpm exec tsc --noEmit
+```
+Log which command was successful. If none exist, prompt to add a `typecheck` script.
+
+#### ✅ Run Linting
+Try each of the following:
+```bash
+pnpm run lint
+pnpm run lint:fix
+pnpm exec eslint .
+```
+Prefer commands that include auto-fix functionality if available.
+
+#### ✅ Run Tests
+Try each of the following:
+```bash
+pnpm run test
+pnpm run test:watch
+pnpm exec vitest
+```
+Use the most complete and fast test suite runner available. If all fail, check for a `vitest.config.ts` or equivalent and suggest adding a test script.
+
+---
+
+### 2. Fallback Handling
+- If no matching script is found for any of the above categories, log a warning and suggest adding a minimal `package.json` entry (e.g., `"typecheck": "tsc --noEmit"`).
+- Do **not** fail unless the project is required to pass validation (e.g., before commit).
+
+---
+
+### 3. Report Validation Results
+After running all steps:
+- Log which commands were run and succeeded/failed
+- Summarize any failed validations
+- Suggest next steps if validation failed (e.g., run fixes, edit files, re-run specific command)
+
+---
+
+## Best Practices
+- Always run validations before attempting to commit code
+- If working in a CI/CD environment, ensure these commands match the pipeline
+- Ensure `package.json` has consistent naming conventions for `typecheck`, `lint`, `test`
+- If a script is missing, prefer adding a wrapper script instead of hardcoding commands
+
+## Output Example
+```txt
+Validation Summary:
+- ✅ typecheck (via: pnpm run typecheck)
+- ✅ lint (via: pnpm run lint:fix)
+- ✅ test (via: pnpm exec vitest)
+
+All validations passed. Ready to commit.
+```
+
+## Related
+- See: `validate-project-before-commit.prompt.md`
+- See: `auto-test-validation.rules.mdc`
+- Monorepo alternative: `monorepo-auto-validate-target.rules.mdc`
