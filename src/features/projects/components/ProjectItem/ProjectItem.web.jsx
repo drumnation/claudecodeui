@@ -25,6 +25,7 @@ export const ProjectItemWeb = ({
   editingSession,
   editingSessionName,
   generatingSummary,
+  regeneratingTitle,
   loadingSessions,
   additionalSessions,
   initialSessionsLoaded,
@@ -42,6 +43,7 @@ export const ProjectItemWeb = ({
   onDeleteSession,
   onGenerateSessionSummary,
   onUpdateSessionSummary,
+  onRegenerateSessionTitle,
   onLoadMoreSessions,
   setEditingName,
   setEditingSession,
@@ -181,6 +183,7 @@ export const ProjectItemWeb = ({
             editingSession={editingSession}
             editingSessionName={editingSessionName}
             generatingSummary={generatingSummary}
+            regeneratingTitle={regeneratingTitle}
             loadingSessions={loadingSessions}
             initialSessionsLoaded={initialSessionsLoaded}
             currentTime={currentTime}
@@ -192,6 +195,7 @@ export const ProjectItemWeb = ({
             onDeleteSession={onDeleteSession}
             onGenerateSessionSummary={onGenerateSessionSummary}
             onUpdateSessionSummary={onUpdateSessionSummary}
+            onRegenerateSessionTitle={onRegenerateSessionTitle}
             onLoadMoreSessions={onLoadMoreSessions}
             setEditingSession={setEditingSession}
             setEditingSessionName={setEditingSessionName}

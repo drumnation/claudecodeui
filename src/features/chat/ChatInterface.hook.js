@@ -544,9 +544,17 @@ export const useChatInterface = ({
   // Effect: Load file list when project changes
   useEffect(() => {
     if (selectedProject) {
+      console.log('📂 Loading files for project:', selectedProject.name);
       fetchProjectFiles(selectedProject.name).then(files => {
+        console.log('📂 Files loaded:', files.length, 'files');
         setFileList(files);
+      }).catch(error => {
+        console.error('📂 Failed to load files:', error);
+        setFileList([]);
       });
+    } else {
+      console.log('📂 No project selected, clearing file list');
+      setFileList([]);
     }
   }, [selectedProject]);
   

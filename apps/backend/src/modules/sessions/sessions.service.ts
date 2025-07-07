@@ -19,54 +19,79 @@ export class SessionsService {
    * Generate a concise session title based on the conversation content
    * Uses GPT-3.5-turbo for efficiency and cost-effectiveness
    */
-  async generateSessionTitle(messages: SessionMessage[]): Promise<string> {
+  async generateSessionTitle(messages: SessionMessage[], options?: { detectTopicChange?: boolean; previousTitle?: string }): Promise<string> {
     try {
-      // Filter to get only user messages for context
-      const userMessages = messages
-        .filter(msg => msg.role === 'user')
-        .slice(0, 5) // Use first 5 user messages max
-        .map(msg => msg.content)
+      // For topic change detection, use more recent messages
+      const messageSlice = options?.detectTopicChange 
+        ? messages.slice(-10) // Last 10 messages for topic change
+        : messages.slice(0, 10); // First 10 messages for initial title
+      
+      // Filter to get user and assistant messages for better context
+      const conversationContext = messageSlice
+        .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+        .map(msg => `${msg.role}: ${msg.content.substring(0, 200)}`) // Limit each message length
         .join('\n');
 
-      if (!userMessages) {
+      if (!conversationContext) {
         return 'New Session';
       }
 
-      // Create a prompt for title generation
-      const prompt = `Based on the following user messages, generate a concise, descriptive title (max 5 words) that summarizes the main topic or task:
+      // Create different prompts based on use case
+      let systemPrompt: string;
+      let userPrompt: string;
+      
+      if (options?.detectTopicChange && options.previousTitle) {
+        systemPrompt = 'You are a helpful assistant that analyzes conversations to detect topic changes and generates updated titles. If the conversation has shifted to a new topic, create a new title that reflects the current focus. If the topic hasn\'t changed significantly, keep the existing title.';
+        userPrompt = `Current conversation title: "${options.previousTitle}"
 
-User messages:
-${userMessages}
+Recent conversation:
+${conversationContext}
+
+Has the conversation shifted to a significantly different topic? If yes, generate a new concise title (max 5 words) that reflects the current focus. If no, respond with "KEEP_CURRENT".
+
+Response:`;
+      } else {
+        systemPrompt = 'You are a helpful assistant that generates concise, descriptive titles for conversations. Keep titles under 5 words and make them specific to the content. Focus on the main topic or goal.';
+        userPrompt = `Based on the following conversation, generate a concise, descriptive title (max 5 words) that summarizes the main topic or task:
+
+Conversation:
+${conversationContext}
 
 Title:`;
+      }
 
       const response = await openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [
           {
             role: 'system',
-            content: 'You are a helpful assistant that generates concise, descriptive titles for conversations. Keep titles under 5 words and make them specific to the content.'
+            content: systemPrompt
           },
           {
             role: 'user',
-            content: prompt
+            content: userPrompt
           }
         ],
         max_tokens: 20,
         temperature: 0.7,
       });
 
-      const title = response.choices[0]?.message?.content?.trim() || 'New Session';
+      const result = response.choices[0]?.message?.content?.trim() || 'New Session';
+      
+      // Handle topic change detection response
+      if (options?.detectTopicChange && result === 'KEEP_CURRENT') {
+        return options.previousTitle || 'New Session';
+      }
       
       // Ensure title is not too long
-      if (title.length > 50) {
-        return title.substring(0, 47) + '...';
+      if (result.length > 50) {
+        return result.substring(0, 47) + '...';
       }
 
-      return title;
+      return result;
     } catch (error) {
       logger.error('Failed to generate session title', { error });
-      return 'New Session';
+      return options?.previousTitle || 'New Session';
     }
   }
 

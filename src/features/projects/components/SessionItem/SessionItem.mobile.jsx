@@ -20,6 +20,7 @@ export const SessionItemMobile = ({
   isEditing,
   editingSessionName,
   isGeneratingSummary,
+  isRegeneratingTitle,
   currentTime,
   formatTimeAgo,
   onProjectSelect,
@@ -27,6 +28,7 @@ export const SessionItemMobile = ({
   onDeleteSession,
   onGenerateSessionSummary,
   onUpdateSessionSummary,
+  onRegenerateSessionTitle,
   setEditingSession,
   setEditingSessionName,
   handleTouchClick
@@ -127,6 +129,21 @@ export const SessionItemMobile = ({
                     }}
                   >
                     {isGeneratingSummary ? (
+                      <S.LoadingSpinner />
+                    ) : (
+                      <RefreshCw className="w-3 h-3" />
+                    )}
+                  </S.GenerateButton>
+                )}
+                {session.summary && (
+                  <S.GenerateButton
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRegenerateSessionTitle(project.name, session.id);
+                    }}
+                    onTouchEnd={handleTouchClick(() => onRegenerateSessionTitle(project.name, session.id))}
+                  >
+                    {isRegeneratingTitle ? (
                       <S.LoadingSpinner />
                     ) : (
                       <RefreshCw className="w-3 h-3" />

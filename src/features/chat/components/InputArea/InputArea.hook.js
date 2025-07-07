@@ -69,9 +69,17 @@ export const useInputArea = ({
     
     // Check for file reference (@)
     const fileRef = extractFileReference(newValue, newCursorPosition);
+    console.log('📎 File reference check:', {
+      fileRef,
+      fileListLength: fileList.length,
+      cursorPosition: newCursorPosition,
+      value: newValue
+    });
+    
     if (fileRef.position !== -1) {
       setAtSymbolPosition(fileRef.position);
       const filtered = filterFiles(fileList, fileRef.query);
+      console.log('📎 Filtered files:', filtered.length, 'from', fileList.length, 'total files');
       setFilteredFiles(filtered);
       setShowFileDropdown(filtered.length > 0);
       setSelectedFileIndex(filtered.length > 0 ? 0 : -1);

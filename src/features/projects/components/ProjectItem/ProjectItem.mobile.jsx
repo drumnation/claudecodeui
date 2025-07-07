@@ -24,6 +24,7 @@ export const ProjectItemMobile = ({
   editingSession,
   editingSessionName,
   generatingSummary,
+  regeneratingTitle,
   loadingSessions,
   additionalSessions,
   initialSessionsLoaded,
@@ -41,6 +42,7 @@ export const ProjectItemMobile = ({
   onDeleteSession,
   onGenerateSessionSummary,
   onUpdateSessionSummary,
+  onRegenerateSessionTitle,
   onLoadMoreSessions,
   setEditingName,
   setEditingSession,
@@ -168,6 +170,7 @@ export const ProjectItemMobile = ({
             editingSession={editingSession}
             editingSessionName={editingSessionName}
             generatingSummary={generatingSummary}
+            regeneratingTitle={regeneratingTitle}
             loadingSessions={loadingSessions}
             initialSessionsLoaded={initialSessionsLoaded}
             currentTime={currentTime}
@@ -179,6 +182,7 @@ export const ProjectItemMobile = ({
             onDeleteSession={onDeleteSession}
             onGenerateSessionSummary={onGenerateSessionSummary}
             onUpdateSessionSummary={onUpdateSessionSummary}
+            onRegenerateSessionTitle={onRegenerateSessionTitle}
             onLoadMoreSessions={onLoadMoreSessions}
             setEditingSession={setEditingSession}
             setEditingSessionName={setEditingSessionName}

@@ -23,10 +23,13 @@ export const useFileTree = (selectedProject) => {
   const fetchFiles = useCallback(async () => {
     if (!selectedProject) return;
     
+    console.log('🌲 FileTree: Fetching files for project:', selectedProject.name);
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/projects/${selectedProject.name}/files`);
+      const encodedProjectName = encodeURIComponent(selectedProject.name);
+      console.log('🌲 FileTree: Encoded project name:', encodedProjectName);
+      const response = await fetch(`/api/projects/${encodedProjectName}/files`);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -37,6 +40,8 @@ export const useFileTree = (selectedProject) => {
       }
       
       const data = await response.json();
+      console.log('🌲 FileTree: Received file data:', data);
+      console.log('🌲 FileTree: Number of items:', Array.isArray(data) ? data.length : 'Not an array');
       // Ensure data is an array
       setFiles(Array.isArray(data) ? data : []);
       setError(null);

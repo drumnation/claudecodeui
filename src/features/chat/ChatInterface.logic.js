@@ -16,14 +16,41 @@ export const loadSessionMessages = async (projectName, sessionId) => {
 };
 
 export const fetchProjectFiles = async (projectName) => {
+  console.log('🔍 fetchProjectFiles called with:', projectName);
+  
+  if (!projectName) {
+    console.warn('🔍 No project name provided to fetchProjectFiles');
+    return [];
+  }
+  
   try {
-    const response = await fetch(`/api/projects/${projectName}/files`);
+    // URL encode the project name to handle special characters
+    const encodedProjectName = encodeURIComponent(projectName);
+    console.log('🔍 Fetching files for project:', projectName, 'encoded as:', encodedProjectName);
+    
+    const url = `/api/projects/${encodedProjectName}/files`;
+    console.log('🔍 Fetching from URL:', url);
+    
+    const response = await fetch(url);
+    console.log('🔍 Response status:', response.status);
+    
     if (response.ok) {
       const files = await response.json();
-      return flattenFileTree(files);
+      console.log('🔍 Fetched file tree:', files);
+      console.log('🔍 File tree type:', Array.isArray(files) ? 'array' : typeof files);
+      console.log('🔍 File tree length:', Array.isArray(files) ? files.length : 'N/A');
+      
+      const flattened = flattenFileTree(files);
+      console.log('🔍 Flattened files:', flattened);
+      console.log('🔍 Flattened count:', flattened.length);
+      
+      return flattened;
+    } else {
+      const errorText = await response.text();
+      console.error('🔍 Failed to fetch files:', response.status, response.statusText, errorText);
     }
   } catch (error) {
-    console.error('Error fetching files:', error);
+    console.error('🔍 Error fetching files:', error);
   }
   return [];
 };
@@ -44,10 +71,17 @@ export const fetchSlashCommands = async () => {
 // Helper Functions
 export const flattenFileTree = (files, basePath = '') => {
   let result = [];
+  if (!files || !Array.isArray(files)) {
+    console.warn('flattenFileTree received invalid input:', files);
+    return result;
+  }
+  
   for (const file of files) {
     const fullPath = basePath ? `${basePath}/${file.name}` : file.name;
     if (file.type === 'directory' && file.children) {
-      result = result.concat(flattenFileTree(file.children, fullPath));
+      // Include directories that contain files
+      const childFiles = flattenFileTree(file.children, fullPath);
+      result = result.concat(childFiles);
     } else if (file.type === 'file') {
       result.push({
         name: file.name,

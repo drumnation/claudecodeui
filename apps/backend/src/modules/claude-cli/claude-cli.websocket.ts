@@ -126,6 +126,15 @@ export class ClaudeWebSocketHandler {
       // Track user messages for summary updates
       if (response?.message?.role === 'user') {
         this.trackUserMessage(sessionId);
+        
+        // Generate initial title after first user message
+        const messageCount = sessionMessageCounts.get(sessionId) || 0;
+        if (messageCount === 1) {
+          logger.info('First user message detected, generating initial session title', { sessionId });
+          setTimeout(() => {
+            this.generateSessionSummary(sessionId, false, true); // initialGeneration = true
+          }, 1000); // Small delay to ensure message is saved
+        }
       }
       
       this.sendMessage({
@@ -206,18 +215,21 @@ export class ClaudeWebSocketHandler {
     
     // Update summary based on configuration (skip if manually edited)
     if (!manuallyEditedSessions.has(sessionId)) {
-      const updateInterval = parseInt(process.env.SESSION_SUMMARY_UPDATE_INTERVAL || '3');
+      const updateInterval = parseInt(process.env.SESSION_SUMMARY_UPDATE_INTERVAL || '5');
       const updateDelay = parseInt(process.env.SESSION_SUMMARY_UPDATE_DELAY || '2000');
+      const checkTopicChange = process.env.DETECT_TOPIC_CHANGES !== 'false';
       
+      // Check for updates at regular intervals
       if (updateInterval > 0 && newCount > 0 && newCount % updateInterval === 0) {
-        logger.info('User message count reached threshold, updating session summary', { 
+        logger.info('User message count reached threshold, checking for title update', { 
           sessionId, 
-          messageCount: newCount 
+          messageCount: newCount,
+          checkTopicChange
         });
         
         // Trigger summary update in the background
         setTimeout(() => {
-          this.generateSessionSummary(sessionId, true);
+          this.generateSessionSummary(sessionId, true, false, checkTopicChange);
         }, updateDelay);
       }
     } else {
@@ -225,7 +237,7 @@ export class ClaudeWebSocketHandler {
     }
   }
 
-  private async generateSessionSummary(sessionId: string, forceUpdate = false): Promise<void> {
+  private async generateSessionSummary(sessionId: string, forceUpdate = false, initialGeneration = false, checkTopicChange = false): Promise<void> {
     try {
       logger.info('Generating session summary', { sessionId, forceUpdate });
       
@@ -260,8 +272,8 @@ export class ClaudeWebSocketHandler {
       const content = await fs.readFile(sessionPath, 'utf8');
       const lines = content.trim().split('\n').filter(line => line.trim());
       
-      // Check if already has a summary (unless forceUpdate)
-      if (!forceUpdate && lines.length > 0) {
+      // Check if already has a summary (unless forceUpdate or initial generation)
+      if (!forceUpdate && !initialGeneration && lines.length > 0) {
         try {
           const firstLine = JSON.parse(lines[0]);
           if (firstLine.type === 'summary' && firstLine.summary && firstLine.summary !== 'No summary available') {
@@ -297,14 +309,42 @@ export class ClaudeWebSocketHandler {
         return;
       }
       
+      // Get current title for topic change detection
+      let currentTitle: string | undefined;
+      if (checkTopicChange && lines.length > 0) {
+        try {
+          const firstLine = JSON.parse(lines[0]);
+          if (firstLine.type === 'summary' && firstLine.summary) {
+            currentTitle = firstLine.summary.replace(/ \(\d+\)$/, ''); // Remove duplicate counter
+          }
+        } catch {
+          // Ignore parsing errors
+        }
+      }
+      
       // Generate title using AI or local pattern matching
       let title: string;
       const useAI = process.env.OPENAI_API_KEY && process.env.USE_AI_TITLES !== 'false';
       
+      logger.info('Title generation config', {
+        useAI,
+        hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+        useAITitlesFlag: process.env.USE_AI_TITLES,
+        messageCount: messages.length
+      });
+      
       if (useAI) {
-        title = await sessionsService.generateSessionTitle(messages);
+        title = await sessionsService.generateSessionTitle(messages, 
+          checkTopicChange ? { detectTopicChange: true, previousTitle: currentTitle } : undefined
+        );
       } else {
         title = sessionsService.generateSessionTitleLocal(messages);
+      }
+      
+      // Only update if title has changed
+      if (checkTopicChange && currentTitle && title === currentTitle) {
+        logger.info('Session title unchanged, skipping update', { sessionId, title });
+        return;
       }
       
       // Update the session file with the new title and mark as UI-created
@@ -312,7 +352,13 @@ export class ClaudeWebSocketHandler {
         origin: 'webui'
       });
       
-      logger.info('Session summary generated', { sessionId, title, origin: 'webui' });
+      logger.info('Session summary generated', { 
+        sessionId, 
+        title, 
+        origin: 'webui',
+        previousTitle: currentTitle,
+        topicChanged: checkTopicChange && currentTitle && title !== currentTitle
+      });
       
       // Notify frontend about the update
       this.sendMessage({

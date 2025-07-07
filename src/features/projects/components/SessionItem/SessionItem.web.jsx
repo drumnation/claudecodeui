@@ -22,6 +22,7 @@ export const SessionItemWeb = ({
   isEditing,
   editingSessionName,
   isGeneratingSummary,
+  isRegeneratingTitle,
   currentTime,
   formatTimeAgo,
   onProjectSelect,
@@ -29,6 +30,7 @@ export const SessionItemWeb = ({
   onDeleteSession,
   onGenerateSessionSummary,
   onUpdateSessionSummary,
+  onRegenerateSessionTitle,
   setEditingSession,
   setEditingSessionName,
   handleTouchClick
@@ -134,6 +136,21 @@ export const SessionItemWeb = ({
                 title="Generate summary"
               >
                 {isGeneratingSummary ? (
+                  <S.LoadingSpinner />
+                ) : (
+                  <RefreshCw className="w-3 h-3 text-blue-600" />
+                )}
+              </S.DesktopGenerateButton>
+            )}
+            {session.summary && (
+              <S.DesktopGenerateButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRegenerateSessionTitle(project.name, session.id);
+                }}
+                title="Regenerate title"
+              >
+                {isRegeneratingTitle ? (
                   <S.LoadingSpinner />
                 ) : (
                   <RefreshCw className="w-3 h-3 text-blue-600" />

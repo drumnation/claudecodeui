@@ -43,6 +43,7 @@ export const ProjectList = ({
     editingSession,
     editingSessionName,
     generatingSummary,
+    regeneratingTitle,
     setEditingName,
     setNewProjectPath,
     setShowNewProject,
@@ -56,6 +57,7 @@ export const ProjectList = ({
     deleteSession,
     generateSessionSummary,
     updateSessionSummary,
+    regenerateSessionTitle,
     deleteProject,
     createNewProject,
     cancelNewProject,
@@ -195,6 +197,7 @@ export const ProjectList = ({
                 editingSession={editingSession}
                 editingSessionName={editingSessionName}
                 generatingSummary={generatingSummary}
+                regeneratingTitle={regeneratingTitle}
                 loadingSessions={loadingSessions}
                 additionalSessions={additionalSessions}
                 initialSessionsLoaded={initialSessionsLoaded}
@@ -212,6 +215,7 @@ export const ProjectList = ({
                 onDeleteSession={deleteSession}
                 onGenerateSessionSummary={generateSessionSummary}
                 onUpdateSessionSummary={updateSessionSummary}
+                onRegenerateSessionTitle={regenerateSessionTitle}
                 onLoadMoreSessions={loadMoreSessions}
                 setEditingName={setEditingName}
                 setEditingSession={setEditingSession}

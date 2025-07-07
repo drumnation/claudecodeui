@@ -8,8 +8,34 @@ import { handleClaudeWebSocketConnection } from './modules/claude-cli';
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Load .env from monorepo root
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const envPath = join(__dirname, '../../../.env');
+const envResult = dotenv.config({ path: envPath });
+
+// Log environment loading status
+if (envResult.error) {
+  console.warn('Warning: Could not load .env file from', envPath);
+} else {
+  console.log('✅ Environment variables loaded from', envPath);
+  console.log('OpenAI API Key:', process.env.OPENAI_API_KEY ? '***' + process.env.OPENAI_API_KEY.slice(-4) : 'Not set');
+  console.log('USE_AI_TITLES:', process.env.USE_AI_TITLES);
+}
 
 const logger = createLogger({ scope: 'backend-main' });
+
+// Log environment configuration
+logger.info('Title generation configuration', {
+  useAiTitles: process.env.USE_AI_TITLES !== 'false',
+  hasOpenAiKey: !!process.env.OPENAI_API_KEY,
+  updateInterval: process.env.SESSION_SUMMARY_UPDATE_INTERVAL || '5',
+  detectTopicChanges: process.env.DETECT_TOPIC_CHANGES !== 'false'
+});
 
 const app = express();
 const PORT = process.env.PORT || 8765;
@@ -207,6 +233,77 @@ app.get('/api/projects/:projectName/sessions/:sessionId/messages', async (req, r
   } catch (error) {
     logger.error('Failed to get session messages', { error, projectName, sessionId });
     res.status(500).json({ error: 'Failed to get session messages' });
+  }
+});
+
+// Update session title route
+app.post('/api/projects/:projectName/sessions/:sessionId/update-title', async (req, res) => {
+  const { projectName, sessionId } = req.params;
+  const { forceRegenerate = false } = req.body;
+  
+  try {
+    // Import sessions service
+    const { sessionsService } = await import('./modules/sessions');
+    const projectPath = path.join(os.homedir(), '.claude', 'projects', projectName);
+    const sessionPath = path.join(projectPath, `${sessionId}.jsonl`);
+    
+    // Read session messages
+    const content = await fs.readFile(sessionPath, 'utf8');
+    const lines = content.trim().split('\n').filter(line => line.trim());
+    
+    // Check if already has a title (unless force regenerate)
+    if (!forceRegenerate && lines.length > 0) {
+      try {
+        const firstLine = JSON.parse(lines[0]);
+        if (firstLine.type === 'summary' && firstLine.summary && firstLine.summary !== 'No summary available') {
+          return res.json({ title: firstLine.summary, updated: false });
+        }
+      } catch {}
+    }
+    
+    // Parse messages
+    const messages = [];
+    for (const line of lines) {
+      try {
+        const msg = JSON.parse(line);
+        if (msg.type !== 'summary' && msg.message) {
+          messages.push({
+            role: msg.message.role || 'user',
+            content: typeof msg.message.content === 'string' 
+              ? msg.message.content 
+              : msg.message.content?.map((c: any) => c.text || '').join(' ') || '',
+            timestamp: msg.timestamp
+          });
+        }
+      } catch {}
+    }
+    
+    if (messages.length === 0) {
+      return res.status(400).json({ error: 'No messages found in session' });
+    }
+    
+    // Generate title
+    const useAI = process.env.OPENAI_API_KEY && process.env.USE_AI_TITLES !== 'false';
+    let title: string;
+    
+    if (useAI) {
+      title = await sessionsService.generateSessionTitle(messages);
+    } else {
+      title = sessionsService.generateSessionTitleLocal(messages);
+    }
+    
+    // Update session
+    const metadata: any = {};
+    if (sessionId.startsWith('ui-')) {
+      metadata.origin = 'webui';
+    }
+    
+    await sessionsService.updateSessionTitle(projectPath, sessionId, title, metadata);
+    
+    res.json({ title, updated: true });
+  } catch (error) {
+    logger.error('Failed to update session title', { error, projectName, sessionId });
+    res.status(500).json({ error: 'Failed to update session title' });
   }
 });
 

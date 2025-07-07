@@ -658,28 +658,40 @@ app.get('/api/projects/:projectName/files', async (req, res) => {
     const fs = require('fs').promises;
     const { getProjects } = require('./projects');
     
+    // Decode the project name
+    const projectName = decodeURIComponent(req.params.projectName);
+    console.log('📁 Files requested for project:', projectName);
+    
     // Get all projects to find the actual path
     const projects = await getProjects();
-    const project = projects.find(p => p.name === req.params.projectName);
+    const project = projects.find(p => p.name === projectName);
     
     if (!project) {
+      console.error('❌ Project not found:', projectName);
+      console.log('Available projects:', projects.map(p => p.name));
       return res.status(404).json({ error: 'Project not found' });
     }
     
     // Use the actual path from the project resolution logic
     let actualPath = project.fullPath;
+    console.log('📂 Project path:', actualPath);
     
     // Check if path exists
     try {
       await fs.access(actualPath);
     } catch (e) {
+      console.error('❌ Project path not accessible:', actualPath);
       return res.status(404).json({ error: `Project path not found: ${actualPath}` });
     }
     
     const files = await getFileTree(actualPath, 3, 0, true);
     const hiddenFiles = files.filter(f => f.name.startsWith('.'));
     console.log('📄 Found', files.length, 'files/folders, including', hiddenFiles.length, 'hidden files');
-    console.log('🔍 Hidden files:', hiddenFiles.map(f => f.name));
+    if (files.length === 0) {
+      console.log('⚠️ No files found in directory:', actualPath);
+    } else {
+      console.log('🔍 Sample files:', files.slice(0, 5).map(f => ({ name: f.name, type: f.type })));
+    }
     res.json(files);
   } catch (error) {
     console.error('❌ File tree error:', error.message);

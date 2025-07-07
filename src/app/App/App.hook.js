@@ -205,8 +205,18 @@ export const useApp = () => {
   // Event handlers
   const handleProjectSelect = useCallback((project) => {
     setSelectedProject(project);
-    setSelectedSession(null);
-    navigate('/');
+    
+    // Auto-select the most recent session if available
+    if (project.sessions && project.sessions.length > 0) {
+      // Sessions are already sorted by lastUpdated (newest first)
+      const mostRecentSession = project.sessions[0];
+      setSelectedSession(mostRecentSession);
+      navigate(`/session/${mostRecentSession.id}`);
+    } else {
+      setSelectedSession(null);
+      navigate('/');
+    }
+    
     if (isMobile) {
       setSidebarOpen(false);
     }

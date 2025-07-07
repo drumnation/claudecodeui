@@ -12,6 +12,7 @@ export const SessionList = ({
   editingSession,
   editingSessionName,
   generatingSummary,
+  regeneratingTitle,
   loadingSessions,
   initialSessionsLoaded,
   currentTime,
@@ -23,6 +24,7 @@ export const SessionList = ({
   onDeleteSession,
   onGenerateSessionSummary,
   onUpdateSessionSummary,
+  onRegenerateSessionTitle,
   onLoadMoreSessions,
   setEditingSession,
   setEditingSessionName,
@@ -84,6 +86,7 @@ export const SessionList = ({
           isEditing={editingSession === session.id}
           editingSessionName={editingSessionName}
           isGeneratingSummary={generatingSummary[`${project.name}-${session.id}`]}
+          isRegeneratingTitle={regeneratingTitle?.[`${project.name}-${session.id}`]}
           currentTime={currentTime}
           formatTimeAgo={formatTimeAgo}
           onProjectSelect={onProjectSelect}
@@ -91,6 +94,7 @@ export const SessionList = ({
           onDeleteSession={onDeleteSession}
           onGenerateSessionSummary={onGenerateSessionSummary}
           onUpdateSessionSummary={onUpdateSessionSummary}
+          onRegenerateSessionTitle={onRegenerateSessionTitle}
           setEditingSession={setEditingSession}
           setEditingSessionName={setEditingSessionName}
           handleTouchClick={handleTouchClick}

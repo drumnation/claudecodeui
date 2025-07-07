@@ -27,6 +27,7 @@ export const useProjectList = ({
   const [editingSession, setEditingSession] = useState(null);
   const [editingSessionName, setEditingSessionName] = useState('');
   const [generatingSummary, setGeneratingSummary] = useState({});
+  const [regeneratingTitle, setRegeneratingTitle] = useState({});
 
   // Touch handler to prevent double-tap issues on iPad
   const handleTouchClick = (callback) => {
@@ -195,6 +196,43 @@ export const useProjectList = ({
     }
   };
 
+  const regenerateSessionTitle = async (projectName, sessionId) => {
+    const key = `${projectName}-${sessionId}`;
+    setRegeneratingTitle(prev => ({ ...prev, [key]: true }));
+    
+    try {
+      const response = await fetch(`/api/projects/${projectName}/sessions/${sessionId}/update-title`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ forceRegenerate: true }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Refresh the project list to show the new title
+        if (window.refreshProjects) {
+          window.refreshProjects();
+        }
+        return data.title;
+      } else {
+        const error = await response.json();
+        console.error('Failed to regenerate title:', error);
+        alert(`Failed to regenerate title: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error regenerating title:', error);
+      alert(`Error regenerating title: ${error.message || 'Network error'}`);
+    } finally {
+      setRegeneratingTitle(prev => {
+        const newState = { ...prev };
+        delete newState[key];
+        return newState;
+      });
+    }
+  };
+
   const deleteProject = async (projectName) => {
     if (!confirm('Are you sure you want to delete this empty project? This action cannot be undone.')) {
       return;
@@ -343,6 +381,7 @@ export const useProjectList = ({
     editingSession,
     editingSessionName,
     generatingSummary,
+    regeneratingTitle,
     
     // State setters
     setEditingName,
@@ -360,6 +399,7 @@ export const useProjectList = ({
     deleteSession,
     generateSessionSummary,
     updateSessionSummary,
+    regenerateSessionTitle,
     deleteProject,
     createNewProject,
     cancelNewProject,
