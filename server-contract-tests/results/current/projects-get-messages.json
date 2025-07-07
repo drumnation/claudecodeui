@@ -1,0 +1,28 @@
+{
+  "testName": "projects-get-messages",
+  "endpoint": "GET /api/projects/:project/sessions/:sessionId/messages",
+  "timestamp": "2025-07-07T00:10:42.719Z",
+  "serverType": "current",
+  "passed": false,
+  "differences": [
+    {
+      "path": "",
+      "expected": "array",
+      "actual": "object",
+      "type": "type"
+    }
+  ],
+  "expected": [
+    {
+      "role": "user",
+      "content": "Test question"
+    },
+    {
+      "role": "assistant",
+      "content": "Test response"
+    }
+  ],
+  "actual": {
+    "messages": []
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "testName": "projects-create",
+  "endpoint": "POST /api/projects/create",
+  "timestamp": "2025-07-07T00:10:42.690Z",
+  "serverType": "current",
+  "passed": false,
+  "differences": [
+    {
+      "path": ".success",
+      "expected": "exists",
+      "actual": "missing",
+      "type": "key"
+    },
+    {
+      "path": ".error",
+      "expected": "not present",
+      "actual": "exists",
+      "type": "extra_key",
+      "severity": "warning"
+    }
+  ],
+  "expected": {
+    "success": true
+  },
+  "actual": {
+    "error": "Path does not exist: /var/folders/04/_tf01s5x5s54v5mx67__6nsw0000gn/T/claude-contract-tests/new-project"
+  }
+}

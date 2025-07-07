@@ -10,6 +10,8 @@ export const useClaudeStatus = (isLoading) => {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [animationPhase, setAnimationPhase] = useState(0);
   const [fakeTokens, setFakeTokens] = useState(0);
+  const [dependencyStatus, setDependencyStatus] = useState(null);
+  const [dependencyLoading, setDependencyLoading] = useState(false);
   
   // Update elapsed time every second
   useEffect(() => {
@@ -40,9 +42,48 @@ export const useClaudeStatus = (isLoading) => {
     return () => clearInterval(timer);
   }, [isLoading]);
   
+  // Fetch dependency status on component mount
+  useEffect(() => {
+    const fetchDependencyStatus = async () => {
+      try {
+        setDependencyLoading(true);
+        const response = await fetch('/api/dependencies');
+        if (response.ok) {
+          const data = await response.json();
+          setDependencyStatus(data.claudeCli);
+        }
+      } catch (error) {
+        console.error('Error fetching dependency status:', error);
+      } finally {
+        setDependencyLoading(false);
+      }
+    };
+
+    fetchDependencyStatus();
+  }, []);
+
+  // Function to refresh dependency status
+  const refreshDependencyStatus = async () => {
+    try {
+      setDependencyLoading(true);
+      const response = await fetch('/api/dependencies');
+      if (response.ok) {
+        const data = await response.json();
+        setDependencyStatus(data.claudeCli);
+      }
+    } catch (error) {
+      console.error('Error refreshing dependency status:', error);
+    } finally {
+      setDependencyLoading(false);
+    }
+  };
+
   return {
     elapsedTime,
     animationPhase,
-    fakeTokens
+    fakeTokens,
+    dependencyStatus,
+    dependencyLoading,
+    refreshDependencyStatus
   };
 };

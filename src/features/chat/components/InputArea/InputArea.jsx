@@ -26,8 +26,8 @@ const InputArea = ({
   input,
   isInputFocused,
   setIsInputFocused,
-  isTextareaExpanded,
-  setIsTextareaExpanded,
+  textareaExpanded,
+  setTextareaExpanded,
   isLoading,
   claudeStatus,
   showCommandMenu,
@@ -97,8 +97,8 @@ const InputArea = ({
     setAtSymbolPosition,
     slashPosition,
     setSlashPosition,
-    isTextareaExpanded,
-    setIsTextareaExpanded,
+    textareaExpanded,
+    setTextareaExpanded,
     handleSubmit: parentHandleSubmit,
     handleInputChange: parentHandleInputChange,
     handleKeyDown: parentHandleKeyDown,
@@ -116,7 +116,7 @@ const InputArea = ({
       />
       
       <StyledForm onSubmit={handleSubmit}>
-        <InputWrapper isExpanded={isTextareaExpanded}>
+        <InputWrapper isExpanded={textareaExpanded}>
           <StyledTextarea
             ref={textareaRef}
             value={input}

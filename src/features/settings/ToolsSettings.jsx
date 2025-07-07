@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Plus, Settings, Shield, AlertTriangle, Moon, Sun } from 'lucide-react';
+import { X, Plus, Settings, Shield, AlertTriangle, Moon, Sun, Terminal } from 'lucide-react';
 import { Button } from '@/shared-components/Button';
 import { useToolsSettings } from '@/features/settings/ToolsSettings.hook';
 import { commonTools } from '@/features/settings/ToolsSettings.logic';
@@ -55,6 +55,12 @@ export const ToolsSettings = ({ isOpen, onClose }) => {
     isSaving,
     saveStatus,
     
+    // Claude CLI state
+    claudeCliPath,
+    claudeCliStatus,
+    claudeCliTesting,
+    setClaudeCliPath,
+    
     // Actions
     handleAddAllowedTool,
     handleRemoveAllowedTool,
@@ -63,7 +69,11 @@ export const ToolsSettings = ({ isOpen, onClose }) => {
     handleAllowedToolKeyPress,
     handleDisallowedToolKeyPress,
     handleSkipPermissionsChange,
-    saveSettings
+    saveSettings,
+    
+    // Claude CLI actions
+    handleTestClaudeCli,
+    handleSaveClaudeCliPath
   } = useToolsSettings(isOpen, onClose);
 
   if (!isOpen) return null;
@@ -109,6 +119,100 @@ export const ToolsSettings = ({ isOpen, onClose }) => {
                 title="Skip permission prompts (use with caution)"
                 description="Equivalent to --dangerously-skip-permissions flag"
               />
+            </Section>
+
+            {/* Claude CLI Configuration */}
+            <Section>
+              <SectionHeader>
+                <Terminal className="w-5 h-5 text-blue-500" />
+                <SectionTitle>Claude CLI Configuration</SectionTitle>
+              </SectionHeader>
+              <SectionDescription>
+                Configure custom path to Claude CLI executable (optional)
+              </SectionDescription>
+              
+              {/* Current Status */}
+              <div className="mb-4 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-medium">Status:</span>
+                  {claudeCliStatus?.available ? (
+                    <span className="text-green-600 dark:text-green-400 text-sm">✓ Claude CLI Found</span>
+                  ) : (
+                    <span className="text-red-600 dark:text-red-400 text-sm">✗ Claude CLI Not Found</span>
+                  )}
+                </div>
+                {claudeCliStatus?.path && (
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    Path: {claudeCliStatus.path}
+                  </div>
+                )}
+                {claudeCliStatus?.error && (
+                  <div className="text-xs text-red-600 dark:text-red-400 mt-1">
+                    {claudeCliStatus.error}
+                  </div>
+                )}
+              </div>
+
+              {/* Path Input */}
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Custom Claude CLI Path (optional)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={claudeCliPath}
+                      onChange={(e) => setClaudeCliPath(e.target.value)}
+                      placeholder="/path/to/claude or leave empty for system PATH"
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                    />
+                    <Button
+                      onClick={handleTestClaudeCli}
+                      disabled={claudeCliTesting}
+                      variant="outline"
+                      size="sm"
+                      className="whitespace-nowrap"
+                    >
+                      {claudeCliTesting ? 'Testing...' : 'Test'}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Leave empty to use system PATH. Path must be absolute and point to executable file.
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSaveClaudeCliPath}
+                    disabled={isSaving}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Save Path
+                  </Button>
+                  <Button
+                    onClick={() => setClaudeCliPath('')}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </div>
+
+              {/* Help Text */}
+              <div className="mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">
+                  <strong>When to use custom path:</strong>
+                </p>
+                <ul className="text-xs text-blue-600 dark:text-blue-400 space-y-1">
+                  <li>• Claude CLI installed in non-standard location</li>
+                  <li>• Running in Docker containers</li>
+                  <li>• Claude CLI not in system PATH</li>
+                  <li>• Multiple Claude CLI versions installed</li>
+                </ul>
+              </div>
             </Section>
 
             {/* Allowed Tools */}

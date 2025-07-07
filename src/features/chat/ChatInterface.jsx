@@ -60,8 +60,8 @@ export const ChatInterface = memo(({
     isInputFocused,
     setIsInputFocused,
     isLoadingSessionMessages,
-    isTextareaExpanded,
-    setIsTextareaExpanded,
+    textareaExpanded,
+    setTextareaExpanded,
     showFileDropdown,
     setShowFileDropdown,
     filteredFiles,
@@ -151,7 +151,7 @@ export const ChatInterface = memo(({
       onSessionActive,
       sendMessage,
       setInput,
-      setIsTextareaExpanded
+      setTextareaExpanded
     });
   }, [
     input,
@@ -166,7 +166,7 @@ export const ChatInterface = memo(({
     onSessionActive,
     sendMessage,
     setInput,
-    setIsTextareaExpanded
+    setTextareaExpanded
   ]);
   
   const handleKeyDown = useCallback((e) => {
@@ -241,8 +241,8 @@ export const ChatInterface = memo(({
           input={input}
           isInputFocused={isInputFocused}
           setIsInputFocused={setIsInputFocused}
-          isTextareaExpanded={isTextareaExpanded}
-          setIsTextareaExpanded={setIsTextareaExpanded}
+          textareaExpanded={textareaExpanded}
+          setTextareaExpanded={setTextareaExpanded}
           isLoading={isLoading}
           claudeStatus={claudeStatus}
           showCommandMenu={showCommandMenu}

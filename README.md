@@ -229,13 +229,104 @@ We welcome contributions! Please follow these guidelines:
 
 ### Common Issues & Solutions
 
-#### "No Claude projects found"
-**Problem**: The UI shows no projects or empty project list
+#### "No Claude projects found" or "spawn claude ENOENT"
+**Problem**: The UI shows no projects or you see "Error · spawn claude ENOENT"
+**Root Cause**: Claude CLI is not installed or not found in system PATH
+
 **Solutions**:
-- Ensure [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) is properly installed
-- Run `claude` command in at least one project directory to initialize
-- Verify `~/.claude/projects/` directory exists and has proper permissions
-d
+1. **Install Claude CLI**:
+   - **macOS/Linux**: Download from [https://claude.ai/download](https://claude.ai/download)
+   - **Windows**: Download from [https://claude.ai/download](https://claude.ai/download)
+   - **Verify installation**: Run `claude --version` in terminal
+
+2. **Check PATH Configuration**:
+   ```bash
+   # Check if claude is in PATH
+   which claude
+   
+   # Or check version
+   claude --version
+   ```
+
+3. **Custom Installation Path**:
+   If Claude CLI is installed in a non-standard location:
+   - **Environment Variable**: Set `CLAUDE_CLI_PATH` in your `.env` file:
+     ```env
+     CLAUDE_CLI_PATH=/custom/path/to/claude
+     ```
+   - **UI Configuration**: Use the Settings menu → Tools Settings → Claude CLI Configuration
+   - **Docker/Containers**: Mount Claude CLI and set `CLAUDE_CLI_PATH`
+
+4. **Initialize Projects**:
+   - After installation, run `claude` in project directories to initialize
+   - Verify `~/.claude/projects/` directory exists and has proper permissions
+
+#### Claude CLI Installation Issues
+**Problem**: "Claude CLI not installed" error in the application
+
+**Platform-Specific Installation**:
+
+**macOS**:
+```bash
+# Using official installer
+curl -L https://claude.ai/download/cli/macos | bash
+
+# Verify installation
+claude --version
+```
+
+**Linux**:
+```bash
+# Using official installer  
+curl -L https://claude.ai/download/cli/linux | bash
+
+# Add to PATH if needed
+echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+**Windows**:
+- Download the Windows installer from https://claude.ai/download
+- Run the installer and follow setup wizard
+- Restart terminal/command prompt
+- Verify with `claude --version`
+
+#### Custom Claude CLI Path Configuration
+**When to use custom paths**:
+- Claude CLI installed in non-standard location
+- Docker containers or sandboxed environments  
+- Multiple Claude CLI versions
+- Corporate environments with restricted installations
+
+**Configuration Methods**:
+
+1. **Environment Variable** (Recommended):
+   ```env
+   # In .env file
+   CLAUDE_CLI_PATH=/usr/local/bin/claude
+   ```
+
+2. **UI Settings**:
+   - Open application → Settings (gear icon)
+   - Navigate to "Tools Settings" 
+   - Find "Claude CLI Configuration" section
+   - Enter custom path and click "Test" then "Save Path"
+
+3. **Docker Example**:
+   ```dockerfile
+   # Copy Claude CLI binary
+   COPY claude /usr/local/bin/claude
+   RUN chmod +x /usr/local/bin/claude
+   
+   # Set environment variable
+   ENV CLAUDE_CLI_PATH=/usr/local/bin/claude
+   ```
+
+**Troubleshooting Custom Paths**:
+- Ensure path is absolute (starts with `/` on Unix systems)
+- Verify file exists: `ls -la /path/to/claude`
+- Check permissions: `chmod +x /path/to/claude`
+- Test manually: `/path/to/claude --version`
 
 #### File Explorer Issues
 **Problem**: Files not loading, permission errors, empty directories

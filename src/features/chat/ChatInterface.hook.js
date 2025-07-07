@@ -41,7 +41,7 @@ export const useChatInterface = ({
   
   // UI states
   const [isInputFocused, setIsInputFocused] = useState(false);
-  const [isTextareaExpanded, setIsTextareaExpanded] = useState(false);
+  const [textareaExpanded, setTextareaExpanded] = useState(false);
   const [isUserScrolledUp, setIsUserScrolledUp] = useState(false);
   const [claudeStatus, setClaudeStatus] = useState(null);
   
@@ -96,10 +96,11 @@ export const useChatInterface = ({
 
   const handleScroll = useCallback(() => {
     if (scrollContainerRef.current) {
-      const wasNearBottom = isNearBottom();
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+      const wasNearBottom = scrollHeight - scrollTop - clientHeight < 100;
       setIsUserScrolledUp(!wasNearBottom);
     }
-  }, [isNearBottom]);
+  }, []);
   
   // Load session messages callback
   const loadSessionMessagesCallback = useCallback(async (projectName, sessionId) => {
@@ -137,7 +138,7 @@ export const useChatInterface = ({
     };
     
     loadMessages();
-  }, [selectedSession, selectedProject, loadSessionMessagesCallback, scrollToBottom, isSystemSessionChange, autoScrollToBottom]);
+  }, [selectedSession, selectedProject, loadSessionMessagesCallback, isSystemSessionChange, autoScrollToBottom]);
   
   // Effect: Update chatMessages when convertedMessages changes
   useEffect(() => {
@@ -504,7 +505,7 @@ export const useChatInterface = ({
         top: container.scrollTop
       };
     }
-  });
+  }, [autoScrollToBottom, chatMessages.length]);
   
   // Effect: Handle auto-scrolling
   useEffect(() => {
@@ -525,14 +526,14 @@ export const useChatInterface = ({
         }
       }
     }
-  }, [chatMessages.length, isUserScrolledUp, scrollToBottom, autoScrollToBottom]);
+  }, [chatMessages.length, isUserScrolledUp, autoScrollToBottom]);
   
   // Effect: Scroll to bottom when component mounts with existing messages
   useEffect(() => {
     if (scrollContainerRef.current && chatMessages.length > 0 && autoScrollToBottom) {
       setTimeout(() => scrollToBottom(), 100);
     }
-  }, [scrollToBottom, autoScrollToBottom]);
+  }, [autoScrollToBottom]);
   
   // Effect: Add scroll event listener
   useEffect(() => {
@@ -551,7 +552,7 @@ export const useChatInterface = ({
       
       const lineHeight = parseInt(window.getComputedStyle(textareaRef.current).lineHeight);
       const isExpanded = textareaRef.current.scrollHeight > lineHeight * 2;
-      setIsTextareaExpanded(isExpanded);
+      setTextareaExpanded(isExpanded);
     }
   }, []);
   
@@ -567,7 +568,7 @@ export const useChatInterface = ({
             
             const lineHeight = parseInt(window.getComputedStyle(textareaRef.current).lineHeight);
             const isExpanded = textareaRef.current.scrollHeight > lineHeight * 2;
-            setIsTextareaExpanded(isExpanded);
+            setTextareaExpanded(isExpanded);
           }
         }, 0);
         
@@ -593,8 +594,8 @@ export const useChatInterface = ({
     isLoadingSessionMessages,
     isSystemSessionChange,
     setIsSystemSessionChange,
-    isTextareaExpanded,
-    setIsTextareaExpanded,
+    textareaExpanded,
+    setTextareaExpanded,
     showFileDropdown,
     setShowFileDropdown,
     fileList,

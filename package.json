@@ -5,11 +5,12 @@
   "main": "server/index.js",
   "scripts": {
     "build-storybook": "storybook build",
+    "backend:dev": "cd apps/backend && npm run dev",
     "build": "vite build",
     "clean:dist": "rm -rf dist && rm -rf node_modules/.vite",
     "client:dev": "vite serve --host --port 8766 --force --clearScreen false",
     "client": "vite --host --port 8766",
-    "dev": "npm run clean:dist && concurrently --kill-others \"npm run server:dev\" \"npm run client:dev\" \"npm run ngrok\" \"npm run storybook\"",
+    "dev": "concurrently --kill-others \"npm run backend:dev\" \"npm run client:dev\"",
     "fix:imports": "node scripts/fixImports.js",
     "list:imports": "node scripts/listBrokenImports.js",
     "ngrok": "node scripts/start-ngrok.js",
@@ -18,7 +19,15 @@
     "server:dev": "NODE_ENV=development node server/index.js",
     "server": "node server/index.js",
     "start": "npm run build && npm run server",
-    "storybook": "storybook dev -p 6006"
+    "storybook": "storybook dev -p 6006",
+    "test:backend": "vitest run --config server/vitest.config.js",
+    "test:backend:watch": "vitest watch --config server/vitest.config.js",
+    "test:backend:ui": "vitest --ui --config server/vitest.config.js",
+    "test:backend:coverage": "vitest run --coverage --config server/vitest.config.js",
+    "typecheck:server": "tsc --project tsconfig.server.json --noEmit",
+    "build:server": "tsc --project tsconfig.server.json",
+    "dev:server:ts": "NODE_ENV=development tsx server/index.js",
+    "test:server:coverage": "vitest run --coverage --config server/vitest.config.js"
   },
   "keywords": [
     "claude",

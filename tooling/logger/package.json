@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@kit/env-loader": "workspace:*",
-    "pino": "^9.5.0"
+    "pino": "^9.7.0"
   },
   "devDependencies": {
     "@kit/eslint-config": "workspace:*",

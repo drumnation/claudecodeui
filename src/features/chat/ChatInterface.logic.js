@@ -227,7 +227,7 @@ export const handleSubmit = (e, {
   onSessionActive,
   sendMessage,
   setInput,
-  setIsTextareaExpanded
+  setTextareaExpanded
 }) => {
   e.preventDefault();
   if (!input.trim() || isLoading || !selectedProject) return;
@@ -273,7 +273,7 @@ export const handleSubmit = (e, {
   });
 
   setInput('');
-  setIsTextareaExpanded(false);
+  setTextareaExpanded(false);
   // Clear the saved draft since message was sent
   if (selectedProject) {
     localStorage.removeItem(`draft_input_${selectedProject.name}`);

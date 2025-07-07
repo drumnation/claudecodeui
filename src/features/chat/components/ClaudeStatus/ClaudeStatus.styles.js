@@ -19,6 +19,7 @@ export const StatusContainer = styled.div`
 
 export const StatusBar = styled.div`
   ${tw`flex items-center justify-between max-w-4xl mx-auto bg-gray-900 dark:bg-gray-950 text-white rounded-lg shadow-lg px-4 py-3`}
+  ${({ $error }) => $error && tw`bg-red-700 dark:bg-red-800`}
 `;
 
 export const StatusContent = styled.div`
@@ -78,4 +79,33 @@ export const InterruptIcon = styled.svg`
 
 export const InterruptText = styled.span`
   ${tw`hidden sm:inline`}
+`;
+
+// Error-specific styled components
+export const ErrorIcon = styled.svg`
+  ${tw`w-5 h-5 text-red-300 flex-shrink-0`}
+`;
+
+export const ErrorContent = styled.div`
+  ${tw`flex-1 ml-3`}
+`;
+
+export const ErrorMessage = styled.div`
+  ${tw`font-medium text-sm text-white mb-1`}
+`;
+
+export const ErrorActions = styled.div`
+  ${tw`flex items-center gap-2 text-xs`}
+`;
+
+export const ErrorLink = styled.a`
+  ${tw`text-red-200 hover:text-white underline transition-colors`}
+`;
+
+export const ErrorSeparator = styled.span`
+  ${tw`text-red-300`}
+`;
+
+export const SettingsButton = styled.button`
+  ${tw`text-red-200 hover:text-white underline transition-colors bg-transparent border-none cursor-pointer p-0`}
 `;

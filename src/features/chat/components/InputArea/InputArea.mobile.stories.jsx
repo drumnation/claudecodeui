@@ -24,7 +24,7 @@ export default {
 const Template = (args) => {
   const [input, setInput] = useState(args.input || '');
   const [isInputFocused, setIsInputFocused] = useState(false);
-  const [isTextareaExpanded, setIsTextareaExpanded] = useState(false);
+  const [textareaExpanded, setTextareaExpanded] = useState(false);
   const [showCommandMenu, setShowCommandMenu] = useState(false);
   const [showFileDropdown, setShowFileDropdown] = useState(false);
   const [filteredCommands, setFilteredCommands] = useState([]);
@@ -144,8 +144,8 @@ const Template = (args) => {
         setInput={setInput}
         isInputFocused={isInputFocused}
         setIsInputFocused={setIsInputFocused}
-        isTextareaExpanded={isTextareaExpanded}
-        setIsTextareaExpanded={setIsTextareaExpanded}
+        textareaExpanded={textareaExpanded}
+        setTextareaExpanded={setTextareaExpanded}
         showCommandMenu={showCommandMenu}
         setShowCommandMenu={setShowCommandMenu}
         filteredCommands={filteredCommands}

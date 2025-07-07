@@ -37,8 +37,8 @@ export const useInputArea = ({
   setAtSymbolPosition,
   slashPosition,
   setSlashPosition,
-  isTextareaExpanded,
-  setIsTextareaExpanded,
+  textareaExpanded,
+  setTextareaExpanded,
   handleSubmit: parentHandleSubmit,
   handleInputChange: parentHandleInputChange,
   handleKeyDown: parentHandleKeyDown,
@@ -59,6 +59,8 @@ export const useInputArea = ({
 
   // Handle input changes
   const handleInputChange = useCallback((e) => {
+    if (!e.target) return;
+    
     const newValue = e.target.value;
     const newCursorPosition = e.target.selectionStart;
     
@@ -106,18 +108,22 @@ export const useInputArea = ({
 
   // Handle textarea click
   const handleTextareaClick = useCallback((e) => {
+    if (!e.target) return;
+    
     setCursorPosition(e.target.selectionStart);
   }, [setCursorPosition]);
 
   // Handle textarea input (for auto-resize)
   const handleTextareaInput = useCallback((e) => {
+    if (!e.target) return;
+    
     autoResizeTextarea(e.target);
     setCursorPosition(e.target.selectionStart);
     
     // Check if textarea is expanded
     const isExpanded = isTextareaExpanded(e.target);
-    setIsTextareaExpanded(isExpanded);
-  }, [setCursorPosition, setIsTextareaExpanded]);
+    setTextareaExpanded(isExpanded);
+  }, [setCursorPosition, setTextareaExpanded]);
 
   // Handle key down events
   const handleKeyDown = useCallback((e) => {
@@ -264,8 +270,8 @@ export const useInputArea = ({
     e.stopPropagation();
     setInput('');
     resetTextarea(textareaRef.current);
-    setIsTextareaExpanded(false);
-  }, [setInput, textareaRef, setIsTextareaExpanded]);
+    setTextareaExpanded(false);
+  }, [setInput, textareaRef, setTextareaExpanded]);
 
   // Auto-resize textarea on mount and when input changes
   useEffect(() => {

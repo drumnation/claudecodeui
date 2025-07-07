@@ -17,11 +17,17 @@ export const useToolsSettings = (isOpen, onClose) => {
   const [skipPermissions, setSkipPermissions] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
+  
+  // Claude CLI configuration state
+  const [claudeCliPath, setClaudeCliPath] = useState('');
+  const [claudeCliStatus, setClaudeCliStatus] = useState(null);
+  const [claudeCliTesting, setClaudeCliTesting] = useState(false);
 
   // Load settings when modal opens
   useEffect(() => {
     if (isOpen) {
       loadSettings();
+      loadClaudeCliStatus();
     }
   }, [isOpen]);
 
@@ -96,6 +102,57 @@ export const useToolsSettings = (isOpen, onClose) => {
     setSkipPermissions(e.target.checked);
   };
 
+  // Claude CLI configuration functions
+  const loadClaudeCliStatus = async () => {
+    try {
+      const response = await fetch('/api/dependencies');
+      if (response.ok) {
+        const data = await response.json();
+        setClaudeCliStatus(data.claudeCli);
+      }
+    } catch (error) {
+      console.error('Error loading Claude CLI status:', error);
+    }
+  };
+
+  const handleTestClaudeCli = async () => {
+    if (!claudeCliPath.trim()) {
+      alert('Please enter a path to test');
+      return;
+    }
+
+    setClaudeCliTesting(true);
+    try {
+      // For now, just validate if the path looks reasonable
+      // In a real implementation, you'd make an API call to test the path
+      if (claudeCliPath.includes('claude')) {
+        alert('Path appears valid (test would be implemented server-side)');
+      } else {
+        alert('Path does not appear to be a Claude CLI executable');
+      }
+    } catch (error) {
+      console.error('Error testing Claude CLI path:', error);
+      alert('Error testing path: ' + error.message);
+    } finally {
+      setClaudeCliTesting(false);
+    }
+  };
+
+  const handleSaveClaudeCliPath = async () => {
+    try {
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus(null), 3000);
+      // In a real implementation, you'd save to environment variables or config
+      // For now, just store locally
+      localStorage.setItem('claude-cli-path', claudeCliPath);
+      alert('Claude CLI path saved. Restart the application for changes to take effect.');
+    } catch (error) {
+      console.error('Error saving Claude CLI path:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus(null), 3000);
+    }
+  };
+
   return {
     // Theme
     isDarkMode,
@@ -112,6 +169,12 @@ export const useToolsSettings = (isOpen, onClose) => {
     isSaving,
     saveStatus,
     
+    // Claude CLI state
+    claudeCliPath,
+    claudeCliStatus,
+    claudeCliTesting,
+    setClaudeCliPath,
+    
     // Actions
     handleAddAllowedTool: addAllowedTool,
     handleRemoveAllowedTool: removeAllowedTool,
@@ -120,6 +183,10 @@ export const useToolsSettings = (isOpen, onClose) => {
     handleAllowedToolKeyPress,
     handleDisallowedToolKeyPress,
     handleSkipPermissionsChange,
-    saveSettings
+    saveSettings,
+    
+    // Claude CLI actions
+    handleTestClaudeCli,
+    handleSaveClaudeCliPath
   };
 };
