@@ -100,10 +100,14 @@ export const filterCommands = (commands, query) => {
   
   const lowerQuery = query.toLowerCase();
   return commands
-    .filter(cmd => 
-      cmd.name.toLowerCase().includes(lowerQuery) ||
-      (cmd.description && cmd.description.toLowerCase().includes(lowerQuery))
-    )
+    .filter(cmd => {
+      // Handle both 'name' and 'command' properties for backward compatibility
+      const commandName = cmd.name || cmd.command;
+      if (!commandName) return false;
+      
+      return commandName.toLowerCase().includes(lowerQuery) ||
+        (cmd.description && cmd.description.toLowerCase().includes(lowerQuery));
+    })
     .slice(0, 10); // Limit to 10 results
 };
 

@@ -90,10 +90,12 @@ async function getSessionsForProject(projectPath: string, limit = 5): Promise<an
         const sessionId = sessionFile.name.replace('.jsonl', '');
         
         let summary = 'No summary available';
+        let metadata = {};
         try {
           const firstLine = JSON.parse(lines[0]);
           if (firstLine.type === 'summary' && firstLine.summary) {
             summary = firstLine.summary;
+            metadata = firstLine.metadata || {};
           }
         } catch {}
         
@@ -105,7 +107,8 @@ async function getSessionsForProject(projectPath: string, limit = 5): Promise<an
           summary,
           messageCount,
           lastActivity: lastActivity.toISOString(),
-          cwd: projectPath.replace(os.homedir(), '~')
+          cwd: projectPath.replace(os.homedir(), '~'),
+          metadata
         });
       } catch (error) {
         logger.warn('Failed to read session', { sessionPath, error });

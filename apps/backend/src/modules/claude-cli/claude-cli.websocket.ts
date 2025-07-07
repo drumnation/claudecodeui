@@ -2,6 +2,10 @@ import { WebSocket } from 'ws';
 import { createLogger } from '@kit/logger/node';
 import { ClaudeCliService, ClaudeEvent } from './claude-cli.service';
 import { ClaudeCommand, AbortSession, ClaudeWebSocketMessage } from './claude-cli.types';
+import { sessionsService } from '../sessions/sessions.service';
+import { promises as fs } from 'fs';
+import path from 'path';
+import os from 'os';
 
 const logger = createLogger({ scope: 'claude-cli-websocket' });
 
@@ -20,7 +24,8 @@ export class ClaudeWebSocketHandler {
 
   async handleClaudeCommand(data: ClaudeCommand): Promise<void> {
     // Generate a session ID if not provided
-    const sessionId = data.options?.sessionId || `session-${Date.now()}`;
+    // Add 'ui-' prefix for sessions created through the web UI
+    const sessionId = data.options?.sessionId || `ui-session-${Date.now()}`;
     this.currentSessionId = sessionId;
     
     // Cancel any existing service for this session
@@ -224,18 +229,98 @@ export class ClaudeWebSocketHandler {
     try {
       logger.info('Generating session summary', { sessionId, forceUpdate });
       
-      // Get project name from session ID
-      const projectName = sessionId.split('-').slice(0, -1).join('-');
+      // Find the project path by searching for the session file
+      const projectsPath = path.join(os.homedir(), '.claude', 'projects');
+      let projectPath: string | null = null;
+      let projectName: string | null = null;
       
-      // TODO: Implement actual summary generation
-      // This would involve:
-      // 1. Fetching session messages
-      // 2. Checking if summary already exists
-      // 3. Generating summary using AI
-      // 4. Updating session summary
-      // 5. Notifying frontend
+      // Search for the session file in all projects
+      const projectDirs = await fs.readdir(projectsPath, { withFileTypes: true });
+      for (const dir of projectDirs) {
+        if (dir.isDirectory()) {
+          const sessionPath = path.join(projectsPath, dir.name, `${sessionId}.jsonl`);
+          try {
+            await fs.access(sessionPath);
+            projectPath = path.join(projectsPath, dir.name);
+            projectName = dir.name;
+            break;
+          } catch {
+            // Session not in this project, continue
+          }
+        }
+      }
       
-      logger.warn('Session summary generation not yet implemented', { sessionId });
+      if (!projectPath || !projectName) {
+        logger.warn('Session file not found', { sessionId });
+        return;
+      }
+      
+      // Read session messages
+      const sessionPath = path.join(projectPath, `${sessionId}.jsonl`);
+      const content = await fs.readFile(sessionPath, 'utf8');
+      const lines = content.trim().split('\n').filter(line => line.trim());
+      
+      // Check if already has a summary (unless forceUpdate)
+      if (!forceUpdate && lines.length > 0) {
+        try {
+          const firstLine = JSON.parse(lines[0]);
+          if (firstLine.type === 'summary' && firstLine.summary && firstLine.summary !== 'No summary available') {
+            logger.info('Session already has a summary', { sessionId, summary: firstLine.summary });
+            return;
+          }
+        } catch {
+          // First line is not valid JSON or not a summary
+        }
+      }
+      
+      // Parse messages for title generation
+      const messages = [];
+      for (const line of lines) {
+        try {
+          const msg = JSON.parse(line);
+          if (msg.type !== 'summary' && msg.message) {
+            messages.push({
+              role: msg.message.role || 'user',
+              content: typeof msg.message.content === 'string' 
+                ? msg.message.content 
+                : msg.message.content?.map((c: any) => c.text || '').join(' ') || '',
+              timestamp: msg.timestamp
+            });
+          }
+        } catch {
+          // Skip invalid lines
+        }
+      }
+      
+      if (messages.length === 0) {
+        logger.warn('No messages found in session', { sessionId });
+        return;
+      }
+      
+      // Generate title using AI or local pattern matching
+      let title: string;
+      const useAI = process.env.OPENAI_API_KEY && process.env.USE_AI_TITLES !== 'false';
+      
+      if (useAI) {
+        title = await sessionsService.generateSessionTitle(messages);
+      } else {
+        title = sessionsService.generateSessionTitleLocal(messages);
+      }
+      
+      // Update the session file with the new title and mark as UI-created
+      await sessionsService.updateSessionTitle(projectPath, sessionId, title, {
+        origin: 'webui'
+      });
+      
+      logger.info('Session summary generated', { sessionId, title, origin: 'webui' });
+      
+      // Notify frontend about the update
+      this.sendMessage({
+        type: 'session-summary-updated',
+        sessionId,
+        summary: title
+      } as any);
+      
     } catch (error) {
       logger.error('Error generating session summary', { error, sessionId });
     }

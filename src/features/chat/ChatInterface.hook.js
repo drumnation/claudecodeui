@@ -201,24 +201,36 @@ export const useChatInterface = ({
   useEffect(() => {
     if (selectedProject && chatMessages.length > 0) {
       try {
-        localStorage.setItem(`chat_messages_${selectedProject.name}`, JSON.stringify(chatMessages));
+        // Limit the number of messages to save (keep only recent 50)
+        const messagesToSave = chatMessages.slice(-50);
+        localStorage.setItem(`chat_messages_${selectedProject.name}`, JSON.stringify(messagesToSave));
       } catch (e) {
         if (e.name === 'QuotaExceededError') {
-          console.warn('localStorage quota exceeded, clearing old chat messages...');
-          // Clear old chat messages from other projects
-          const keys = Object.keys(localStorage);
-          const chatKeys = keys.filter(k => k.startsWith('chat_messages_') && k !== `chat_messages_${selectedProject.name}`);
+          console.warn('localStorage quota exceeded, performing aggressive cleanup...');
           
-          // Remove oldest chat messages
-          if (chatKeys.length > 0) {
-            // Remove the first (oldest) chat message storage
-            localStorage.removeItem(chatKeys[0]);
+          try {
+            // Clear all chat messages from other projects
+            const keys = Object.keys(localStorage);
+            const chatKeys = keys.filter(k => k.startsWith('chat_messages_') && k !== `chat_messages_${selectedProject.name}`);
+            const draftKeys = keys.filter(k => k.startsWith('draft_input_') && k !== `draft_input_${selectedProject.name}`);
             
-            // Try again
+            // Remove all old chat messages
+            chatKeys.forEach(key => localStorage.removeItem(key));
+            // Remove old draft inputs
+            draftKeys.forEach(key => localStorage.removeItem(key));
+            
+            // Try again with limited messages
+            const limitedMessages = chatMessages.slice(-30); // Even more aggressive limit
+            localStorage.setItem(`chat_messages_${selectedProject.name}`, JSON.stringify(limitedMessages));
+          } catch (e2) {
+            console.error('Still unable to save after aggressive cleanup:', e2);
+            // As last resort, clear current project's old messages and save only recent ones
             try {
-              localStorage.setItem(`chat_messages_${selectedProject.name}`, JSON.stringify(chatMessages));
-            } catch (e2) {
-              console.error('Still unable to save chat messages after cleanup:', e2);
+              localStorage.removeItem(`chat_messages_${selectedProject.name}`);
+              const minimalMessages = chatMessages.slice(-10);
+              localStorage.setItem(`chat_messages_${selectedProject.name}`, JSON.stringify(minimalMessages));
+            } catch (e3) {
+              console.error('Failed to save even minimal messages:', e3);
             }
           }
         } else {
@@ -517,6 +529,13 @@ export const useChatInterface = ({
             }
             return msg;
           }));
+          break;
+          
+        case 'session-summary-updated':
+          // Session title has been updated by the backend
+          console.log('Session summary updated:', latestMessage);
+          // The parent component should handle updating the session list
+          // No need to update local state as this is handled by the parent
           break;
       }
     }

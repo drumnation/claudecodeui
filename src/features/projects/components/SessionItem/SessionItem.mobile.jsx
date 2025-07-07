@@ -83,6 +83,12 @@ export const SessionItemMobile = ({
             </S.SessionMeta>
           </S.SessionInfo>
           <S.SessionActions>
+            {/* Show UI-created indicator */}
+            {(session.metadata?.origin === 'webui' || session.id?.startsWith('ui-')) && (
+              <Badge variant="outline" className="text-xs px-1.5 py-0 text-blue-600 border-blue-600">
+                UI
+              </Badge>
+            )}
             {session.messageCount > 0 && (
               <Badge variant="secondary" className="text-xs px-1.5 py-0">
                 {session.messageCount}

@@ -65,7 +65,13 @@ export const SessionItemWeb = ({
               )}>
                 {formatTimeAgo(session.lastActivity, currentTime)}
               </span>
-              <div className="flex items-center ml-auto">
+              <div className="flex items-center ml-auto gap-1">
+                {/* Show UI-created indicator */}
+                {(session.metadata?.origin === 'webui' || session.id?.startsWith('ui-')) && (
+                  <Badge variant="outline" className="text-xs px-1 py-0 text-blue-600 border-blue-600">
+                    UI
+                  </Badge>
+                )}
                 {session.messageCount > 0 && (
                   <Badge variant="secondary" className="text-xs px-1 py-0">
                     {session.messageCount}
