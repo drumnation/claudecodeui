@@ -60,7 +60,8 @@ const InputArea = ({
   setFilteredFiles = () => {},
   setFilteredCommands = () => {},
   setSelectedFileIndex = () => {},
-  setSelectedCommandIndex = () => {}
+  setSelectedCommandIndex = () => {},
+  messageQueue = []
 }) => {
   const {
     handleSubmit,
@@ -127,7 +128,7 @@ const InputArea = ({
             onBlur={() => setIsInputFocused(false)}
             onInput={handleTextareaInput}
             placeholder="Ask Claude to help with your code... (@ to reference files)"
-            disabled={isLoading}
+            disabled={false}
             rows={1}
           />
           
@@ -224,10 +225,16 @@ const InputArea = ({
         
         {/* Hint text */}
         <HintTextDesktop>
-          Press Enter to send • Shift+Enter for new line • @ to reference files • / for commands
+          {isLoading 
+            ? `Messages will be queued while Claude is processing${messageQueue.length > 0 ? ` (${messageQueue.length} queued)` : ''} • @ to reference files • / for commands`
+            : 'Press Enter to send • Shift+Enter for new line • @ to reference files • / for commands'
+          }
         </HintTextDesktop>
         <HintTextMobile isInputFocused={isInputFocused}>
-          Enter to send • @ for files • / for commands
+          {isLoading
+            ? `Messages queued${messageQueue.length > 0 ? ` (${messageQueue.length})` : ''} • @ for files • / for commands`
+            : 'Enter to send • @ for files • / for commands'
+          }
         </HintTextMobile>
       </StyledForm>
     </InputAreaContainer>

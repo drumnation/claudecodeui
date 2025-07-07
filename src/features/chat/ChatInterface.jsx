@@ -83,6 +83,8 @@ export const ChatInterface = memo(({
     setSlashPosition,
     claudeStatus,
     setClaudeStatus,
+    messageQueue,
+    setMessageQueue,
     fileList,
     slashCommands,
     
@@ -102,6 +104,7 @@ export const ChatInterface = memo(({
     selectedProject,
     selectedSession,
     messages,
+    sendMessage,
     onInputFocusChange,
     onSessionActive,
     onSessionInactive,
@@ -151,7 +154,9 @@ export const ChatInterface = memo(({
       onSessionActive,
       sendMessage,
       setInput,
-      setTextareaExpanded
+      setTextareaExpanded,
+      messageQueue,
+      setMessageQueue
     });
   }, [
     input,
@@ -166,7 +171,9 @@ export const ChatInterface = memo(({
     onSessionActive,
     sendMessage,
     setInput,
-    setTextareaExpanded
+    setTextareaExpanded,
+    messageQueue,
+    setMessageQueue
   ]);
   
   const handleKeyDown = useCallback((e) => {
@@ -274,6 +281,7 @@ export const ChatInterface = memo(({
           setShowCommandMenu={setShowCommandMenu}
           setSelectedFileIndex={setSelectedFileIndex}
           setSelectedCommandIndex={setSelectedCommandIndex}
+          messageQueue={messageQueue}
         />
       </ChatInterfaceContainer>
     </>

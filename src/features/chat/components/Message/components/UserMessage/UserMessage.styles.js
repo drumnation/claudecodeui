@@ -7,6 +7,7 @@ export const UserMessageContainer = styled.div`
 
 export const UserMessageBubble = styled.div`
   ${tw`bg-blue-600 text-white rounded-2xl rounded-br-md px-3 sm:px-4 py-2 shadow-sm flex-1 sm:flex-initial`}
+  ${props => props.isQueued && tw`opacity-70 border-2 border-dashed border-blue-400`}
 `;
 
 export const UserMessageText = styled.div`

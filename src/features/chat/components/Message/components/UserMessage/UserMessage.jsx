@@ -5,9 +5,12 @@ import { formatTimestamp } from '@/features/chat/components/Message/Message.logi
 const UserMessage = memo(({ message, isGrouped }) => {
   return (
     <S.UserMessageContainer>
-      <S.UserMessageBubble>
+      <S.UserMessageBubble isQueued={message.isQueued}>
         <S.UserMessageText>{message.content}</S.UserMessageText>
-        <S.UserMessageTime>{formatTimestamp(message.timestamp)}</S.UserMessageTime>
+        <S.UserMessageTime>
+          {formatTimestamp(message.timestamp)}
+          {message.isQueued && ' • Queued'}
+        </S.UserMessageTime>
       </S.UserMessageBubble>
       {!isGrouped && (
         <S.UserAvatar src="/icons/user.jpg" alt="User" />

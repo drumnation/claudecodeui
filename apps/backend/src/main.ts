@@ -4,6 +4,7 @@ import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
 import { createLogger } from '@kit/logger/node';
 import { handleGetProjects } from './projects.controller';
+import { handleClaudeWebSocketConnection } from './modules/claude-cli';
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
@@ -117,6 +118,63 @@ async function getSessionsForProject(projectPath: string, limit = 5): Promise<an
   return sessions;
 }
 
+// Git routes (placeholder for now)
+app.get('/api/git/status', (req, res) => {
+  // Return empty git status
+  res.json({
+    modified: [],
+    untracked: [],
+    staged: [],
+    branch: 'main',
+    ahead: 0,
+    behind: 0
+  });
+});
+
+app.get('/api/git/branches', (req, res) => {
+  // Return default branch
+  res.json({
+    current: 'main',
+    branches: ['main']
+  });
+});
+
+// File routes
+app.get('/api/files', (req, res) => {
+  // Return empty file list
+  res.json([]);
+});
+
+app.get('/api/projects/:projectName/files', (req, res) => {
+  // Return empty file list for specific project
+  res.json([]);
+});
+
+// Slash commands route
+app.get('/api/slash-commands', (req, res) => {
+  // Return available slash commands
+  res.json({
+    commands: [
+      { command: '/help', description: 'Show available commands' },
+      { command: '/clear', description: 'Clear the conversation' },
+      { command: '/summary', description: 'Generate a summary of the conversation' },
+      { command: '/save', description: 'Save the current session' },
+      { command: '/load', description: 'Load a previous session' }
+    ]
+  });
+});
+
+// Dependencies check route
+app.get('/api/dependencies', (req, res) => {
+  // Check if Claude CLI is available
+  res.json({
+    claudeCli: {
+      available: true,
+      version: '1.0.0'
+    }
+  });
+});
+
 // Session messages route
 app.get('/api/projects/:projectName/sessions/:sessionId/messages', async (req, res) => {
   const { projectName, sessionId } = req.params;
@@ -155,129 +213,9 @@ const server = createServer(app);
 // Setup WebSocket server
 const wss = new WebSocketServer({ server });
 
-// Track active sessions and their timeouts
-const activeSessions = new Map<string, NodeJS.Timeout>();
-
 wss.on('connection', (ws) => {
-  logger.info('WebSocket client connected');
-  
-  // Track this connection's active session
-  let currentSessionId: string | null = null;
-
-  ws.on('message', async (message) => {
-    try {
-      const data = JSON.parse(message.toString());
-      logger.debug('Received WebSocket message', { type: data.type });
-
-      switch (data.type) {
-        case 'claude-command':
-          // Generate a session ID if not provided
-          const sessionId = data.options?.sessionId || `session-${Date.now()}`;
-          currentSessionId = sessionId;
-          
-          // Cancel any existing timeout for this session
-          if (activeSessions.has(sessionId)) {
-            clearTimeout(activeSessions.get(sessionId)!);
-            activeSessions.delete(sessionId);
-          }
-
-          // Send status update
-          ws.send(JSON.stringify({
-            type: 'claude-status',
-            status: {
-              text: 'Processing your request...',
-              tokens: 0,
-              can_interrupt: true
-            }
-          }));
-
-          // For now, just send a mock response after a delay
-          const timeoutId = setTimeout(() => {
-            // Check if this session was aborted
-            if (!activeSessions.has(sessionId)) {
-              logger.debug('Session was aborted, not sending response', { sessionId });
-              return;
-            }
-
-            // Send assistant response
-            ws.send(JSON.stringify({
-              type: 'message',
-              message: {
-                type: 'assistant',
-                content: 'I understand you want help, but I need to be connected to the Claude CLI to process your request. The backend integration is not yet complete.',
-                timestamp: new Date().toISOString()
-              }
-            }));
-
-            // Send completion status
-            ws.send(JSON.stringify({
-              type: 'claude-status',
-              status: {
-                text: 'Complete',
-                tokens: 150,
-                can_interrupt: false
-              }
-            }));
-
-            // Send stream end
-            ws.send(JSON.stringify({
-              type: 'stream-end'
-            }));
-
-            // Clean up
-            activeSessions.delete(sessionId);
-          }, 1000);
-
-          // Store the timeout
-          activeSessions.set(sessionId, timeoutId);
-          break;
-
-        case 'abort-session':
-          logger.info('Abort session requested', { sessionId: data.sessionId });
-          
-          // Cancel any active timeout for this session
-          if (activeSessions.has(data.sessionId)) {
-            clearTimeout(activeSessions.get(data.sessionId)!);
-            activeSessions.delete(data.sessionId);
-          }
-          
-          // Send acknowledgment
-          ws.send(JSON.stringify({
-            type: 'session-aborted',
-            sessionId: data.sessionId
-          }));
-          
-          // Send stream-end to properly close the session
-          ws.send(JSON.stringify({
-            type: 'stream-end'
-          }));
-          break;
-
-        default:
-          logger.warn('Unknown message type', { type: data.type });
-      }
-    } catch (error) {
-      logger.error('Failed to process WebSocket message', { error });
-      ws.send(JSON.stringify({
-        type: 'error',
-        error: 'Failed to process message'
-      }));
-    }
-  });
-
-  ws.on('close', () => {
-    logger.info('WebSocket client disconnected');
-    
-    // Clean up any active sessions for this connection
-    if (currentSessionId && activeSessions.has(currentSessionId)) {
-      clearTimeout(activeSessions.get(currentSessionId)!);
-      activeSessions.delete(currentSessionId);
-    }
-  });
-
-  ws.on('error', (error) => {
-    logger.error('WebSocket error', { error });
-  });
+  // Use the modular Claude CLI handler
+  handleClaudeWebSocketConnection(ws);
 });
 
 // Start server

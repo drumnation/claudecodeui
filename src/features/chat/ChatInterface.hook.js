@@ -7,6 +7,7 @@ export const useChatInterface = ({
   selectedProject,
   selectedSession,
   messages,
+  sendMessage,
   onInputFocusChange,
   onSessionActive,
   onSessionInactive,
@@ -60,6 +61,9 @@ export const useChatInterface = ({
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(-1);
   const [slashPosition, setSlashPosition] = useState(-1);
   
+  // Message queue for handling messages while Claude is processing
+  const [messageQueue, setMessageQueue] = useState([]);
+  
   // Refs
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -68,9 +72,6 @@ export const useChatInterface = ({
   
   // Memoized values
   const createDiff = useCreateDiff();
-  const convertedMessages = useMemo(() => {
-    return normalizeMessages(sessionMessages);
-  }, [sessionMessages]);
   
   const visibleMessages = useMemo(() => {
     const maxMessages = 100;
@@ -131,21 +132,54 @@ export const useChatInterface = ({
           setIsSystemSessionChange(false);
         }
       } else {
-        setChatMessages([]);
+        // Only clear messages if we're not loading and there are no pending messages
+        if (!isLoading && messageQueue.length === 0) {
+          setChatMessages([]);
+        }
         setSessionMessages([]);
         setCurrentSessionId(null);
       }
     };
     
     loadMessages();
-  }, [selectedSession, selectedProject, loadSessionMessagesCallback, isSystemSessionChange, autoScrollToBottom]);
+  }, [selectedSession, selectedProject, loadSessionMessagesCallback, isSystemSessionChange, autoScrollToBottom, isLoading, messageQueue.length]);
   
-  // Effect: Update chatMessages when convertedMessages changes
+  // Effect: Update chatMessages when session messages change
   useEffect(() => {
-    if (sessionMessages.length > 0) {
-      setChatMessages(convertedMessages);
+    if (selectedSession && sessionMessages.length > 0 && !isSystemSessionChange) {
+      const normalized = normalizeMessages(sessionMessages);
+      
+      // Preserve any user messages that were just sent but not yet in session
+      setChatMessages(prev => {
+        const recentUserMessages = prev.filter(msg => 
+          msg.type === 'user' && 
+          (msg.isQueued || new Date() - new Date(msg.timestamp) < 5000)
+        );
+        
+        // Merge normalized session messages with recent user messages
+        const allMessages = [...normalized];
+        
+        // Add recent user messages that aren't already in the session
+        recentUserMessages.forEach(userMsg => {
+          const exists = allMessages.some(sessionMsg => 
+            sessionMsg.type === 'user' && 
+            sessionMsg.content === userMsg.content &&
+            Math.abs(new Date(sessionMsg.timestamp) - new Date(userMsg.timestamp)) < 1000
+          );
+          
+          if (!exists) {
+            allMessages.push(userMsg);
+          }
+        });
+        
+        // Sort by timestamp
+        return allMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      });
+    } else if (!selectedSession) {
+      // Clear messages when no session is selected
+      setChatMessages([]);
     }
-  }, [convertedMessages, sessionMessages]);
+  }, [selectedSession, sessionMessages, isSystemSessionChange]);
   
   // Effect: Notify parent when input focus changes
   useEffect(() => {
@@ -349,13 +383,31 @@ export const useChatInterface = ({
           break;
           
         case 'claude-complete':
-          setIsLoading(false);
-          setCanAbortSession(false);
-          setClaudeStatus(null);
-          
-          const activeSessionId = currentSessionId || sessionStorage.getItem('pendingSessionId');
-          if (activeSessionId && onSessionInactive) {
-            onSessionInactive(activeSessionId);
+          // Check if there are queued messages
+          if (messageQueue.length > 0) {
+            // Process the next message in queue
+            const nextMessage = messageQueue[0];
+            setMessageQueue(prev => prev.slice(1));
+            
+            // Send the queued message
+            sendMessage(nextMessage.wsMessage);
+            
+            // Keep loading state active since we're processing the queue
+            setClaudeStatus({
+              text: 'Processing queued message',
+              tokens: 0,
+              can_interrupt: true
+            });
+          } else {
+            // No more messages in queue, reset loading state
+            setIsLoading(false);
+            setCanAbortSession(false);
+            setClaudeStatus(null);
+            
+            const activeSessionId = currentSessionId || sessionStorage.getItem('pendingSessionId');
+            if (activeSessionId && onSessionInactive) {
+              onSessionInactive(activeSessionId);
+            }
           }
           
           const pendingSessionId = sessionStorage.getItem('pendingSessionId');
@@ -363,12 +415,23 @@ export const useChatInterface = ({
             setCurrentSessionId(pendingSessionId);
             sessionStorage.removeItem('pendingSessionId');
           }
+          
+          // Mark any queued messages as no longer queued
+          setChatMessages(prev => prev.map(msg => {
+            if (msg.isQueued) {
+              return { ...msg, isQueued: false };
+            }
+            return msg;
+          }));
           break;
           
         case 'session-aborted':
           setIsLoading(false);
           setCanAbortSession(false);
           setClaudeStatus(null);
+          
+          // Clear the message queue since session was aborted
+          setMessageQueue([]);
           
           if (currentSessionId && onSessionInactive) {
             onSessionInactive(currentSessionId);
@@ -379,6 +442,14 @@ export const useChatInterface = ({
             content: 'Session interrupted by user.',
             timestamp: new Date()
           }]);
+          
+          // Mark any queued messages as aborted
+          setChatMessages(prev => prev.map(msg => {
+            if (msg.isQueued) {
+              return { ...msg, isQueued: false, wasAborted: true };
+            }
+            return msg;
+          }));
           break;
           
         case 'claude-status':
@@ -415,9 +486,41 @@ export const useChatInterface = ({
             setCanAbortSession(statusInfo.can_interrupt);
           }
           break;
+          
+        case 'stream-end':
+          // Stream has ended, check if there are queued messages
+          if (messageQueue.length > 0) {
+            // Process the next message in queue
+            const nextMessage = messageQueue[0];
+            setMessageQueue(prev => prev.slice(1));
+            
+            // Send the queued message
+            sendMessage(nextMessage.wsMessage);
+            
+            // Keep loading state active since we're processing the queue
+            setClaudeStatus({
+              text: 'Processing queued message',
+              tokens: 0,
+              can_interrupt: true
+            });
+          } else {
+            // No more messages in queue, reset loading state
+            setIsLoading(false);
+            setCanAbortSession(false);
+            setClaudeStatus(null);
+          }
+          
+          // Mark any queued messages as no longer queued
+          setChatMessages(prev => prev.map(msg => {
+            if (msg.isQueued) {
+              return { ...msg, isQueued: false };
+            }
+            return msg;
+          }));
+          break;
       }
     }
-  }, [messages, currentSessionId, onReplaceTemporarySession, onNavigateToSession, onSessionInactive]);
+  }, [messages, currentSessionId, onReplaceTemporarySession, onNavigateToSession, onSessionInactive, sendMessage, messageQueue, setMessageQueue, setChatMessages, setClaudeStatus]);
   
   // Effect: Load file list when project changes
   useEffect(() => {
@@ -624,6 +727,8 @@ export const useChatInterface = ({
     setSlashPosition,
     claudeStatus,
     setClaudeStatus,
+    messageQueue,
+    setMessageQueue,
     
     // Refs
     messagesEndRef,
@@ -633,7 +738,6 @@ export const useChatInterface = ({
     
     // Memoized values
     createDiff,
-    convertedMessages,
     visibleMessages,
     
     // Callbacks

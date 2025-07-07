@@ -10,7 +10,8 @@
  * @returns {boolean} Whether the input can be submitted
  */
 export const canSubmitInput = (input, isLoading) => {
-  return input.trim().length > 0 && !isLoading;
+  // Allow submission even when loading to support Claude's message queue
+  return input.trim().length > 0;
 };
 
 /**

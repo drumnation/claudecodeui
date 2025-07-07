@@ -7,7 +7,10 @@
     "dev": "tsx watch src/main.ts",
     "dev:minimal": "tsx watch src/main-minimal.ts",
     "start": "node dist/src/main.js",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "vitest",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "^1.0.24",
@@ -32,7 +35,9 @@
     "@types/multer": "^1.4.11",
     "@types/node": "^22.14.1",
     "@types/ws": "^8.5.10",
+    "@vitest/coverage-v8": "^2.1.0",
     "tsx": "^4.7.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.0"
   }
 }

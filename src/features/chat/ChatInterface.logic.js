@@ -227,40 +227,26 @@ export const handleSubmit = (e, {
   onSessionActive,
   sendMessage,
   setInput,
-  setTextareaExpanded
+  setTextareaExpanded,
+  messageQueue,
+  setMessageQueue
 }) => {
   e.preventDefault();
-  if (!input.trim() || isLoading || !selectedProject) return;
+  if (!input.trim() || !selectedProject) return;
 
   const userMessage = {
     type: 'user',
     content: input,
-    timestamp: new Date()
+    timestamp: new Date(),
+    isQueued: isLoading // Mark as queued if Claude is still processing
   };
 
   setChatMessages(prev => [...prev, userMessage]);
-  setIsLoading(true);
-  setCanAbortSession(true);
-  // Set a default status when starting
-  setClaudeStatus({
-    text: 'Processing',
-    tokens: 0,
-    can_interrupt: true
-  });
   
-  // Always scroll to bottom when user sends a message
-  setTimeout(() => scrollToBottom(), 0);
-
-  // Session Protection: Mark session as active
-  const sessionToActivate = currentSessionId || `new-session-${Date.now()}`;
-  if (onSessionActive) {
-    onSessionActive(sessionToActivate);
-  }
-
   const toolsSettings = getToolsSettings();
-
-  // Send command to Claude CLI via WebSocket
-  sendMessage({
+  
+  // Create the WebSocket message
+  const wsMessage = {
     type: 'claude-command',
     command: input,
     options: {
@@ -270,7 +256,35 @@ export const handleSubmit = (e, {
       resume: !!currentSessionId,
       toolsSettings: toolsSettings
     }
-  });
+  };
+  
+  if (isLoading) {
+    // Claude is busy, queue the message
+    setMessageQueue(prev => [...prev, { 
+      message: userMessage, 
+      wsMessage: wsMessage 
+    }]);
+  } else {
+    // Claude is ready, send immediately
+    setIsLoading(true);
+    setCanAbortSession(true);
+    setClaudeStatus({
+      text: 'Processing',
+      tokens: 0,
+      can_interrupt: true
+    });
+    
+    // Session Protection: Mark session as active
+    const sessionToActivate = currentSessionId || `new-session-${Date.now()}`;
+    if (onSessionActive) {
+      onSessionActive(sessionToActivate);
+    }
+    
+    sendMessage(wsMessage);
+  }
+  
+  // Always scroll to bottom when user sends a message
+  setTimeout(() => scrollToBottom(), 0);
 
   setInput('');
   setTextareaExpanded(false);
