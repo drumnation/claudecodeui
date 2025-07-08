@@ -8,6 +8,7 @@ import { NewProjectModal } from './components/NewProjectModal';
 import { WorktreeModal } from './components/WorktreeModal';
 import { ProjectItem } from './components/ProjectItem';
 import { ConfirmationModal } from '@/shared-components/ConfirmationModal';
+import { PlannerModal } from '@/features/planner';
 import { 
   Folder, 
   RefreshCw, 
@@ -51,6 +52,8 @@ export const ProjectList = ({
     creatingWorktree,
     selectedProjectForWorktree,
     removingWorktree,
+    showPlannerModal,
+    selectedProjectForPlanner,
     confirmationState,
     setEditingName,
     setNewProjectPath,
@@ -78,6 +81,9 @@ export const ProjectList = ({
     cancelWorktree,
     onCreateWorktree,
     onRemoveWorktree,
+    handlePlanFeature,
+    closePlannerModal,
+    handlePlanComplete,
     handleConfirm,
     handleCancel
   } = useProjectList({
@@ -175,6 +181,14 @@ export const ProjectList = ({
         />
       )}
       
+      {showPlannerModal && (
+        <PlannerModal
+          selectedProject={selectedProjectForPlanner}
+          onClose={closePlannerModal}
+          onPlanComplete={handlePlanComplete}
+        />
+      )}
+      
       <ScrollArea className="flex-1 md:px-2 md:py-3">
         <S.ProjectsList>
           {isLoading ? (
@@ -245,6 +259,7 @@ export const ProjectList = ({
                 onLoadMoreSessions={loadMoreSessions}
                 onCreateWorktree={onCreateWorktree}
                 onRemoveWorktree={onRemoveWorktree}
+                onPlanFeature={handlePlanFeature}
                 setEditingName={setEditingName}
                 setEditingSession={setEditingSession}
                 setEditingSessionName={setEditingSessionName}

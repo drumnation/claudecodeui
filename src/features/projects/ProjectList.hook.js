@@ -38,6 +38,10 @@ export const useProjectList = ({
   const [selectedProjectForWorktree, setSelectedProjectForWorktree] = useState(null);
   const [removingWorktree, setRemovingWorktree] = useState(false);
   
+  // Planner state
+  const [showPlannerModal, setShowPlannerModal] = useState(false);
+  const [selectedProjectForPlanner, setSelectedProjectForPlanner] = useState(null);
+  
   // Confirmation modal state
   const {
     confirmationState,
@@ -462,6 +466,25 @@ export const useProjectList = ({
     removeWorktree(project);
   };
 
+  // Planner handlers
+  const handlePlanFeature = (project) => {
+    setSelectedProjectForPlanner(project);
+    setShowPlannerModal(true);
+  };
+
+  const closePlannerModal = () => {
+    setShowPlannerModal(false);
+    setSelectedProjectForPlanner(null);
+  };
+
+  const handlePlanComplete = (planResult) => {
+    // Plan has been completed, could trigger notifications or other actions
+    console.log('Plan completed:', planResult);
+    
+    // Keep modal open to show results and allow opening in Claude session
+    // Modal will be closed when user clicks "Close" or "Open in Claude Session"
+  };
+
   const loadMoreSessions = async (project) => {
     const canLoadMore = project.sessionMeta?.hasMore !== false;
     
@@ -548,6 +571,10 @@ export const useProjectList = ({
     selectedProjectForWorktree,
     removingWorktree,
     
+    // Planner state
+    showPlannerModal,
+    selectedProjectForPlanner,
+    
     // Confirmation modal state
     confirmationState,
     
@@ -582,6 +609,11 @@ export const useProjectList = ({
     cancelWorktree,
     onCreateWorktree,
     onRemoveWorktree,
+    
+    // Planner handlers
+    handlePlanFeature,
+    closePlannerModal,
+    handlePlanComplete,
     
     // Confirmation modal handlers
     handleConfirm,

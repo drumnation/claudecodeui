@@ -3,8 +3,11 @@ import { promisify } from 'util';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { createHash } from 'crypto';
+import { backlogCliService } from './backlog-cli.service.js';
+import { createLogger } from '@kit/logger/node';
 
 const execFileAsync = promisify(execFile);
+const logger = createLogger({ scope: 'backlog-service' });
 
 // TypeScript interfaces
 export interface Task {
@@ -68,6 +71,13 @@ export interface TaskFilter {
 }
 
 export class BacklogService {
+  private async ensureCliAvailable(): Promise<void> {
+    const status = await backlogCliService.checkInstallation();
+    if (!status.installed) {
+      throw new Error('Backlog CLI is not installed. Please install it to use backlog features.');
+    }
+  }
+
   private encodeProjectPath(projectPath: string): string {
     return createHash('md5').update(projectPath).digest('hex');
   }
@@ -79,7 +89,10 @@ export class BacklogService {
   }
 
   async ensureBacklogInitialized(projectPath: string): Promise<void> {
+    await this.ensureCliAvailable();
+    
     const backlogPath = this.getBacklogPath(projectPath);
+    const backlogCommand = backlogCliService.getCommand();
     
     try {
       await fs.access(backlogPath);
@@ -91,9 +104,9 @@ export class BacklogService {
       
       // Initialize backlog
       try {
-        await execFileAsync('backlog', ['init'], { cwd: backlogPath });
+        await execFileAsync(backlogCommand, ['init'], { cwd: backlogPath });
       } catch (execError: any) {
-        console.error('Failed to initialize backlog:', execError);
+        logger.error('Failed to initialize backlog', { error: execError, backlogPath });
         throw new Error(`Failed to initialize backlog: ${execError.message}`);
       }
     }
@@ -104,7 +117,8 @@ export class BacklogService {
     const backlogPath = this.getBacklogPath(projectPath);
     
     try {
-      const { stdout } = await execFileAsync('backlog', ['task', 'list', '--json'], { 
+      const backlogCommand = backlogCliService.getCommand();
+      const { stdout } = await execFileAsync(backlogCommand, ['task', 'list', '--json'], { 
         cwd: backlogPath 
       });
       
@@ -152,7 +166,8 @@ export class BacklogService {
     }
     
     try {
-      const { stdout } = await execFileAsync('backlog', args, { cwd: backlogPath });
+      const backlogCommand = backlogCliService.getCommand();
+      const { stdout } = await execFileAsync(backlogCommand, args, { cwd: backlogPath });
       const taskId = this.extractTaskIdFromOutput(stdout);
       
       // Retrieve the created task
@@ -202,7 +217,8 @@ export class BacklogService {
     }
     
     try {
-      await execFileAsync('backlog', args, { cwd: backlogPath });
+      const backlogCommand = backlogCliService.getCommand();
+      await execFileAsync(backlogCommand, args, { cwd: backlogPath });
       
       // Retrieve the updated task
       const tasks = await this.listTasks(projectPath);
@@ -224,7 +240,8 @@ export class BacklogService {
     const backlogPath = this.getBacklogPath(projectPath);
     
     try {
-      await execFileAsync('backlog', ['task', 'archive', taskId], { cwd: backlogPath });
+      const backlogCommand = backlogCliService.getCommand();
+      await execFileAsync(backlogCommand, ['task', 'archive', taskId], { cwd: backlogPath });
     } catch (error: any) {
       console.error('Failed to delete task:', error);
       throw new Error(`Failed to delete task: ${error.message}`);

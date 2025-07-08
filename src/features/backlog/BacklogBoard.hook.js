@@ -12,8 +12,9 @@ import {
 export function useBacklogBoard(selectedProject) {
   // Core state
   const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [cliAvailable, setCliAvailable] = useState(null);
   
   // UI state
   const [selectedTask, setSelectedTask] = useState(null);
@@ -43,8 +44,35 @@ export function useBacklogBoard(selectedProject) {
   const wsRef = useRef(null);
   const location = useLocation();
 
+  // Check CLI availability
+  const checkCliAvailability = useCallback(async () => {
+    console.log('Checking CLI availability...');
+    try {
+      const response = await fetch('/api/backlog/health');
+      console.log('Health check response:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        console.error('Backlog health check failed:', response.status, response.statusText);
+        const text = await response.text();
+        console.error('Response body:', text);
+        setCliAvailable(false);
+        return false;
+      }
+      
+      const data = await response.json();
+      console.log('Health check data:', data);
+      setCliAvailable(data.backlogAvailable);
+      return data.backlogAvailable;
+    } catch (err) {
+      console.error('Error checking backlog CLI:', err);
+      setCliAvailable(false);
+      return false;
+    }
+  }, []);
+
   // Fetch tasks
   const fetchTasks = useCallback(async () => {
+    console.log('fetchTasks called for project:', selectedProject?.name);
     if (!selectedProject) return;
     
     setLoading(true);
@@ -58,21 +86,29 @@ export function useBacklogBoard(selectedProject) {
       if (filters.labels.length > 0) params.append('labels', filters.labels.join(','));
       if (filters.search) params.append('search', filters.search);
       
-      const response = await fetch(
-        `/api/projects/${encodeURIComponent(selectedProject.name)}/backlog?${params}`,
-        { headers: { 'Content-Type': 'application/json' } }
-      );
+      const url = `/api/projects/${encodeURIComponent(selectedProject.name)}/backlog?${params}`;
+      console.log('Fetching tasks from:', url);
+      
+      const response = await fetch(url, { 
+        headers: { 'Content-Type': 'application/json' } 
+      });
+      
+      console.log('Fetch response:', response.status, response.statusText);
       
       if (!response.ok) {
+        const text = await response.text();
+        console.error('Fetch failed, response body:', text);
         throw new Error('Failed to fetch tasks');
       }
       
       const data = await response.json();
+      console.log('Tasks data:', data);
       setTasks(data.tasks || []);
     } catch (err) {
       console.error('Error fetching tasks:', err);
       setError(err.message);
     } finally {
+      console.log('Setting loading to false');
       setLoading(false);
     }
   }, [selectedProject, filters]);
@@ -337,12 +373,24 @@ export function useBacklogBoard(selectedProject) {
     setIsPlanningMode(prev => !prev);
   }, []);
 
-  // Initialize and cleanup
+  // Initialize CLI check
   useEffect(() => {
-    if (selectedProject) {
-      fetchTasks();
+    if (selectedProject && cliAvailable === null) {
+      console.log('Initial CLI check for project:', selectedProject.name);
+      checkCliAvailability();
     }
-  }, [selectedProject, fetchTasks]);
+  }, [selectedProject?.name]); // Only run when project changes
+
+  // Fetch tasks when CLI is available
+  useEffect(() => {
+    if (selectedProject && cliAvailable === true) {
+      console.log('CLI is available, fetching tasks');
+      fetchTasks();
+    } else if (cliAvailable === false) {
+      console.log('CLI not available');
+      setLoading(false);
+    }
+  }, [selectedProject?.name, cliAvailable]); // Run when project or CLI availability changes
 
   // Setup WebSocket for real-time updates
   useEffect(() => {
@@ -367,6 +415,7 @@ export function useBacklogBoard(selectedProject) {
     columns,
     loading,
     error,
+    cliAvailable,
     selectedTask,
     isCreateModalOpen,
     isEditModalOpen,
@@ -396,6 +445,7 @@ export function useBacklogBoard(selectedProject) {
     clearFilters,
     setSortBy,
     setPlanText,
+    checkCliAvailability,
     
     // Drag and drop handlers
     handleDragStart,

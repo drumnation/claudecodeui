@@ -4,8 +4,14 @@ export const BoardContainer = styled.div`
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: ${props => props.theme.colors.background};
-  color: ${props => props.theme.colors.text};
+  background-color: rgb(255 255 255);
+  color: rgb(0 0 0);
+  position: relative;
+  
+  .dark & {
+    background-color: rgb(17 24 39);
+    color: rgb(255 255 255);
+  }
 `;
 
 export const BoardHeader = styled.div`
@@ -13,9 +19,14 @@ export const BoardHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid ${props => props.theme.colors.border};
-  background: ${props => props.theme.colors.surface};
+  border-bottom: 1px solid rgb(229 231 235);
+  background-color: rgb(249 250 251);
   flex-shrink: 0;
+  
+  .dark & {
+    border-bottom-color: rgb(55 65 81);
+    background-color: rgb(31 41 55);
+  }
 `;
 
 export const BoardTitle = styled.h2`
@@ -59,17 +70,26 @@ export const Column = styled.div`
   display: flex;
   flex-direction: column;
   background: ${props => props.isDragOver 
-    ? props.theme.colors.primary + '10' 
-    : props.theme.colors.surface};
+    ? 'rgba(59, 130, 246, 0.1)' 
+    : 'rgb(249 250 251)'};
   border: 1px solid ${props => props.isDragOver 
-    ? props.theme.colors.primary 
-    : props.theme.colors.border};
+    ? 'rgb(59, 130, 246)' 
+    : 'rgb(229 231 235)'};
   border-radius: 0.5rem;
   transition: all 0.2s ease;
 
   @media (max-width: 768px) {
     max-width: 100%;
     min-height: 200px;
+  }
+  
+  .dark & {
+    background: ${props => props.isDragOver 
+      ? 'rgba(59, 130, 246, 0.1)' 
+      : 'rgb(31 41 55)'};
+    border-color: ${props => props.isDragOver 
+      ? 'rgb(59, 130, 246)' 
+      : 'rgb(55 65 81)'};
   }
 `;
 
@@ -78,9 +98,14 @@ export const ColumnHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid ${props => props.theme.colors.border};
-  background: ${props => props.theme.colors.background};
+  border-bottom: 1px solid rgb(229 231 235);
+  background-color: rgb(255 255 255);
   border-radius: 0.5rem 0.5rem 0 0;
+  
+  .dark & {
+    border-bottom-color: rgb(55 65 81);
+    background-color: rgb(17 24 39);
+  }
 `;
 
 export const ColumnTitle = styled.h3`
@@ -95,10 +120,15 @@ export const ColumnTitle = styled.h3`
 export const ColumnCount = styled.span`
   font-size: 0.75rem;
   font-weight: 400;
-  color: ${props => props.theme.colors.textSecondary};
-  background: ${props => props.theme.colors.border};
+  color: rgb(107 114 128);
+  background: rgb(229 231 235);
   padding: 0.125rem 0.5rem;
   border-radius: 9999px;
+  
+  .dark & {
+    color: rgb(156 163 175);
+    background: rgb(55 65 81);
+  }
 `;
 
 export const ColumnContent = styled.div`
@@ -117,10 +147,14 @@ export const EmptyColumn = styled.div`
   justify-content: center;
   height: 100%;
   min-height: 120px;
-  color: ${props => props.theme.colors.textSecondary};
+  color: rgb(107 114 128);
   font-size: 0.875rem;
   text-align: center;
   padding: 1rem;
+  
+  .dark & {
+    color: rgb(156 163 175);
+  }
 `;
 
 export const FilterBar = styled.div`
@@ -128,28 +162,43 @@ export const FilterBar = styled.div`
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1.5rem;
-  background: ${props => props.theme.colors.surface};
-  border-bottom: 1px solid ${props => props.theme.colors.border};
+  background: rgb(249 250 251);
+  border-bottom: 1px solid rgb(229 231 235);
   flex-wrap: wrap;
+  
+  .dark & {
+    background: rgb(31 41 55);
+    border-bottom-color: rgb(55 65 81);
+  }
 `;
 
 export const SearchInput = styled.input`
   flex: 1;
   min-width: 200px;
   padding: 0.5rem 1rem;
-  border: 1px solid ${props => props.theme.colors.border};
+  border: 1px solid rgb(229 231 235);
   border-radius: 0.375rem;
-  background: ${props => props.theme.colors.background};
-  color: ${props => props.theme.colors.text};
+  background: rgb(255 255 255);
+  color: rgb(0 0 0);
   font-size: 0.875rem;
 
   &:focus {
     outline: none;
-    border-color: ${props => props.theme.colors.primary};
+    border-color: rgb(59 130 246);
   }
 
   &::placeholder {
-    color: ${props => props.theme.colors.textSecondary};
+    color: rgb(107 114 128);
+  }
+  
+  .dark & {
+    border-color: rgb(55 65 81);
+    background: rgb(17 24 39);
+    color: rgb(255 255 255);
+    
+    &::placeholder {
+      color: rgb(156 163 175);
+    }
   }
 `;
 
@@ -159,14 +208,14 @@ export const FilterButton = styled.button`
   gap: 0.375rem;
   padding: 0.5rem 0.75rem;
   background: ${props => props.isActive 
-    ? props.theme.colors.primary 
-    : props.theme.colors.background};
+    ? 'rgb(59 130 246)' 
+    : 'rgb(255 255 255)'};
   color: ${props => props.isActive 
     ? 'white' 
-    : props.theme.colors.text};
+    : 'rgb(0 0 0)'};
   border: 1px solid ${props => props.isActive 
-    ? props.theme.colors.primary 
-    : props.theme.colors.border};
+    ? 'rgb(59 130 246)' 
+    : 'rgb(229 231 235)'};
   border-radius: 0.375rem;
   font-size: 0.875rem;
   cursor: pointer;
@@ -174,8 +223,26 @@ export const FilterButton = styled.button`
 
   &:hover {
     background: ${props => props.isActive 
-      ? props.theme.colors.primaryDark 
-      : props.theme.colors.border};
+      ? 'rgb(37 99 235)' 
+      : 'rgb(229 231 235)'};
+  }
+  
+  .dark & {
+    background: ${props => props.isActive 
+      ? 'rgb(59 130 246)' 
+      : 'rgb(17 24 39)'};
+    color: ${props => props.isActive 
+      ? 'white' 
+      : 'rgb(255 255 255)'};
+    border-color: ${props => props.isActive 
+      ? 'rgb(59 130 246)' 
+      : 'rgb(55 65 81)'};
+    
+    &:hover {
+      background: ${props => props.isActive 
+        ? 'rgb(37 99 235)' 
+        : 'rgb(55 65 81)'};
+    }
   }
 `;
 
@@ -186,10 +253,28 @@ export const LoadingOverlay = styled.div`
   right: 0;
   bottom: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: ${props => props.theme.colors.background}ee;
+  background: rgba(255, 255, 255, 0.93);
   z-index: 10;
+  
+  .dark & {
+    background: rgba(17, 24, 39, 0.93);
+  }
+  
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
 `;
 
 export const ErrorMessage = styled.div`
@@ -197,9 +282,9 @@ export const ErrorMessage = styled.div`
   align-items: center;
   gap: 0.5rem;
   padding: 1rem;
-  background: ${props => props.theme.colors.error}10;
-  color: ${props => props.theme.colors.error};
-  border: 1px solid ${props => props.theme.colors.error}30;
+  background: rgba(239, 68, 68, 0.06);
+  color: rgb(239 68 68);
+  border: 1px solid rgba(239, 68, 68, 0.19);
   border-radius: 0.375rem;
   margin: 1rem;
 `;
@@ -209,9 +294,14 @@ export const MetricsBar = styled.div`
   align-items: center;
   gap: 1.5rem;
   padding: 0.75rem 1.5rem;
-  background: ${props => props.theme.colors.surface};
-  border-bottom: 1px solid ${props => props.theme.colors.border};
+  background: rgb(249 250 251);
+  border-bottom: 1px solid rgb(229 231 235);
   font-size: 0.875rem;
+  
+  .dark & {
+    background: rgb(31 41 55);
+    border-bottom-color: rgb(55 65 81);
+  }
 `;
 
 export const MetricItem = styled.div`
@@ -221,10 +311,18 @@ export const MetricItem = styled.div`
 `;
 
 export const MetricLabel = styled.span`
-  color: ${props => props.theme.colors.textSecondary};
+  color: rgb(107 114 128);
+  
+  .dark & {
+    color: rgb(156 163 175);
+  }
 `;
 
 export const MetricValue = styled.span`
   font-weight: 600;
-  color: ${props => props.color || props.theme.colors.text};
+  color: ${props => props.color || 'rgb(0 0 0)'};
+  
+  .dark & {
+    color: ${props => props.color || 'rgb(255 255 255)'};
+  }
 `;

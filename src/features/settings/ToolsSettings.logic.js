@@ -18,11 +18,26 @@ export const commonTools = [
   'WebSearch'
 ];
 
+// Available CodeQAI embedding models
+export const embeddingModels = [
+  { value: 'sentence-transformers', label: 'Sentence Transformers (Local)', description: 'Fast local embeddings' },
+  { value: 'instructor', label: 'Instructor Embeddings (Local)', description: 'High-quality local embeddings' },
+  { value: 'openai', label: 'OpenAI Embeddings', description: 'Requires API key' },
+  { value: 'azure', label: 'Azure OpenAI', description: 'Requires Azure configuration' },
+  { value: 'anthropic', label: 'Anthropic Embeddings', description: 'Requires API key' }
+];
+
 // Default settings structure
 export const defaultSettings = {
   allowedTools: [],
   disallowedTools: [],
-  skipPermissions: false
+  skipPermissions: false,
+  plannerEnabled: true,
+  selectedAgents: ['ARCH', 'DIFF', 'DEPS'],
+  codeqaiEnabled: true,
+  contextLimits: { maxResults: 8, snippetLength: 500 },
+  codeqaiEmbeddingModel: 'sentence-transformers',
+  codeqaiUseLocalLLM: false
 };
 
 // Storage key for localStorage
@@ -38,7 +53,13 @@ export const loadSettingsFromStorage = () => {
       return {
         allowedTools: settings.allowedTools || [],
         disallowedTools: settings.disallowedTools || [],
-        skipPermissions: settings.skipPermissions || false
+        skipPermissions: settings.skipPermissions || false,
+        plannerEnabled: settings.plannerEnabled ?? true,
+        selectedAgents: settings.selectedAgents ?? ['ARCH', 'DIFF', 'DEPS'],
+        codeqaiEnabled: settings.codeqaiEnabled ?? true,
+        contextLimits: settings.contextLimits ?? { maxResults: 8, snippetLength: 500 },
+        codeqaiEmbeddingModel: settings.codeqaiEmbeddingModel ?? 'sentence-transformers',
+        codeqaiUseLocalLLM: settings.codeqaiUseLocalLLM ?? false
       };
     }
     

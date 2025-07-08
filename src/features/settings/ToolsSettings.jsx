@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Plus, Settings, Shield, AlertTriangle, Moon, Sun, Terminal } from 'lucide-react';
+import { X, Plus, Settings, Shield, AlertTriangle, Moon, Sun, Terminal, Brain } from 'lucide-react';
 import { Button } from '@/shared-components/Button';
 import { useToolsSettings } from '@/features/settings/ToolsSettings.hook';
 import { commonTools } from '@/features/settings/ToolsSettings.logic';
@@ -61,6 +61,17 @@ export const ToolsSettings = ({ isOpen, onClose }) => {
     claudeCliTesting,
     setClaudeCliPath,
     
+    // Planner state
+    plannerEnabled,
+    selectedAgents,
+    codeqaiEnabled,
+    codeqaiStatus,
+    contextLimits,
+    codeqaiEmbeddingModel,
+    codeqaiUseLocalLLM,
+    setCodeqaiEmbeddingModel,
+    setCodeqaiUseLocalLLM,
+    
     // Actions
     handleAddAllowedTool,
     handleRemoveAllowedTool,
@@ -73,7 +84,13 @@ export const ToolsSettings = ({ isOpen, onClose }) => {
     
     // Claude CLI actions
     handleTestClaudeCli,
-    handleSaveClaudeCliPath
+    handleSaveClaudeCliPath,
+    
+    // Planner actions
+    togglePlanner,
+    toggleAgent,
+    toggleCodeQAI,
+    updateContextLimits
   } = useToolsSettings(isOpen, onClose);
 
   if (!isOpen) return null;
@@ -211,6 +228,172 @@ export const ToolsSettings = ({ isOpen, onClose }) => {
                   <li>• Running in Docker containers</li>
                   <li>• Claude CLI not in system PATH</li>
                   <li>• Multiple Claude CLI versions installed</li>
+                </ul>
+              </div>
+            </Section>
+
+            {/* Multi-Agent Planner */}
+            <Section>
+              <SectionHeader>
+                <Brain className="w-5 h-5 text-purple-500" />
+                <SectionTitle>Multi-Agent Planner</SectionTitle>
+              </SectionHeader>
+              <SectionDescription>
+                Configure the AI-powered feature planning system with specialized agents
+              </SectionDescription>
+              
+              <div className="space-y-4">
+                {/* Enable Planner */}
+                <SettingToggle
+                  checked={plannerEnabled}
+                  onChange={togglePlanner}
+                  title="Enable Multi-Agent Planner"
+                  description="Allow AI agents to analyze and plan features for your projects"
+                />
+
+                {plannerEnabled && (
+                  <>
+                    {/* Agent Selection */}
+                    <div>
+                      <label className="block text-sm font-medium mb-3">
+                        Default Agents
+                      </label>
+                      <div className="space-y-2">
+                        <SettingToggle
+                          checked={selectedAgents.includes('ARCH')}
+                          onChange={() => toggleAgent('ARCH')}
+                          title="ARCH Agent"
+                          description="Analyzes system architecture and design patterns"
+                        />
+                        <SettingToggle
+                          checked={selectedAgents.includes('DIFF')}
+                          onChange={() => toggleAgent('DIFF')}
+                          title="DIFF Agent"
+                          description="Identifies files and components that need modification"
+                        />
+                        <SettingToggle
+                          checked={selectedAgents.includes('DEPS')}
+                          onChange={() => toggleAgent('DEPS')}
+                          title="DEPS Agent"
+                          description="Analyzes external and internal dependency requirements"
+                        />
+                      </div>
+                    </div>
+
+                    {/* CodeQAI Integration */}
+                    <div>
+                      <SettingToggle
+                        checked={codeqaiEnabled}
+                        onChange={toggleCodeQAI}
+                        title="CodeQAI Integration"
+                        description="Use semantic code search to provide context to agents"
+                      />
+                      
+                      {codeqaiEnabled && (
+                        <div className="ml-6 mt-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-sm font-medium">Status:</span>
+                            {codeqaiStatus?.available ? (
+                              <span className="text-green-600 dark:text-green-400 text-sm">✓ CodeQAI Available</span>
+                            ) : (
+                              <span className="text-red-600 dark:text-red-400 text-sm">✗ CodeQAI Not Found</span>
+                            )}
+                          </div>
+                          {!codeqaiStatus?.available && (
+                            <div className="text-xs text-gray-600 dark:text-gray-400">
+                              Install CodeQAI: pip install codeqai
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Embedding Model Configuration */}
+                    {codeqaiEnabled && (
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Embedding Model
+                        </label>
+                        <select
+                          value={codeqaiEmbeddingModel}
+                          onChange={(e) => setCodeqaiEmbeddingModel(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                        >
+                          <option value="sentence-transformers">Sentence Transformers (Local)</option>
+                          <option value="instructor">Instructor Embeddings (Local)</option>
+                          <option value="openai">OpenAI Embeddings</option>
+                          <option value="azure">Azure OpenAI</option>
+                          <option value="anthropic">Anthropic Embeddings</option>
+                        </select>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {codeqaiEmbeddingModel === 'sentence-transformers' && 'Fast local embeddings, no API key required'}
+                          {codeqaiEmbeddingModel === 'instructor' && 'High-quality local embeddings, no API key required'}
+                          {codeqaiEmbeddingModel === 'openai' && 'Requires OpenAI API key'}
+                          {codeqaiEmbeddingModel === 'azure' && 'Requires Azure OpenAI configuration'}
+                          {codeqaiEmbeddingModel === 'anthropic' && 'Requires Anthropic API key'}
+                        </p>
+                        
+                        {/* Local LLM Option */}
+                        <div className="mt-3">
+                          <SettingToggle
+                            checked={codeqaiUseLocalLLM}
+                            onChange={() => setCodeqaiUseLocalLLM(!codeqaiUseLocalLLM)}
+                            title="Use Local LLM for Chat"
+                            description="Use llama.cpp or Ollama for CodeQAI chat instead of cloud APIs"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Context Limits */}
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Context Limits
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                            Max Results per Agent
+                          </label>
+                          <input
+                            type="number"
+                            value={contextLimits.maxResults}
+                            onChange={(e) => updateContextLimits('maxResults', parseInt(e.target.value) || 8)}
+                            min="1"
+                            max="20"
+                            className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                            Snippet Length (chars)
+                          </label>
+                          <input
+                            type="number"
+                            value={contextLimits.snippetLength}
+                            onChange={(e) => updateContextLimits('snippetLength', parseInt(e.target.value) || 500)}
+                            min="100"
+                            max="2000"
+                            step="100"
+                            className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Help Text */}
+              <div className="mt-4 p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20">
+                <p className="text-sm text-purple-700 dark:text-purple-300 mb-2">
+                  <strong>About Multi-Agent Planning:</strong>
+                </p>
+                <ul className="text-xs text-purple-600 dark:text-purple-400 space-y-1">
+                  <li>• ARCH Agent analyzes system architecture and suggests design patterns</li>
+                  <li>• DIFF Agent identifies what files and components need changes</li>
+                  <li>• DEPS Agent analyzes dependency requirements and compatibility</li>
+                  <li>• CodeQAI provides semantic code search for better context</li>
                 </ul>
               </div>
             </Section>

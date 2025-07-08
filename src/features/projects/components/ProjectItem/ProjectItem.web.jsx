@@ -8,7 +8,8 @@ import {
   Check, 
   X,
   MoreVertical,
-  GitBranch
+  GitBranch,
+  Brain
 } from 'lucide-react';
 import { Button } from '@/shared-components/Button/Button';
 import { SessionList } from '../SessionList';
@@ -27,6 +28,7 @@ const ProjectContextMenu = ({
   onDeleteProject, 
   onCreateWorktree, 
   onRemoveWorktree,
+  onPlanFeature,
   position 
 }) => {
   const menuRef = useRef(null);
@@ -56,6 +58,16 @@ const ProjectContextMenu = ({
       >
         <Edit3 className="w-4 h-4" />
         <span>Edit Project Name</span>
+      </S.DesktopContextItem>
+      
+      <S.DesktopContextItem
+        onClick={() => {
+          onPlanFeature(project);
+          onClose();
+        }}
+      >
+        <Brain className="w-4 h-4" />
+        <span>Plan Feature</span>
       </S.DesktopContextItem>
       
       {!project.isWorktree && (
@@ -132,6 +144,7 @@ export const ProjectItemWeb = ({
   onLoadMoreSessions,
   onCreateWorktree,
   onRemoveWorktree,
+  onPlanFeature,
   setEditingName,
   setEditingSession,
   setEditingSessionName,
@@ -321,6 +334,7 @@ export const ProjectItemWeb = ({
         onDeleteProject={onDeleteProject}
         onCreateWorktree={onCreateWorktree}
         onRemoveWorktree={onRemoveWorktree}
+        onPlanFeature={onPlanFeature}
         position={contextMenuPosition}
       />
     </S.ProjectContainer>

@@ -24,6 +24,10 @@ export function handleClaudeWebSocketConnection(ws: WebSocket): void {
           await handler.handleClaudeCommand(data);
           break;
 
+        case 'planner-command':
+          await handler.handlePlannerCommand(data);
+          break;
+
         case 'abort-session':
           handler.handleAbortSession(data);
           break;

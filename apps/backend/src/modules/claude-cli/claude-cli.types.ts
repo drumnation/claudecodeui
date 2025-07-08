@@ -31,6 +31,12 @@ export interface ClaudeWebSocketMessage {
   exitCode?: number;
   isNewSession?: boolean;
   summary?: string;
+  // Planner-specific fields
+  agentType?: string;
+  progress?: any;
+  agentResults?: any[];
+  finalPlan?: string;
+  output?: string;
 }
 
 export interface SessionInfo {

@@ -2,10 +2,13 @@ import { Request, Response } from 'express';
 import { BacklogService, TaskFilter, CreateTaskRequest, UpdateTaskRequest } from './modules/backlog/backlog.service.js';
 import { AiPlanningService } from './modules/backlog/ai-planning.service.js';
 import { projectsService } from './modules/projects/projects.service.js';
+import { backlogCliService } from './modules/backlog/backlog-cli.service.js';
+import { createLogger } from '@kit/logger/node';
 
 // Initialize services
 const backlogService = new BacklogService();
 const aiPlanningService = new AiPlanningService();
+const logger = createLogger({ scope: 'backlog-controller' });
 
 // GET /api/projects/:projectName/backlog
 export async function handleGetBacklog(req: Request, res: Response) {
@@ -296,6 +299,109 @@ export async function handleReviewTasks(req: Request, res: Response) {
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Failed to review tasks' 
+    });
+  }
+}
+
+// GET /api/backlog/health
+export async function handleBacklogHealth(req: Request, res: Response) {
+  try {
+    const status = await backlogCliService.checkInstallation();
+    
+    if (status.installed) {
+      res.json({
+        status: 'healthy',
+        backlogAvailable: true,
+        backlogVersion: status.version,
+        backlogPath: status.path,
+        message: 'Backlog CLI is available and ready'
+      });
+    } else {
+      res.status(503).json({
+        status: 'unhealthy',
+        backlogAvailable: false,
+        error: status.error || 'Backlog CLI not found',
+        installInstructions: 'Use the install endpoint or run: npm install -g backlog.md'
+      });
+    }
+  } catch (error: any) {
+    logger.error('Error checking backlog health', { error });
+    res.status(500).json({
+      status: 'error',
+      backlogAvailable: false,
+      error: error.message || 'Failed to check backlog status'
+    });
+  }
+}
+
+// POST /api/backlog/install
+export async function handleBacklogInstall(req: Request, res: Response) {
+  try {
+    // Check if already installed
+    const currentStatus = await backlogCliService.checkInstallation();
+    if (currentStatus.installed) {
+      return res.json({
+        success: true,
+        alreadyInstalled: true,
+        version: currentStatus.version,
+        message: 'Backlog is already installed'
+      });
+    }
+
+    // Stream installation progress
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    });
+
+    const sendProgress = (progress: any) => {
+      res.write(`data: ${JSON.stringify(progress)}\n\n`);
+    };
+
+    try {
+      const result = await backlogCliService.installBacklog(sendProgress);
+      
+      sendProgress({
+        status: 'completed',
+        message: 'Installation completed successfully',
+        version: result.version,
+        progress: 100
+      });
+      
+      res.end();
+    } catch (error: any) {
+      sendProgress({
+        status: 'failed',
+        message: error.message,
+        progress: 0
+      });
+      
+      res.end();
+    }
+  } catch (error: any) {
+    logger.error('Error installing backlog', { error });
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to install backlog'
+    });
+  }
+}
+
+// GET /api/backlog/install-instructions
+export async function handleBacklogInstallInstructions(req: Request, res: Response) {
+  try {
+    const instructions = await backlogCliService.getInstallInstructions();
+    res.json({
+      success: true,
+      instructions,
+      format: 'markdown'
+    });
+  } catch (error: any) {
+    logger.error('Error getting install instructions', { error });
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to get install instructions'
     });
   }
 }

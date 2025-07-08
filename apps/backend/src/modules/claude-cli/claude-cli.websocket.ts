@@ -3,14 +3,22 @@ import { createLogger } from '@kit/logger/node';
 import { ClaudeCliService, ClaudeEvent } from './claude-cli.service';
 import { ClaudeCommand, AbortSession, ClaudeWebSocketMessage } from './claude-cli.types';
 import { sessionsService } from '../sessions/sessions.service';
+import { getPlannerServiceInstance } from '../planner/planner.controller.js';
+import { PlannerRequest } from '../planner/planner.types.js';
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
 
 const logger = createLogger({ scope: 'claude-cli-websocket' });
 
+// Environment variable constants - parsed once at startup
+const SESSION_SUMMARY_UPDATE_INTERVAL = parseInt(process.env.SESSION_SUMMARY_UPDATE_INTERVAL || '5');
+const SESSION_SUMMARY_UPDATE_DELAY = parseInt(process.env.SESSION_SUMMARY_UPDATE_DELAY || '2000');
+const DETECT_TOPIC_CHANGES = process.env.DETECT_TOPIC_CHANGES !== 'false';
+
 // Track active services
 const activeServices = new Map<string, ClaudeCliService>();
+const activePlannerServices = new Map<string, any>();
 const sessionMessageCounts = new Map<string, number>();
 const manuallyEditedSessions = new Set<string>();
 
@@ -75,16 +83,96 @@ export class ClaudeWebSocketHandler {
     }
   }
 
+  async handlePlannerCommand(data: PlannerRequest): Promise<void> {
+    const sessionId = data.sessionId || `planner-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    this.currentSessionId = sessionId;
+    
+    logger.info('Planner command received', { 
+      sessionId,
+      projectPath: data.projectPath,
+      selectedAgents: data.selectedAgents,
+      featureDescriptionLength: data.featureDescription.length
+    });
+
+    try {
+      // Get planner service instance
+      const plannerService = getPlannerServiceInstance();
+      
+      // Check if planning is already in progress
+      if (plannerService.isRunning()) {
+        this.sendMessage({
+          type: 'planner-error',
+          error: 'Planning is already in progress',
+          sessionId
+        });
+        return;
+      }
+
+      // Set up planner event handlers
+      this.setupPlannerHandlers(plannerService, sessionId);
+      
+      // Store active planner service
+      activePlannerServices.set(sessionId, plannerService);
+
+      // Send initial status
+      this.sendMessage({
+        type: 'planner-status',
+        data: {
+          status: 'starting',
+          message: 'Initializing multi-agent planner...'
+        },
+        sessionId
+      });
+
+      // Start planning (async)
+      plannerService.planFeature(data)
+        .then(result => {
+          logger.info('Planning completed successfully', { 
+            sessionId,
+            duration: result.totalDuration,
+            agentCount: result.agentResults.length
+          });
+        })
+        .catch(error => {
+          logger.error('Planning failed', { 
+            sessionId,
+            error: error.message
+          });
+        })
+        .finally(() => {
+          activePlannerServices.delete(sessionId);
+        });
+
+    } catch (error: any) {
+      logger.error('Failed to start planner', { error, sessionId });
+      this.sendMessage({
+        type: 'planner-error',
+        error: 'Failed to start planner',
+        sessionId
+      });
+      activePlannerServices.delete(sessionId);
+    }
+  }
+
   handleAbortSession(data: AbortSession): void {
     logger.info('Abort session requested', { sessionId: data.sessionId });
     
-    // Kill any active service for this session
+    // Kill any active Claude CLI service for this session
     if (activeServices.has(data.sessionId)) {
       const service = activeServices.get(data.sessionId);
       if (service) {
         service.kill();
       }
       activeServices.delete(data.sessionId);
+    }
+    
+    // Abort any active planner service for this session
+    if (activePlannerServices.has(data.sessionId)) {
+      const plannerService = activePlannerServices.get(data.sessionId);
+      if (plannerService && plannerService.abortPlanning) {
+        plannerService.abortPlanning();
+      }
+      activePlannerServices.delete(data.sessionId);
     }
     
     // Send acknowledgment
@@ -108,6 +196,59 @@ export class ClaudeWebSocketHandler {
       }
       activeServices.delete(this.currentSessionId);
     }
+    
+    // Clean up any active planner services
+    if (this.currentSessionId && activePlannerServices.has(this.currentSessionId)) {
+      const plannerService = activePlannerServices.get(this.currentSessionId);
+      if (plannerService && plannerService.abortPlanning) {
+        plannerService.abortPlanning();
+      }
+      activePlannerServices.delete(this.currentSessionId);
+    }
+  }
+
+  private setupPlannerHandlers(plannerService: any, sessionId: string): void {
+    // Handle planner status updates
+    plannerService.on('planner-status', (data: any) => {
+      this.sendMessage({
+        type: 'planner-status',
+        data: data,
+        sessionId,
+        progress: data.progress,
+        agentType: data.agentType
+      });
+    });
+
+    // Handle planner output
+    plannerService.on('planner-output', (data: any) => {
+      this.sendMessage({
+        type: 'planner-output',
+        data: data,
+        sessionId,
+        agentType: data.agentType,
+        output: data.output
+      });
+    });
+
+    // Handle planner completion
+    plannerService.on('planner-complete', (data: any) => {
+      this.sendMessage({
+        type: 'planner-complete',
+        data: data,
+        sessionId,
+        finalPlan: data.finalPlan,
+        agentResults: data.agentResults
+      });
+    });
+
+    // Handle planner errors
+    plannerService.on('planner-error', (data: any) => {
+      this.sendMessage({
+        type: 'planner-error',
+        error: data.error,
+        sessionId
+      });
+    });
   }
 
   private setupServiceHandlers(service: ClaudeCliService, sessionId: string): void {
@@ -215,22 +356,18 @@ export class ClaudeWebSocketHandler {
     
     // Update summary based on configuration (skip if manually edited)
     if (!manuallyEditedSessions.has(sessionId)) {
-      const updateInterval = parseInt(process.env.SESSION_SUMMARY_UPDATE_INTERVAL || '5');
-      const updateDelay = parseInt(process.env.SESSION_SUMMARY_UPDATE_DELAY || '2000');
-      const checkTopicChange = process.env.DETECT_TOPIC_CHANGES !== 'false';
-      
       // Check for updates at regular intervals
-      if (updateInterval > 0 && newCount > 0 && newCount % updateInterval === 0) {
+      if (SESSION_SUMMARY_UPDATE_INTERVAL > 0 && newCount > 0 && newCount % SESSION_SUMMARY_UPDATE_INTERVAL === 0) {
         logger.info('User message count reached threshold, checking for title update', { 
           sessionId, 
           messageCount: newCount,
-          checkTopicChange
+          checkTopicChange: DETECT_TOPIC_CHANGES
         });
         
         // Trigger summary update in the background
         setTimeout(() => {
-          this.generateSessionSummary(sessionId, true, false, checkTopicChange);
-        }, updateDelay);
+          this.generateSessionSummary(sessionId, true, false, DETECT_TOPIC_CHANGES);
+        }, SESSION_SUMMARY_UPDATE_DELAY);
       }
     } else {
       logger.debug('Skipping auto-update for manually edited session', { sessionId });

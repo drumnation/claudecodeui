@@ -35,6 +35,7 @@ A desktop and mobile UI for [Claude Code](https://docs.anthropic.com/en/docs/cla
 
 - **Responsive Design** - Works seamlessly across desktop, tablet, and mobile
 - **Interactive Chat Interface** - Built-in chat interface for seamless communication with Claude Code
+- **Multi-Agent Planner** - AI-powered feature planning with specialized agents (ARCH, DIFF, DEPS)
 - **Integrated Shell Terminal** - Direct access to Claude Code CLI through built-in shell functionality
 - **File Explorer** - Interactive file tree with syntax highlighting and live editing
 - **Session Management** - Resume conversations, manage multiple sessions, and track history
@@ -126,11 +127,73 @@ The UI automatically discovers Claude Code projects from `~/.claude/projects/` a
 - **Session Actions** - Rename, delete, and export conversation history
 - **Cross-device Sync** - Access sessions from any device
 
+#### Multi-Agent Planner
+- **Intelligent Feature Planning** - AI-powered analysis of feature requirements
+- **Specialized Agents** - ARCH, DIFF, and DEPS agents for comprehensive planning
+- **Real-time Progress** - Live updates as agents analyze your project
+- **Contextual Understanding** - CodeQAI integration for semantic code search
+- **Actionable Plans** - Detailed implementation strategies with file-level recommendations
+
 ### Mobile Experience
 - **Responsive Design** - Optimized for all screen sizes
 - **Touch-friendly Interface** - Swipe gestures and touch navigation
 - **Mobile Navigation** - Bottom tab bar for easy thumb navigation
 - **Adaptive Layout** - Collapsible sidebar and smart content prioritization
+
+### Multi-Agent Planner
+
+The Multi-Agent Planner is an advanced AI-powered feature that helps you plan and architect new features for your projects using specialized AI agents.
+
+#### How It Works
+
+1. **Start Planning** - Click "Plan Feature" from any project's context menu
+2. **Describe Your Feature** - Enter a natural language description of what you want to build
+3. **Agent Selection** - Choose which specialized agents to involve in the planning process
+4. **Real-time Analysis** - Watch as agents analyze your codebase and generate insights
+5. **Actionable Plan** - Receive a comprehensive plan with specific implementation steps
+
+#### The Agents
+
+**ARCH Agent** - Architecture Analysis
+- Analyzes system architecture and design patterns
+- Identifies integration points and architectural considerations
+- Suggests design patterns and structural improvements
+- Evaluates scalability and maintainability implications
+
+**DIFF Agent** - Impact Analysis  
+- Identifies files and components that need modification
+- Maps dependencies and change propagation
+- Highlights potential breaking changes
+- Provides change impact assessment
+
+**DEPS Agent** - Dependency Analysis
+- Analyzes external and internal dependency requirements
+- Identifies missing dependencies and version conflicts
+- Suggests optimal dependency management strategies
+- Evaluates security and compatibility implications
+
+#### CodeQAI Integration
+
+When enabled, CodeQAI provides semantic code search capabilities:
+- **Contextual Understanding** - Agents receive relevant code snippets
+- **Semantic Search** - Find related functionality across your codebase
+- **Smart Context** - Agents understand your existing patterns and conventions
+- **Reduced Hallucination** - Grounded responses based on actual code
+
+#### Configuration
+
+Configure the planner in Settings → Tools Settings → Multi-Agent Planner:
+- **Enable/Disable Planner** - Control availability of planning features
+- **Agent Selection** - Choose default agents for planning sessions
+- **CodeQAI Integration** - Toggle semantic search capabilities
+- **Context Limits** - Adjust search result limits and snippet lengths
+
+#### Best Practices
+
+1. **Clear Descriptions** - Provide detailed feature descriptions for better analysis
+2. **Enable CodeQAI** - Use semantic search for more accurate insights
+3. **Review Agent Results** - Each agent provides unique perspectives - review all
+4. **Iterative Planning** - Use planning results to refine and improve your approach
 
 ## Architecture
 
@@ -335,6 +398,44 @@ source ~/.bashrc
 - Verify the project path exists and is accessible
 - Review server console logs for detailed error messages
 - Ensure you're not trying to access system directories outside project scope
+
+#### Multi-Agent Planner Issues
+**Problem**: "Plan Feature" option not available or planner not working
+**Root Cause**: Planner may be disabled in settings or dependencies missing
+
+**Solutions**:
+1. **Enable Planner**:
+   - Open Settings → Tools Settings → Multi-Agent Planner
+   - Toggle "Enable Multi-Agent Planner" to ON
+   - Select desired agents (ARCH, DIFF, DEPS)
+   - Save settings
+
+2. **CodeQAI Integration Issues**:
+   ```bash
+   # Install CodeQAI if not available
+   pip install codeqai
+   
+   # Verify installation
+   codeqai --version
+   ```
+
+3. **Agent Execution Problems**:
+   - Ensure Claude CLI is properly installed and configured
+   - Check that prompt templates exist in `.brain/prompts/` directory
+   - Verify project has sufficient permissions for file analysis
+   - Review server logs for detailed error messages
+
+4. **Performance Issues**:
+   - Reduce context limits in planner settings
+   - Disable CodeQAI if running on resource-constrained systems
+   - Select fewer agents for faster execution
+
+**Problem**: Planner results are incomplete or inaccurate
+**Solutions**:
+- Provide more detailed feature descriptions
+- Enable CodeQAI for better contextual understanding
+- Ensure all required agents are selected
+- Verify project structure follows standard conventions
 
 
 ## License

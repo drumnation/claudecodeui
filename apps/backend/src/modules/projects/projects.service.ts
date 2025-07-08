@@ -66,6 +66,7 @@ export class ProjectsService {
       /singularity-core/,
       /claude-code-worktree/,
       /mind-control/,
+      /cc-ui/,
       // Common patterns with dashes
       /[a-z]+-[a-z]+/
     ];
@@ -95,6 +96,8 @@ export class ProjectsService {
         if (part === 'Users' || part === 'home' || part === 'var' || 
             part === 'opt' || part === 'Dev' || part === 'dev' ||
             part === 'Documents' || part === 'Desktop' || part === 'Downloads' ||
+            part === 'experiments' || part === 'projects' || part === 'src' ||
+            part === 'claudecodeui' || // Add the final directory as a known component
             /^[A-Z][a-z]*$/.test(part)) {
           // This looks like a path component
           if (current) {
@@ -256,10 +259,31 @@ export class ProjectsService {
             logger.warn('Project path does not exist', { 
               actualProjectPath, 
               encoded: entry.name,
+              decodedPath,
               error: error.message 
             });
-            // Skip this project if the path doesn't exist
-            continue;
+            
+            // If the decoded path doesn't exist, check if it's a cc-ui vs cc/ui issue
+            if (actualProjectPath.includes('/cc/ui/')) {
+              const correctedPath = actualProjectPath.replace('/cc/ui/', '/cc-ui/');
+              logger.info('Attempting path correction', { 
+                original: actualProjectPath, 
+                corrected: correctedPath 
+              });
+              
+              try {
+                await fs.access(correctedPath);
+                actualProjectPath = correctedPath;
+                canonicalRoot = await getCanonicalProjectRoot(correctedPath);
+                logger.info('Path correction successful');
+              } catch {
+                // Skip this project if the corrected path also doesn't exist
+                continue;
+              }
+            } else {
+              // Skip this project if the path doesn't exist
+              continue;
+            }
           }
           
           logger.info('Resolved project to canonical root', {

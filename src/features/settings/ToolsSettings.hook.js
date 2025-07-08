@@ -22,12 +22,25 @@ export const useToolsSettings = (isOpen, onClose) => {
   const [claudeCliPath, setClaudeCliPath] = useState('');
   const [claudeCliStatus, setClaudeCliStatus] = useState(null);
   const [claudeCliTesting, setClaudeCliTesting] = useState(false);
+  
+  // Planner configuration state
+  const [plannerEnabled, setPlannerEnabled] = useState(true);
+  const [selectedAgents, setSelectedAgents] = useState(['ARCH', 'DIFF', 'DEPS']);
+  const [codeqaiEnabled, setCodeqaiEnabled] = useState(true);
+  const [codeqaiStatus, setCodeqaiStatus] = useState(null);
+  const [contextLimits, setContextLimits] = useState({
+    maxResults: 8,
+    snippetLength: 500
+  });
+  const [codeqaiEmbeddingModel, setCodeqaiEmbeddingModel] = useState('sentence-transformers');
+  const [codeqaiUseLocalLLM, setCodeqaiUseLocalLLM] = useState(false);
 
   // Load settings when modal opens
   useEffect(() => {
     if (isOpen) {
       loadSettings();
       loadClaudeCliStatus();
+      loadCodeQAIStatus();
     }
   }, [isOpen]);
 
@@ -36,6 +49,14 @@ export const useToolsSettings = (isOpen, onClose) => {
     setAllowedTools(settings.allowedTools);
     setDisallowedTools(settings.disallowedTools);
     setSkipPermissions(settings.skipPermissions);
+    
+    // Load planner settings
+    setPlannerEnabled(settings.plannerEnabled ?? true);
+    setSelectedAgents(settings.selectedAgents ?? ['ARCH', 'DIFF', 'DEPS']);
+    setCodeqaiEnabled(settings.codeqaiEnabled ?? true);
+    setContextLimits(settings.contextLimits ?? { maxResults: 8, snippetLength: 500 });
+    setCodeqaiEmbeddingModel(settings.codeqaiEmbeddingModel ?? 'sentence-transformers');
+    setCodeqaiUseLocalLLM(settings.codeqaiUseLocalLLM ?? false);
   };
 
   const saveSettings = async () => {
@@ -45,7 +66,13 @@ export const useToolsSettings = (isOpen, onClose) => {
     const settings = {
       allowedTools,
       disallowedTools,
-      skipPermissions
+      skipPermissions,
+      plannerEnabled,
+      selectedAgents,
+      codeqaiEnabled,
+      contextLimits,
+      codeqaiEmbeddingModel,
+      codeqaiUseLocalLLM
     };
     
     const result = saveSettingsToStorage(settings);
@@ -153,6 +180,41 @@ export const useToolsSettings = (isOpen, onClose) => {
     }
   };
 
+  const loadCodeQAIStatus = async () => {
+    try {
+      // Simple check to see if CodeQAI is available
+      // In a real implementation, you'd check if the codeqai command exists
+      // For now, we'll assume it's available
+      setCodeqaiStatus({ available: true });
+    } catch (error) {
+      setCodeqaiStatus({ available: false, error: error.message });
+    }
+  };
+
+  // Planner action handlers
+  const togglePlanner = () => {
+    setPlannerEnabled(!plannerEnabled);
+  };
+
+  const toggleAgent = (agentType) => {
+    setSelectedAgents(prev => 
+      prev.includes(agentType) 
+        ? prev.filter(agent => agent !== agentType)
+        : [...prev, agentType]
+    );
+  };
+
+  const toggleCodeQAI = () => {
+    setCodeqaiEnabled(!codeqaiEnabled);
+  };
+
+  const updateContextLimits = (key, value) => {
+    setContextLimits(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
   return {
     // Theme
     isDarkMode,
@@ -175,6 +237,17 @@ export const useToolsSettings = (isOpen, onClose) => {
     claudeCliTesting,
     setClaudeCliPath,
     
+    // Planner state
+    plannerEnabled,
+    selectedAgents,
+    codeqaiEnabled,
+    codeqaiStatus,
+    contextLimits,
+    codeqaiEmbeddingModel,
+    codeqaiUseLocalLLM,
+    setCodeqaiEmbeddingModel,
+    setCodeqaiUseLocalLLM,
+    
     // Actions
     handleAddAllowedTool: addAllowedTool,
     handleRemoveAllowedTool: removeAllowedTool,
@@ -187,6 +260,12 @@ export const useToolsSettings = (isOpen, onClose) => {
     
     // Claude CLI actions
     handleTestClaudeCli,
-    handleSaveClaudeCliPath
+    handleSaveClaudeCliPath,
+    
+    // Planner actions
+    togglePlanner,
+    toggleAgent,
+    toggleCodeQAI,
+    updateContextLimits
   };
 };

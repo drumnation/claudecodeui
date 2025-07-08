@@ -7,7 +7,8 @@ import {
   Check, 
   X,
   MoreVertical,
-  GitBranch
+  GitBranch,
+  Brain
 } from 'lucide-react';
 import { SessionList } from '../SessionList';
 import * as S from './ProjectItem.styles';
@@ -23,7 +24,8 @@ const ProjectActionMenu = ({
   onStartEditing,
   onDeleteProject,
   onCreateWorktree,
-  onRemoveWorktree
+  onRemoveWorktree,
+  onPlanFeature
 }) => {
   if (!isOpen) return null;
 
@@ -46,6 +48,16 @@ const ProjectActionMenu = ({
           >
             <Edit3 className="w-5 h-5" />
             <span>Edit Project Name</span>
+          </S.MobileActionButton>
+          
+          <S.MobileActionButton
+            onClick={() => {
+              onPlanFeature(project);
+              onClose();
+            }}
+          >
+            <Brain className="w-5 h-5" />
+            <span>Plan Feature</span>
           </S.MobileActionButton>
           
           {!project.isWorktree && (
@@ -124,6 +136,7 @@ export const ProjectItemMobile = ({
   onLoadMoreSessions,
   onCreateWorktree,
   onRemoveWorktree,
+  onPlanFeature,
   setEditingName,
   setEditingSession,
   setEditingSessionName,
@@ -287,6 +300,7 @@ export const ProjectItemMobile = ({
         onDeleteProject={onDeleteProject}
         onCreateWorktree={onCreateWorktree}
         onRemoveWorktree={onRemoveWorktree}
+        onPlanFeature={onPlanFeature}
       />
     </S.ProjectContainer>
   );

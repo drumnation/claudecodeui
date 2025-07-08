@@ -8,6 +8,11 @@ import { handleClaudeWebSocketConnection } from './modules/claude-cli';
 import { handleGetProjectFiles } from './modules/files';
 import { handleShellWebSocketConnection } from './modules/shell';
 import { 
+  handlePlanFeature, 
+  handleGetPlannerStatus, 
+  handleAbortPlanning 
+} from './modules/planner';
+import { 
   handleGitStatus, 
   handleGitBranches, 
   handleGitDiff, 
@@ -22,7 +27,10 @@ import {
   handleDeleteTask,
   handleGetBoard,
   handleGenerateTasks,
-  handleReviewTasks
+  handleReviewTasks,
+  handleBacklogHealth,
+  handleBacklogInstall,
+  handleBacklogInstallInstructions
 } from './backlog.controller';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -344,6 +352,11 @@ app.post('/api/git/commit', handleGitCommit);
 app.post('/api/git/checkout', handleGitCheckout);
 app.post('/api/git/create-branch', handleGitCreateBranch);
 
+// Planner routes
+app.post('/api/planner/plan', handlePlanFeature);
+app.get('/api/planner/status/:sessionId', handleGetPlannerStatus);
+app.post('/api/planner/abort/:sessionId', handleAbortPlanning);
+
 // Backlog routes
 app.get('/api/projects/:projectName/backlog', handleGetBacklog);
 app.post('/api/projects/:projectName/backlog/tasks', handleCreateTask);
@@ -352,6 +365,11 @@ app.delete('/api/projects/:projectName/backlog/tasks/:taskId', handleDeleteTask)
 app.get('/api/projects/:projectName/backlog/board', handleGetBoard);
 app.post('/api/projects/:projectName/backlog/plan', handleGenerateTasks);
 app.post('/api/projects/:projectName/backlog/review', handleReviewTasks);
+
+// Backlog system routes
+app.get('/api/backlog/health', handleBacklogHealth);
+app.post('/api/backlog/install', handleBacklogInstall);
+app.get('/api/backlog/install-instructions', handleBacklogInstallInstructions);
 
 // File routes
 app.get('/api/files', (req, res) => {

@@ -38,31 +38,20 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
   // Define fetchFileDiff first since it's used by fetchGitStatus
   const fetchFileDiff = useCallback(async (filePath) => {
     if (!selectedProject || !filePath) {
-      console.log('🚫 Skipping fetchFileDiff - no project or filepath');
       return;
     }
     
     try {
-      // Use the project name directly
-      console.log('🔍 Fetching diff for file:', filePath);
-      console.log('🔍 Project name:', selectedProject?.name);
       const diff = await gitApi.fetchFileDiff(selectedProject.name, filePath);
-      console.log('📦 Diff response:', diff ? 'received' : 'empty');
       
       if (diff) {
-        setGitDiff(prev => {
-          const newDiffs = {
-            ...prev,
-            [filePath]: diff
-          };
-          console.log('📋 Updated gitDiff state:', newDiffs);
-          return newDiffs;
-        });
-      } else {
-        console.warn('⚠️ No diff returned for file:', filePath);
+        setGitDiff(prev => ({
+          ...prev,
+          [filePath]: diff
+        }));
       }
     } catch (error) {
-      console.error('❌ Error fetching file diff:', error);
+      console.error('Error fetching file diff:', error);
     }
   }, [selectedProject?.name]);
 
@@ -73,16 +62,11 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
     setIsLoading(true);
     setError(null);
     try {
-      // Use the project name directly
-      console.log('🔍 Fetching git status for project:', selectedProject.name);
-      console.log('🔍 Original path:', selectedProject.fullPath);
-      
       const data = await gitApi.fetchStatus(selectedProject.name);
-      console.log('📦 Git status response:', data);
       
       if (data) {
         if (data.error) {
-          console.error('❌ Git status error:', data.error);
+          console.error('Git status error:', data.error);
           setError(data.error);
           setGitStatus(null);
         } else {
@@ -91,7 +75,6 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
           
           // Check if we got the new format with 'staged' instead of separate arrays
           if (data.staged !== undefined && !data.modified && !data.added && !data.deleted) {
-            console.log('⚠️ Detected new API format, normalizing...');
             normalizedData = {
               branch: data.branch,
               modified: [],
@@ -121,13 +104,6 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
               });
             }
           }
-          
-          console.log('✅ Setting git status with files:', {
-            modified: normalizedData.modified?.length || 0,
-            added: normalizedData.added?.length || 0,
-            deleted: normalizedData.deleted?.length || 0,
-            untracked: normalizedData.untracked?.length || 0
-          });
           setGitStatus(normalizedData);
           setCurrentBranch(normalizedData.branch || 'main');
           
@@ -145,12 +121,33 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
           ]);
           setSelectedFiles(allFiles);
           
-          // Fetch diffs for changed files
-          const filesToFetch = [...(data.modified || []), ...(data.added || [])];
-          for (const file of filesToFetch) {
-            if (file && selectedProject) {
-              fetchFileDiff(file);
-            }
+          // Fetch diffs for changed files in batch
+          const filesToFetch = [...(normalizedData.modified || []), ...(normalizedData.added || [])];
+          if (filesToFetch.length > 0) {
+            // Fetch all diffs in parallel and update state once
+            Promise.all(
+              filesToFetch.map(async (file) => {
+                if (!file) return null;
+                try {
+                  const diff = await gitApi.fetchFileDiff(selectedProject.name, file);
+                  return { file, diff };
+                } catch (error) {
+                  console.error('Error fetching diff for file:', file, error);
+                  return null;
+                }
+              })
+            ).then(results => {
+              const validResults = results.filter(r => r && r.diff);
+              if (validResults.length > 0) {
+                setGitDiff(prev => {
+                  const newDiffs = { ...prev };
+                  validResults.forEach(({ file, diff }) => {
+                    newDiffs[file] = diff;
+                  });
+                  return newDiffs;
+                });
+              }
+            });
           }
         }
       } else {
@@ -311,17 +308,22 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
   
   // Effects - Now all callbacks are defined above
   useEffect(() => {
-    if (selectedProject) {
-      // Only fetch if we don't have external git status
-      if (!externalGitStatus) {
-        fetchGitStatus();
-      }
-      fetchBranches();
-      if (activeView === 'history') {
-        fetchRecentCommits();
-      }
+    if (selectedProject && !externalGitStatus) {
+      fetchGitStatus();
     }
-  }, [selectedProject?.name, activeView, externalGitStatus]); // Only depend on project name, not the whole object
+  }, [selectedProject?.name]); // Only fetch git status when project changes
+  
+  useEffect(() => {
+    if (selectedProject) {
+      fetchBranches();
+    }
+  }, [selectedProject?.name]);
+  
+  useEffect(() => {
+    if (selectedProject && activeView === 'history') {
+      fetchRecentCommits();
+    }
+  }, [selectedProject?.name, activeView]);
 
   // Update internal state when external git status changes
   useEffect(() => {
