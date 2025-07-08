@@ -204,21 +204,6 @@ export const useGitPanel = (selectedProject) => {
     }
   };
 
-  const fetchFileDiff = async (filePath) => {
-    try {
-      const projectName = encodeProjectPath(selectedProject.fullPath);
-      const diff = await gitApi.fetchFileDiff(projectName, filePath);
-      
-      if (diff) {
-        setGitDiff(prev => ({
-          ...prev,
-          [filePath]: diff
-        }));
-      }
-    } catch (error) {
-      console.error('Error fetching file diff:', error);
-    }
-  };
 
   const fetchRecentCommits = async () => {
     try {
@@ -319,16 +304,24 @@ export const useGitPanel = (selectedProject) => {
       const projectName = '-' + encodedPath;
       
       console.log('🔍 Fetching diff for file:', filePath);
+      console.log('🔍 Project name:', projectName);
       const diff = await gitApi.fetchFileDiff(projectName, filePath);
+      console.log('📦 Diff response:', diff);
       
       if (diff) {
-        setGitDiff(prev => ({
-          ...prev,
-          [filePath]: diff
-        }));
+        setGitDiff(prev => {
+          const newDiffs = {
+            ...prev,
+            [filePath]: diff
+          };
+          console.log('📋 Updated gitDiff state:', newDiffs);
+          return newDiffs;
+        });
+      } else {
+        console.warn('⚠️ No diff returned for file:', filePath);
       }
     } catch (error) {
-      console.error('Error fetching file diff:', error);
+      console.error('❌ Error fetching file diff:', error);
     }
   };
 

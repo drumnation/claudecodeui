@@ -65,24 +65,32 @@ export const FileItem = ({
           </StatusBadge>
         </FileItemContent>
       </FileItemHeader>
-      {isExpanded && diff && (
+      {isExpanded && (
         <DiffContainer>
-          {isMobile && (
-            <DiffControls>
-              <WrapToggleButton
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleWrapText();
-                }}
-                title={wrapText ? "Switch to horizontal scroll" : "Switch to text wrap"}
-              >
-                {wrapText ? '↔️ Scroll' : '↩️ Wrap'}
-              </WrapToggleButton>
-            </DiffControls>
+          {!diff ? (
+            <DiffContent>
+              <DiffLine>Loading diff...</DiffLine>
+            </DiffContent>
+          ) : (
+            <>
+              {isMobile && (
+                <DiffControls>
+                  <WrapToggleButton
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleWrapText();
+                    }}
+                    title={wrapText ? "Switch to horizontal scroll" : "Switch to text wrap"}
+                  >
+                    {wrapText ? '↔️ Scroll' : '↩️ Wrap'}
+                  </WrapToggleButton>
+                </DiffControls>
+              )}
+              <DiffContent>
+                {diff.split('\n').map((line, index) => renderDiffLine(line, index))}
+              </DiffContent>
+            </>
           )}
-          <DiffContent>
-            {diff.split('\n').map((line, index) => renderDiffLine(line, index))}
-          </DiffContent>
         </DiffContainer>
       )}
     </FileItemContainer>

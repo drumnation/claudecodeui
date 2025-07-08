@@ -323,4 +323,4 @@ process.on('SIGINT', () => {
     logger.info('Server closed');
     process.exit(0);
   });
-});
+});// Test comment
