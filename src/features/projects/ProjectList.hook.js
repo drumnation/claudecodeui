@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useConfirmation } from '@/hooks/useConfirmation';
 import { gitApi } from '@/features/git/GitPanel.logic';
+import { createLogger } from '@kit/logger/browser';
+
+const logger = createLogger({ scope: 'ProjectList.hook' });
 
 export const useProjectList = ({
   projects,
@@ -17,7 +20,12 @@ export const useProjectList = ({
 }) => {
   const [expandedProjects, setExpandedProjects] = useState(new Set());
   const [editingProject, setEditingProject] = useState(null);
-  const [showNewProject, setShowNewProject] = useState(false);
+  const [showNewProject, setShowNewProjectState] = useState(false);
+  
+  const setShowNewProject = (value) => {
+    logger.debug('setShowNewProject called', { value, stack: new Error().stack });
+    setShowNewProjectState(value);
+  };
   const [editingName, setEditingName] = useState('');
   const [newProjectPath, setNewProjectPath] = useState('');
   const [creatingProject, setCreatingProject] = useState(false);
@@ -55,6 +63,7 @@ export const useProjectList = ({
     return (e) => {
       e.preventDefault();
       e.stopPropagation();
+      logger.debug('handleTouchClick called');
       callback();
     };
   };
@@ -311,6 +320,7 @@ export const useProjectList = ({
 
       if (response.ok) {
         const result = await response.json();
+        logger.debug('Closing new project modal after successful creation');
         setShowNewProject(false);
         setNewProjectPath('');
         
@@ -351,6 +361,7 @@ export const useProjectList = ({
   };
 
   const cancelNewProject = () => {
+    logger.debug('cancelNewProject called');
     setShowNewProject(false);
     setNewProjectPath('');
   };

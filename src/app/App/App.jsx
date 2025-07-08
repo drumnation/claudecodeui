@@ -94,6 +94,10 @@ export const App = () => {
                 e.stopPropagation();
                 setSidebarOpen(false);
               }}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
             />
             <S.MobileSidebarContent 
               $isOpen={sidebarOpen}
@@ -129,7 +133,9 @@ export const App = () => {
             messages={messages}
             connectionHealth={connectionHealth}
             isMobile={isMobile}
-            onMenuClick={() => setSidebarOpen(true)}
+            onMenuClick={() => {
+              setSidebarOpen(true);
+            }}
             isLoading={isLoadingProjects}
             onInputFocusChange={setIsInputFocused}
             onSessionActive={markSessionAsActive}

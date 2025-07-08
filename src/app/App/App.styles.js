@@ -17,7 +17,7 @@ export const SidebarContent = styled.div`
 
 // Mobile sidebar overlay
 export const MobileSidebarOverlay = styled.div`
-  ${tw`fixed inset-0 z-50 flex transition-all duration-150 ease-out`}
+  ${tw`fixed inset-0 z-[60] flex transition-all duration-150 ease-out`}
   ${({ $isOpen }) => $isOpen 
     ? tw`opacity-100 visible` 
     : tw`opacity-0 invisible`}

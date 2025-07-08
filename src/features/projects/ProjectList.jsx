@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLogger } from '@kit/logger/react';
 import { useProjectList } from './ProjectList.hook';
 import { formatTimeAgo } from './ProjectList.logic';
 import { ScrollArea } from '@/shared-components/ScrollArea/ScrollArea';
@@ -31,6 +32,7 @@ export const ProjectList = ({
   onRefresh,
   onShowSettings
 }) => {
+  const logger = useLogger({ component: 'ProjectList' });
   const {
     expandedProjects,
     editingProject,
@@ -152,7 +154,16 @@ export const ProjectList = ({
               <RefreshCw className={`w-4 h-4 text-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
             </S.RefreshButton>
             <S.NewProjectButton
-              onClick={() => setShowNewProject(true)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                logger.debug('New Project button clicked');
+                setShowNewProject(true);
+              }}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
             >
               <FolderPlus className="w-4 h-4" />
             </S.NewProjectButton>

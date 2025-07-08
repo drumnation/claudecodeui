@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLogger } from '@kit/logger/react';
 import { Input } from '@/shared-components/Input/Input';
 import { Button } from '@/shared-components/Button/Button';
 import { FolderPlus, X, FolderOpen, Edit3 } from 'lucide-react';
@@ -12,7 +13,15 @@ export const NewProjectModal = ({
   onCreateProject,
   onCancel
 }) => {
+  const logger = useLogger({ component: 'NewProjectModal' });
   const [useBrowser, setUseBrowser] = useState(false);
+
+  React.useEffect(() => {
+    logger.debug('Modal opened');
+    return () => {
+      logger.debug('Modal closed');
+    };
+  }, []);
 
   const handlePathSelect = (path) => {
     setNewProjectPath(path);
@@ -93,8 +102,17 @@ export const NewProjectModal = ({
       </S.DesktopForm>
       
       {/* Mobile Form - Simple Overlay */}
-      <S.MobileOverlay>
-        <S.MobileModal>
+      <S.MobileOverlay
+        onClick={(e) => {
+          e.stopPropagation();
+          onCancel();
+        }}
+      >
+        <S.MobileModal
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+        >
           <S.MobileHeader>
             <S.MobileHeaderContent>
               <S.MobileIconWrapper>
@@ -105,7 +123,16 @@ export const NewProjectModal = ({
               </div>
             </S.MobileHeaderContent>
             <S.MobileCloseButton
-              onClick={onCancel}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                logger.debug('Close button clicked');
+                onCancel();
+              }}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
               disabled={creatingProject}
             >
               <X className="w-3 h-3" />
@@ -148,8 +175,14 @@ export const NewProjectModal = ({
                 className="text-sm h-10 rounded-md focus:border-primary transition-colors"
                 autoFocus
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') onCreateProject();
-                  if (e.key === 'Escape') onCancel();
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    onCreateProject();
+                  }
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    onCancel();
+                  }
                 }}
               />
             )}

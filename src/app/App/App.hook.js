@@ -388,6 +388,12 @@ export const useApp = () => {
     localStorage.setItem('autoScrollToBottom', JSON.stringify(value));
   }, []);
 
+  // Wrap setSidebarOpen with logging
+  const setSidebarOpenWithLogging = useCallback((value) => {
+    logger.debug('setSidebarOpen called', { value, from: new Error().stack });
+    setSidebarOpen(value);
+  }, []);
+
   return {
     // State
     projects,
@@ -414,7 +420,7 @@ export const useApp = () => {
     
     // Setters
     setActiveTab,
-    setSidebarOpen,
+    setSidebarOpen: setSidebarOpenWithLogging,
     setIsInputFocused,
     setShowToolsSettings,
     setShowQuickSettings,
