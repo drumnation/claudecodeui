@@ -1,6 +1,7 @@
 import React from 'react';
 import { Globe, RefreshCw, AlertCircle } from 'lucide-react';
 import { Button } from '@/shared-components/Button';
+import { getDevServerUrl } from '@/utils/url';
 import {
   PreviewContainer,
   StyledIframe,
@@ -60,7 +61,7 @@ export const PreviewFrame = ({
         <StyledIframe
           key={iframeKey}
           ref={iframeRef}
-          src={url || serverUrl || 'http://localhost:8766'}
+          src={url || serverUrl || getDevServerUrl()}
           onLoad={onIframeLoad}
           onError={onIframeError}
           sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-downloads"

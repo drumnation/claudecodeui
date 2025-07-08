@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { getDevServerUrl } from '@/utils/url';
 
 export const useLivePreviewPanel = ({
   serverUrl,
@@ -7,7 +8,7 @@ export const useLivePreviewPanel = ({
   onScriptSelect,
   onClearLogs
 }) => {
-  const [url, setUrl] = useState('http://localhost:8766');
+  const [url, setUrl] = useState(() => getDevServerUrl());
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -23,7 +24,7 @@ export const useLivePreviewPanel = ({
       setUrl(serverUrl);
       setError(null);
     } else if (isCurrentProjectServer && serverStatus === 'stopped') {
-      setUrl('http://localhost:8766');
+      setUrl(getDevServerUrl());
       setError(null);
     }
   }, [serverUrl, isCurrentProjectServer, serverStatus]);
@@ -99,7 +100,7 @@ export const useLivePreviewPanel = ({
 
   const showDevServerAnywayHandler = () => {
     setShowDevServerAnyway(true);
-    setUrl('http://localhost:8766');
+    setUrl(getDevServerUrl());
     setIframeKey(prev => prev + 1);
   };
 

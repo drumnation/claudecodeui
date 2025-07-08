@@ -61,6 +61,8 @@ export const ChatInterface = memo(({
     isInputFocused,
     setIsInputFocused,
     isLoadingSessionMessages,
+    isStreaming,
+    isSessionTransitioning,
     textareaExpanded,
     setTextareaExpanded,
     showFileDropdown,
@@ -243,6 +245,8 @@ export const ChatInterface = memo(({
           createDiff={createDiff}
           scrollContainerRef={scrollContainerRef}
           messagesEndRef={messagesEndRef}
+          isStreaming={isStreaming}
+          isSessionTransitioning={isSessionTransitioning}
         />
 
         <InputArea

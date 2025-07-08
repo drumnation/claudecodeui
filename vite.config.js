@@ -11,6 +11,15 @@ const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(file
 export default defineConfig(async () => {
   const { consoleForwardPlugin } = await import('vite-console-forward-plugin');
   
+  // Enhanced ngrok detection and configuration
+  const isNgrokMode = process.env.NGROK_URL || process.env.NODE_ENV === 'ngrok';
+  const ngrokHost = process.env.NGROK_URL ? new URL(process.env.NGROK_URL).hostname : null;
+  
+  console.log('🔧 Vite HMR Configuration:');
+  console.log(`   - NGROK_URL: ${process.env.NGROK_URL || 'Not set'}`);
+  console.log(`   - Detected ngrok mode: ${isNgrokMode}`);
+  console.log(`   - Ngrok host: ${ngrokHost || 'N/A'}`);
+  
   return {
   resolve: {
     alias: {
@@ -39,12 +48,13 @@ export default defineConfig(async () => {
   server: {
     port: process.env.VITE_PORT || 8766,
     strictPort: true,
-    host: true,
+    host: '0.0.0.0', // Listen on all interfaces for ngrok
     hmr: {
       // Use different HMR settings based on whether ngrok is being used
-      ...(process.env.NGROK_URL ? {
+      ...(isNgrokMode ? {
         clientPort: 443,
-        protocol: 'wss'
+        protocol: 'wss',
+        host: ngrokHost || 'localhost'
       } : {
         // For local development, use the same port as the dev server
         port: process.env.VITE_PORT || 8766,
@@ -56,17 +66,25 @@ export default defineConfig(async () => {
       usePolling: true,
       interval: 100
     },
-    allowedHosts: ['localhost', '.ngrok.app', '.ngrok-free.app', '.ngrok.io', 'claude-code.ngrok.io'],
+    allowedHosts: 'all', // Allow all hosts for ngrok
+    cors: true, // Enable CORS for mobile access
     proxy: {
-      '/api': `http://localhost:${process.env.VITE_API_PORT || 8765}`,
+      '/api': {
+        target: `http://localhost:${process.env.VITE_API_PORT || 8765}`,
+        changeOrigin: true,
+        secure: false
+      },
       '/ws': {
         target: `ws://localhost:${process.env.VITE_API_PORT || 8765}`,
-        ws: true
+        ws: true,
+        changeOrigin: true,
+        secure: false
       },
       '/shell': {
         target: `ws://localhost:${process.env.VITE_API_PORT || 8765}`,
         ws: true,
-        changeOrigin: true
+        changeOrigin: true,
+        secure: false
       }
     }
   },

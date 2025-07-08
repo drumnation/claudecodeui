@@ -36,7 +36,9 @@ const MessagesArea = ({
   showRawParameters = false,
   createDiff = () => {},
   scrollContainerRef,
-  messagesEndRef
+  messagesEndRef,
+  isStreaming = false,
+  isSessionTransitioning = false
 }) => {
   const { handleSmoothScroll } = useMessagesArea({
     scrollContainerRef,
@@ -112,7 +114,7 @@ const MessagesArea = ({
   
   return (
     <MessagesContainer ref={scrollContainerRef}>
-      {chatMessages.length === 0 ? renderEmptyState() : renderMessages()}
+      {(chatMessages.length === 0 && !isLoadingSessionMessages && !isStreaming && !isSessionTransitioning) ? renderEmptyState() : renderMessages()}
       
       <MessagesEndAnchor ref={messagesEndRef} />
       
@@ -157,7 +159,9 @@ MessagesArea.propTypes = {
   messagesEndRef: PropTypes.oneOfType([
     PropTypes.func,
     PropTypes.shape({ current: PropTypes.any })
-  ]).isRequired
+  ]).isRequired,
+  isStreaming: PropTypes.bool,
+  isSessionTransitioning: PropTypes.bool
 };
 
 export default memo(MessagesArea);

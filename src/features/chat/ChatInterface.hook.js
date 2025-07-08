@@ -33,6 +33,8 @@ export const useChatInterface = ({
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingSessionMessages, setIsLoadingSessionMessages] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [isSessionTransitioning, setIsSessionTransitioning] = useState(false);
   
   // Session management
   const [currentSessionId, setCurrentSessionId] = useState(selectedSession?.id || null);
@@ -125,15 +127,17 @@ export const useChatInterface = ({
         if (!isSystemSessionChange) {
           const messages = await loadSessionMessagesCallback(selectedProject.name, selectedSession.id);
           setSessionMessages(messages);
+          setIsSessionTransitioning(false);
           if (autoScrollToBottom) {
             setTimeout(() => scrollToBottom(), 200);
           }
         } else {
           setIsSystemSessionChange(false);
+          setIsSessionTransitioning(false);
         }
       } else {
-        // Only clear messages if we're not loading and there are no pending messages
-        if (!isLoading && messageQueue.length === 0) {
+        // Only clear messages if we're not loading, no pending messages, and not streaming
+        if (!isLoading && messageQueue.length === 0 && !isStreaming) {
           setChatMessages([]);
         }
         setSessionMessages([]);
@@ -176,8 +180,10 @@ export const useChatInterface = ({
         return allMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
       });
     } else if (!selectedSession) {
-      // Clear messages when no session is selected
-      setChatMessages([]);
+      // Clear messages when no session is selected, but not during streaming or session transitions
+      if (!isStreaming && !isSessionTransitioning) {
+        setChatMessages([]);
+      }
     }
   }, [selectedSession, sessionMessages, isSystemSessionChange]);
   
@@ -280,7 +286,15 @@ export const useChatInterface = ({
               newSession: latestMessage.data.session_id
             });
             
+            // Check if currently streaming - defer session change if needed
+            if (isStreaming) {
+              console.log('🔄 Deferring session change - Claude is currently streaming');
+              // Could implement a pending session change queue here if needed
+              return;
+            }
+            
             setIsSystemSessionChange(true);
+            setIsSessionTransitioning(true);
             
             if (onNavigateToSession) {
               onNavigateToSession(latestMessage.data.session_id);
@@ -298,7 +312,15 @@ export const useChatInterface = ({
               newSession: latestMessage.data.session_id
             });
             
+            // Check if currently streaming - defer session change if needed
+            if (isStreaming) {
+              console.log('🔄 Deferring session change - Claude is currently streaming');
+              // Could implement a pending session change queue here if needed
+              return;
+            }
+            
             setIsSystemSessionChange(true);
+            setIsSessionTransitioning(true);
             
             if (onNavigateToSession) {
               onNavigateToSession(latestMessage.data.session_id);
@@ -315,6 +337,9 @@ export const useChatInterface = ({
             console.log('🔄 System init message for current session, ignoring');
             return;
           }
+          
+          // Set streaming state when receiving claude-response
+          setIsStreaming(true);
           
           // Handle different types of content in the response
           if (Array.isArray(messageData.content)) {
@@ -395,6 +420,10 @@ export const useChatInterface = ({
           break;
           
         case 'claude-complete':
+          // Claude has finished processing - no longer streaming
+          setIsStreaming(false);
+          setIsSessionTransitioning(false);
+          
           // Check if there are queued messages
           if (messageQueue.length > 0) {
             // Process the next message in queue
@@ -441,6 +470,8 @@ export const useChatInterface = ({
           setIsLoading(false);
           setCanAbortSession(false);
           setClaudeStatus(null);
+          setIsStreaming(false);
+          setIsSessionTransitioning(false);
           
           // Clear the message queue since session was aborted
           setMessageQueue([]);
@@ -506,11 +537,16 @@ export const useChatInterface = ({
             setClaudeStatus(statusInfo);
             setIsLoading(true);
             setCanAbortSession(statusInfo.can_interrupt);
+            setIsStreaming(true);
           }
           break;
           
         case 'stream-end':
-          // Stream has ended, check if there are queued messages
+          // Stream has ended - no longer streaming
+          setIsStreaming(false);
+          setIsSessionTransitioning(false);
+          
+          // Check if there are queued messages
           if (messageQueue.length > 0) {
             // Process the next message in queue
             const nextMessage = messageQueue[0];
@@ -684,6 +720,14 @@ export const useChatInterface = ({
     }
   }, [handleScroll]);
   
+  // Effect: Cleanup streaming state on component unmount or project change
+  useEffect(() => {
+    return () => {
+      setIsStreaming(false);
+      setIsSessionTransitioning(false);
+    };
+  }, [selectedProject?.name]);
+  
   // Effect: Initial textarea setup
   useEffect(() => {
     if (textareaRef.current) {
@@ -734,6 +778,10 @@ export const useChatInterface = ({
     isLoadingSessionMessages,
     isSystemSessionChange,
     setIsSystemSessionChange,
+    isStreaming,
+    setIsStreaming,
+    isSessionTransitioning,
+    setIsSessionTransitioning,
     textareaExpanded,
     setTextareaExpanded,
     showFileDropdown,

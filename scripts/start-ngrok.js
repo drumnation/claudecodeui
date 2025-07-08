@@ -1,5 +1,7 @@
 const { exec } = require('child_process');
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 
 const NGROK_API_URL = 'http://localhost:4040/api/tunnels';
 const MAX_RETRIES = 10;
@@ -33,6 +35,33 @@ async function getNgrokUrl() {
   throw new Error('Failed to get ngrok URL after ' + MAX_RETRIES + ' attempts');
 }
 
+async function writeNgrokUrlToEnv(url) {
+  const envLocalPath = path.join(__dirname, '..', '.env.local');
+  const envContent = `NGROK_URL=${url}\n`;
+  
+  try {
+    // Check if .env.local exists and read its content
+    let existingContent = '';
+    if (fs.existsSync(envLocalPath)) {
+      existingContent = fs.readFileSync(envLocalPath, 'utf8');
+    }
+    
+    // Remove any existing NGROK_URL entry
+    const lines = existingContent.split('\n').filter(line => !line.startsWith('NGROK_URL='));
+    
+    // Add the new NGROK_URL
+    lines.push(`NGROK_URL=${url}`);
+    
+    // Write back to file
+    fs.writeFileSync(envLocalPath, lines.join('\n'));
+    console.log('✅ NGROK_URL written to .env.local');
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to write NGROK_URL to .env.local:', error.message);
+    return false;
+  }
+}
+
 // Kill any existing ngrok processes first
 exec('pkill -f ngrok', (error) => {
   // Ignore errors from pkill if no process exists
@@ -61,13 +90,25 @@ exec('pkill -f ngrok', (error) => {
 setTimeout(async () => {
   try {
     const url = await getNgrokUrl();
+    
+    // Write the URL to .env.local for Vite to pick up
+    await writeNgrokUrlToEnv(url);
+    
     console.log('\n' + '='.repeat(60));
     console.log('🌐 NGROK TUNNEL IS READY!');
     console.log('📱 Access your app at: ' + url);
+    console.log('📂 NGROK_URL set in .env.local');
+    console.log('🚀 Now run: npm run client:dev');
+    console.log('   or use: npm run dev:ngrok (if available)');
     console.log('='.repeat(60) + '\n');
+    
+    // Set environment variable for current process
+    process.env.NGROK_URL = url;
+    
   } catch (error) {
-    console.error('Failed to get ngrok URL:', error.message);
+    console.error('❌ Failed to get ngrok URL:', error.message);
     console.log('Check ngrok dashboard at: http://localhost:4040');
+    console.log('Make sure ngrok is installed and accessible in PATH');
   }
 }, 2000);
 

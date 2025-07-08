@@ -252,7 +252,7 @@ export class ProjectsService {
           try {
             await fs.access(actualProjectPath);
             canonicalRoot = await getCanonicalProjectRoot(actualProjectPath);
-          } catch (error) {
+          } catch (error: any) {
             logger.warn('Project path does not exist', { 
               actualProjectPath, 
               encoded: entry.name,
