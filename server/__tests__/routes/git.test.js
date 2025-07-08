@@ -34,13 +34,22 @@ describe('git routes', () => {
     app.use(express.json());
     app.use('/api/git', gitRouter);
 
-    // Default mock for getProjects
-    getProjects.mockResolvedValue({
-      '/test/project': {
+    // Default mock for getProjects - return array format
+    getProjects.mockResolvedValue([
+      {
+        name: 'Users-dmieloch-Dev-experiments-cc-ui-claudecodeui',
+        fullPath: '/Users/dmieloch/Dev/experiments/cc-ui/claudecodeui',
+        displayName: 'claudecodeui'
+      },
+      {
         name: 'test-project',
-        path: '/test/project'
+        fullPath: '/test/project',
+        displayName: 'test-project'
       }
-    });
+    ]);
+
+    // Mock fs.promises.access to simulate existing directories
+    fsPromises.access = vi.fn().mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -50,7 +59,9 @@ describe('git routes', () => {
   describe('GET /api/git/status', () => {
     it('should return git status for a project', async () => {
       exec.mockImplementation((cmd, opts, cb) => {
-        if (cmd.includes('git status --porcelain')) {
+        if (cmd.includes('git rev-parse --git-dir')) {
+          cb(null, '.git');
+        } else if (cmd.includes('git status --porcelain')) {
           cb(null, 'M  src/index.js\n?? newfile.txt\n');
         } else if (cmd.includes('git rev-parse --abbrev-ref HEAD')) {
           cb(null, 'main\n');
@@ -58,16 +69,81 @@ describe('git routes', () => {
       });
 
       const res = await request(app)
-        .get('/api/git/status?project=/test/project');
+        .get('/api/git/status?project=test-project');
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({
         branch: 'main',
-        files: [
-          { path: 'src/index.js', status: 'M', type: 'modified' },
-          { path: 'newfile.txt', status: '??', type: 'untracked' }
-        ]
+        modified: ['src/index.js'],
+        added: [],
+        deleted: [],
+        untracked: ['newfile.txt']
       });
+    });
+
+    it('should handle project name with leading dash (frontend format)', async () => {
+      exec.mockImplementation((cmd, opts, cb) => {
+        if (cmd.includes('git rev-parse --git-dir')) {
+          cb(null, '.git');
+        } else if (cmd.includes('git status --porcelain')) {
+          cb(null, 'M  src/index.js\n');
+        } else if (cmd.includes('git rev-parse --abbrev-ref HEAD')) {
+          cb(null, 'main\n');
+        }
+      });
+
+      const res = await request(app)
+        .get('/api/git/status?project=-Users-dmieloch-Dev-experiments-cc-ui-claudecodeui');
+
+      expect(res.status).toBe(200);
+      expect(res.body.branch).toBe('main');
+      expect(res.body.modified).toContain('src/index.js');
+    });
+
+    it('should handle real workspace paths', async () => {
+      exec.mockImplementation((cmd, opts, cb) => {
+        if (cmd.includes('git rev-parse --git-dir')) {
+          cb(null, '.git');
+        } else if (cmd.includes('git status --porcelain')) {
+          cb(null, 'M  README.md\n');
+        } else if (cmd.includes('git rev-parse --abbrev-ref HEAD')) {
+          cb(null, 'main\n');
+        }
+      });
+
+      const res = await request(app)
+        .get('/api/git/status?project=Users-dmieloch-Dev-experiments-cc-ui-claudecodeui');
+
+      expect(res.status).toBe(200);
+      expect(res.body.branch).toBe('main');
+      expect(res.body.modified).toContain('README.md');
+    });
+
+    it('should handle case sensitivity variations', async () => {
+      // Mock projects with different case
+      getProjects.mockResolvedValue([
+        {
+          name: 'Users-dmieloch-dev-experiments-cc-ui-claudecodeui',
+          fullPath: '/Users/dmieloch/dev/experiments/cc-ui/claudecodeui',
+          displayName: 'claudecodeui'
+        }
+      ]);
+
+      exec.mockImplementation((cmd, opts, cb) => {
+        if (cmd.includes('git rev-parse --git-dir')) {
+          cb(null, '.git');
+        } else if (cmd.includes('git status --porcelain')) {
+          cb(null, '');
+        } else if (cmd.includes('git rev-parse --abbrev-ref HEAD')) {
+          cb(null, 'main\n');
+        }
+      });
+
+      // Test with uppercase Dev
+      const res = await request(app)
+        .get('/api/git/status?project=Users-dmieloch-Dev-experiments-cc-ui-claudecodeui');
+
+      expect(res.status).toBe(200);
     });
 
     it('should handle staged files correctly', async () => {
@@ -92,22 +168,77 @@ describe('git routes', () => {
     });
 
     it('should handle project not found', async () => {
-      getProjects.mockResolvedValue({});
+      getProjects.mockResolvedValue([]);
+      
+      // Mock fs.access to fail
+      fsPromises.access = vi.fn().mockRejectedValue(new Error('ENOENT'));
 
       const res = await request(app)
-        .get('/api/git/status?project=/nonexistent');
+        .get('/api/git/status?project=nonexistent-project');
 
-      expect(res.status).toBe(404);
-      expect(res.body.error).toBe('Project not found');
+      expect(res.status).toBe(200);
+      expect(res.body.error).toContain('Project directory not found');
     });
 
-    it('should handle git command errors', async () => {
+    it('should handle not a git repository error', async () => {
       exec.mockImplementation((cmd, opts, cb) => {
-        cb(new Error('Not a git repository'));
+        if (cmd.includes('git rev-parse --git-dir')) {
+          cb(new Error('fatal: not a git repository'));
+        }
       });
 
       const res = await request(app)
-        .get('/api/git/status?project=/test/project');
+        .get('/api/git/status?project=test-project');
+
+      expect(res.status).toBe(200);
+      expect(res.body.error).toContain('Not a git repository');
+      expect(res.body.error).toContain('Initialize with');
+    });
+
+    it('should handle malformed project parameter', async () => {
+      const res = await request(app)
+        .get('/api/git/status?project=');
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Project name is required');
+    });
+
+    it('should handle special characters in project names', async () => {
+      getProjects.mockResolvedValue([
+        {
+          name: 'user-project-with-special-chars',
+          fullPath: '/Users/name with spaces/project',
+          displayName: 'project'
+        }
+      ]);
+
+      exec.mockImplementation((cmd, opts, cb) => {
+        if (cmd.includes('git rev-parse --git-dir')) {
+          cb(null, '.git');
+        } else if (cmd.includes('git status --porcelain')) {
+          cb(null, '');
+        } else if (cmd.includes('git rev-parse --abbrev-ref HEAD')) {
+          cb(null, 'main\n');
+        }
+      });
+
+      const res = await request(app)
+        .get('/api/git/status?project=user-project-with-special-chars');
+
+      expect(res.status).toBe(200);
+    });
+
+    it('should handle git command errors gracefully', async () => {
+      exec.mockImplementation((cmd, opts, cb) => {
+        if (cmd.includes('git rev-parse --git-dir')) {
+          cb(null, '.git');
+        } else if (cmd.includes('git status --porcelain')) {
+          cb(new Error('fatal: bad revision'));
+        }
+      });
+
+      const res = await request(app)
+        .get('/api/git/status?project=test-project');
 
       expect(res.status).toBe(500);
       expect(res.body.error).toContain('Git operation failed');

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Folder, FolderOpen, File, FileText, FileCode, AlertCircle, Loader2 } from 'lucide-react';
+import { Folder, FolderOpen, File, FileText, FileCode, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 import { ScrollArea } from '@/shared-components/ScrollArea';
 import { CodeEditor } from '@/shared-components/CodeEditor';
 import { ImageViewer } from '@/features/files/components/ImageViewer';
@@ -19,7 +19,8 @@ export const FileTree = ({ selectedProject }) => {
     handleFileSelect,
     handleImageSelect,
     closeFile,
-    closeImage
+    closeImage,
+    fetchFiles
   } = useFileTree(selectedProject);
 
   const renderIcon = (item) => {
@@ -134,10 +135,38 @@ export const FileTree = ({ selectedProject }) => {
                 <AlertCircle className="w-full h-full" />
               </S.ErrorIcon>
             </S.ErrorStateIcon>
-            <S.ErrorStateTitle>Failed to load files</S.ErrorStateTitle>
+            <S.ErrorStateTitle>
+              {error.includes('Permission denied') ? 'Access Denied' : 
+               error.includes('not found') ? 'Directory Not Found' :
+               error.includes('Cannot connect') ? 'Connection Failed' :
+               'Failed to Load Files'}
+            </S.ErrorStateTitle>
             <S.ErrorStateMessage>
-              {error}
+              {error.split('\n').map((line, index) => (
+                <div key={index}>{line}</div>
+              ))}
             </S.ErrorStateMessage>
+            {(error.includes('Permission denied') || error.includes('not found')) && (
+              <S.EmptyStateDescription style={{ marginTop: '1rem' }}>
+                <strong>Troubleshooting tips:</strong>
+                <ul style={{ textAlign: 'left', marginTop: '0.5rem' }}>
+                  <li>Check if the project directory exists at the expected location</li>
+                  <li>Verify you have read permissions for the directory</li>
+                  <li>If the project was moved, try refreshing the project list</li>
+                  <li>For permission issues, check directory ownership and permissions</li>
+                </ul>
+              </S.EmptyStateDescription>
+            )}
+            {S.RefreshButton ? (
+              <S.RefreshButton onClick={fetchFiles} disabled={loading}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Try Again
+              </S.RefreshButton>
+            ) : (
+              <button onClick={fetchFiles} disabled={loading} style={{ marginTop: '1rem' }}>
+                Try Again
+              </button>
+            )}
           </S.ErrorStateContainer>
         ) : !Array.isArray(files) || files.length === 0 ? (
           <S.EmptyStateContainer>
@@ -146,10 +175,35 @@ export const FileTree = ({ selectedProject }) => {
                 <Folder className="w-full h-full" />
               </S.EmptyFolderIcon>
             </S.EmptyStateIcon>
-            <S.EmptyStateTitle>No files found</S.EmptyStateTitle>
+            <S.EmptyStateTitle>No Files Found</S.EmptyStateTitle>
             <S.EmptyStateDescription>
-              Check if the project path is accessible
+              {selectedProject?.fullPath ? (
+                <React.Fragment>
+                  <div>Project path: <code style={{ fontSize: '0.875rem' }}>{selectedProject.fullPath}</code></div>
+                  <div style={{ marginTop: '1rem' }}>
+                    <strong>Possible reasons:</strong>
+                    <ul style={{ textAlign: 'left', marginTop: '0.5rem' }}>
+                      <li>The directory is empty</li>
+                      <li>All files are in excluded directories (node_modules, dist, build)</li>
+                      <li>Permission issues preventing file access</li>
+                      <li>The project path may have changed</li>
+                    </ul>
+                  </div>
+                </React.Fragment>
+              ) : (
+                'Check if the project path is accessible'
+              )}
             </S.EmptyStateDescription>
+            {S.RefreshButton ? (
+              <S.RefreshButton onClick={fetchFiles} disabled={loading} style={{ marginTop: '1rem' }}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh
+              </S.RefreshButton>
+            ) : (
+              <button onClick={fetchFiles} disabled={loading} style={{ marginTop: '1rem' }}>
+                Refresh
+              </button>
+            )}
           </S.EmptyStateContainer>
         ) : (
           <S.FileTreeContainer>

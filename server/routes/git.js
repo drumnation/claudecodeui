@@ -11,9 +11,13 @@ const execAsync = promisify(exec);
 async function getActualProjectPath(projectName) {
   const { getProjects } = require('../projects');
   
+  // Normalize the project name by removing leading dashes
+  const normalizedProjectName = projectName.replace(/^-/, '');
+  console.log('🔍 Normalizing project name:', projectName, '->', normalizedProjectName);
+  
   // Get all projects to find the actual path
   const projects = await getProjects();
-  const project = projects.find(p => p.name === projectName);
+  const project = projects.find(p => p.name === normalizedProjectName || p.name === projectName);
   
   if (project && project.fullPath) {
     // Check if the path exists, if not try case variations
@@ -41,8 +45,10 @@ async function getActualProjectPath(projectName) {
   
   // Fallback to simple conversion if project not found
   // Claude stores projects with dashes instead of slashes
-  // Convert "-Users-dmieloch-Dev-experiments-claudecodeui" to "/Users/dmieloch/Dev/experiments/claudecodeui"
-  const simplePath = projectName.replace(/-/g, '/');
+  // Handle both formats: with and without leading dash
+  const cleanedName = projectName.replace(/^-/, '');
+  const simplePath = '/' + cleanedName.replace(/-/g, '/');
+  console.log('🔍 Fallback path resolution:', projectName, '->', simplePath);
   
   // Try case variations for the simple path too
   const variations = [
@@ -67,30 +73,45 @@ async function getActualProjectPath(projectName) {
 router.get('/status', async (req, res) => {
   const { project } = req.query;
   
+  console.log('🔍 Git status endpoint called');
+  console.log('  Query params:', req.query);
+  console.log('  Project param:', project);
+  
   if (!project) {
+    console.error('❌ Git status: No project name provided');
     return res.status(400).json({ error: 'Project name is required' });
+  }
+
+  // Validate project parameter format
+  if (typeof project !== 'string' || project.length === 0) {
+    console.error('❌ Git status: Invalid project parameter format:', project);
+    return res.status(400).json({ error: 'Invalid project parameter format' });
   }
 
   try {
     const projectPath = await getActualProjectPath(project);
-    console.log('🔍 Git status request for project:', project);
-    console.log('📁 Resolved to path:', projectPath);
-    console.log('📂 Current working directory:', process.cwd());
+    console.log('🎯 Git status request');
+    console.log('  Original project param:', project);
+    console.log('  Resolved path:', projectPath);
+    console.log('  Current working directory:', process.cwd());
     
     // Check if directory exists
     try {
       await fs.access(projectPath);
-    } catch {
-      console.error('Project path not found:', projectPath);
-      return res.json({ error: 'Project not found' });
+      console.log('✅ Directory exists:', projectPath);
+    } catch (err) {
+      console.error('❌ Project path not found:', projectPath);
+      console.error('  Error details:', err.message);
+      return res.json({ error: `Project directory not found: ${projectPath}. Please ensure the project exists and is accessible.` });
     }
 
     // Check if it's a git repository
     try {
       await execAsync('git rev-parse --git-dir', { cwd: projectPath });
-    } catch {
-      console.error('Not a git repository:', projectPath);
-      return res.json({ error: 'Not a git repository' });
+    } catch (err) {
+      console.error('❌ Not a git repository:', projectPath);
+      console.error('  Error details:', err.message);
+      return res.json({ error: `Not a git repository: ${projectPath}. Initialize with 'git init' to use version control.` });
     }
 
     // Get current branch
@@ -98,6 +119,8 @@ router.get('/status', async (req, res) => {
     
     // Get git status
     const { stdout: statusOutput } = await execAsync('git status --porcelain', { cwd: projectPath });
+    console.log('📋 Git status output length:', statusOutput.length);
+    console.log('📋 Git status raw output:', statusOutput ? statusOutput.substring(0, 200) : 'EMPTY');
     
     const modified = [];
     const added = [];
@@ -110,6 +133,8 @@ router.get('/status', async (req, res) => {
       const status = line.substring(0, 2);
       const file = line.substring(3);
       
+      console.log(`  File: "${file}" Status: "${status}"`);
+      
       if (status === 'M ' || status === ' M' || status === 'MM') {
         modified.push(file);
       } else if (status === 'A ' || status === 'AM') {
@@ -119,6 +144,13 @@ router.get('/status', async (req, res) => {
       } else if (status === '??') {
         untracked.push(file);
       }
+    });
+    
+    console.log('📊 Git status summary:', {
+      modified: modified.length,
+      added: added.length,
+      deleted: deleted.length,
+      untracked: untracked.length
     });
     
     res.json({

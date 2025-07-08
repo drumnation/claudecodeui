@@ -38,6 +38,105 @@ describe('Git API Contract Tests', () => {
     await cleanupTestEnvironment();
   });
 
+  describe('Project Path Encoding Tests', () => {
+    it('should handle project names with leading dash (frontend format)', async () => {
+      // Simulate frontend encoding with leading dash
+      const encodedPath = '-Users-dmieloch-Dev-experiments-cc-ui-claudecodeui';
+      
+      const response = await api.get('/api/git/status', {
+        params: { project: encodedPath }
+      });
+      
+      // Should handle the format without error
+      expect(response.status).toBe(200);
+      if (response.data.error) {
+        // If error, should be about project not found, not encoding issues
+        expect(response.data.error).toMatch(/Project directory not found|Not a git repository/);
+      }
+    });
+
+    it('should handle project names without leading dash (backend format)', async () => {
+      // Simulate backend encoding without leading dash
+      const encodedPath = 'Users-dmieloch-Dev-experiments-cc-ui-claudecodeui';
+      
+      const response = await api.get('/api/git/status', {
+        params: { project: encodedPath }
+      });
+      
+      expect(response.status).toBe(200);
+      if (response.data.error) {
+        expect(response.data.error).toMatch(/Project directory not found|Not a git repository/);
+      }
+    });
+
+    it('should handle real workspace paths like current project', async () => {
+      // Use the actual current workspace path
+      const currentPath = path.resolve(__dirname, '../../..');
+      const encodedPath = currentPath.replace(/^\//g, '').replace(/\//g, '-');
+      
+      const response = await api.get('/api/git/status', {
+        params: { project: encodedPath }
+      });
+      
+      expect(response.status).toBe(200);
+      // Should return actual git status for the real project
+      if (!response.data.error) {
+        expect(response.data).toHaveProperty('branch');
+        expect(response.data).toHaveProperty('modified');
+        expect(response.data).toHaveProperty('added');
+        expect(response.data).toHaveProperty('deleted');
+        expect(response.data).toHaveProperty('untracked');
+      }
+    });
+
+    it('should handle case variations in project paths', async () => {
+      const variations = [
+        'Users-dmieloch-Dev-experiments-cc-ui-claudecodeui',
+        'users-dmieloch-dev-experiments-cc-ui-claudecodeui',
+        'Users-dmieloch-dev-experiments-cc-ui-claudecodeui'
+      ];
+      
+      for (const projectName of variations) {
+        const response = await api.get('/api/git/status', {
+          params: { project: projectName }
+        });
+        
+        expect(response.status).toBe(200);
+        // Should not return internal server errors
+        if (response.status === 500) {
+          expect(response.data.error).not.toContain('Internal server error');
+        }
+      }
+    });
+
+    it('should handle paths with special characters and spaces', async () => {
+      const specialPaths = [
+        'Users-name with spaces-project',
+        'Users-name.with.dots-project',
+        'Users-name_with_underscores-project'
+      ];
+      
+      for (const projectName of specialPaths) {
+        const response = await api.get('/api/git/status', {
+          params: { project: projectName }
+        });
+        
+        expect(response.status).toBe(200);
+      }
+    });
+
+    it('should return helpful error messages for encoding issues', async () => {
+      const response = await api.get('/api/git/status', {
+        params: { project: 'definitely-not-a-real-project-path-12345' }
+      });
+      
+      expect(response.status).toBe(200);
+      expect(response.data.error).toBeDefined();
+      expect(response.data.error).toContain('Project directory not found');
+      expect(response.data.error).toContain('ensure the project exists');
+    });
+  });
+
   describe('GET /api/git/status', () => {
     beforeEach(async () => {
       // Reset any changes
@@ -50,8 +149,11 @@ describe('Git API Contract Tests', () => {
     });
 
     it('should return clean status when no changes', async () => {
+      // Use encoded project name format
+      const encodedProjectName = gitProjectPath.replace(/^\//g, '').replace(/\//g, '-');
+      
       const response = await api.get('/api/git/status', {
-        params: { project: gitProjectPath }
+        params: { project: encodedProjectName }
       });
       
       const expectedStructure = {

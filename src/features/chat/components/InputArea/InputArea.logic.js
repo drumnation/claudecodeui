@@ -78,15 +78,27 @@ export const extractCommand = (input, cursorPosition) => {
  * @returns {Array} Filtered list of files
  */
 export const filterFiles = (fileList, query) => {
-  if (!query) return [];
+  // Handle edge cases
+  if (!fileList || !Array.isArray(fileList)) {
+    return [];
+  }
+  
+  // Return first 10 files when no query (consistent with filterCommands behavior)
+  if (!query) {
+    console.log('[filterFiles] No query provided, returning first 10 files:', fileList.slice(0, 10));
+    return fileList.slice(0, 10);
+  }
   
   const lowerQuery = query.toLowerCase();
-  return fileList
+  const filtered = fileList
     .filter(file => 
       file.name.toLowerCase().includes(lowerQuery) ||
       file.path.toLowerCase().includes(lowerQuery)
     )
     .slice(0, 10); // Limit to 10 results
+  
+  console.log('[filterFiles] Filtered files for query:', query, 'Results:', filtered);
+  return filtered;
 };
 
 /**

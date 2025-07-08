@@ -5,6 +5,7 @@ import { createServer } from 'http';
 import { createLogger } from '@kit/logger/node';
 import { handleGetProjects } from './projects.controller';
 import { handleClaudeWebSocketConnection } from './modules/claude-cli';
+import { handleGetProjectFiles } from './modules/files';
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
@@ -174,10 +175,7 @@ app.get('/api/files', (req, res) => {
   res.json([]);
 });
 
-app.get('/api/projects/:projectName/files', (req, res) => {
-  // Return empty file list for specific project
-  res.json([]);
-});
+app.get('/api/projects/:projectName/files', handleGetProjectFiles);
 
 // Slash commands route
 app.get('/api/slash-commands', (req, res) => {

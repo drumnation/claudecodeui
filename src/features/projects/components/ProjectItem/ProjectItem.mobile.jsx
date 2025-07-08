@@ -11,7 +11,8 @@ import {
 } from 'lucide-react';
 import { SessionList } from '../SessionList';
 import * as S from './ProjectItem.styles';
-import { WorktreeBadge, ProjectLanguageBadge } from '@/components/WorktreeBadge/WorktreeBadge';
+import { WorktreeBadge, ProjectLanguageBadge, ProjectMonorepoBadge } from '@/components/WorktreeBadge/WorktreeBadge';
+import { GitBranchBadge } from '@/features/projects/components/GitBranchBadge';
 
 export const ProjectItemMobile = ({
   project,
@@ -94,10 +95,17 @@ export const ProjectItemMobile = ({
                   />
                 ) : (
                   <>
-                    <S.ProjectName>{project.displayName}</S.ProjectName>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <S.ProjectName>{project.displayName}</S.ProjectName>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                        {project.isWorktree && <WorktreeBadge isMobile={true} />}
+                        <ProjectLanguageBadge language={project.language} />
+                        {project.isMonorepo && <ProjectMonorepoBadge isMonorepo={project.isMonorepo} />}
+                      </div>
+                    </div>
                     <S.ProjectMeta>
                       <span>{`${displayCount} session${displayCount === 1 ? '' : 's'}`}</span>
-                      <ProjectLanguageBadge language={project.language} />
+                      <GitBranchBadge branch={project.gitBranch} gitStatus={project.gitStatus} />
                     </S.ProjectMeta>
                   </>
                 )}
@@ -156,7 +164,6 @@ export const ProjectItemMobile = ({
               )}
             </S.ProjectActions>
           </S.MobileProjectContent>
-          {project.isWorktree && <WorktreeBadge isMobile={true} />}
         </S.MobileProjectItem>
       </S.ProjectHeader>
 

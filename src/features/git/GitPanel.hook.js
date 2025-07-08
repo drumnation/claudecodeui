@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { gitApi } from '@/features/git/GitPanel.logic';
+import { encodeProjectPath } from '@/lib/projectUtils';
 
 export const useGitPanel = (selectedProject) => {
   // State management
@@ -23,6 +24,7 @@ export const useGitPanel = (selectedProject) => {
   const [expandedCommits, setExpandedCommits] = useState(new Set());
   const [commitDiffs, setCommitDiffs] = useState({});
   const [isGeneratingMessage, setIsGeneratingMessage] = useState(false);
+  const [error, setError] = useState(null);
 
   // Refs
   const textareaRef = useRef(null);
@@ -56,33 +58,87 @@ export const useGitPanel = (selectedProject) => {
     if (!selectedProject) return;
     
     setIsLoading(true);
+    setError(null);
     try {
       // Convert project path to the format expected by the server
-      const projectName = selectedProject.fullPath.replace(/\//g, '-');
+      const projectName = encodeProjectPath(selectedProject.fullPath);
+      console.log('🔍 Fetching git status for project:', projectName);
+      console.log('🔍 Original path:', selectedProject.fullPath);
+      
       const data = await gitApi.fetchStatus(projectName);
+      console.log('📦 Git status response:', data);
       
       if (data) {
-        setGitStatus(data);
-        setCurrentBranch(data.branch || 'main');
-        
-        // Auto-select all changed files
-        const allFiles = new Set([
-          ...(data.modified || []),
-          ...(data.added || []),
-          ...(data.deleted || []),
-          ...(data.untracked || [])
-        ]);
-        setSelectedFiles(allFiles);
-        
-        // Fetch diffs for changed files
-        for (const file of [...(data.modified || []), ...(data.added || [])]) {
-          fetchFileDiff(file);
+        if (data.error) {
+          console.error('❌ Git status error:', data.error);
+          setError(data.error);
+          setGitStatus(null);
+        } else {
+          // Handle both old and new API response formats
+          let normalizedData = data;
+          
+          // Check if we got the new format with 'staged' instead of separate arrays
+          if (data.staged !== undefined && !data.modified && !data.added && !data.deleted) {
+            console.log('⚠️ Detected new API format, normalizing...');
+            normalizedData = {
+              branch: data.branch,
+              modified: [],
+              added: [],
+              deleted: [],
+              untracked: data.untracked || [],
+              // We might need to parse staged files differently
+              files: []
+            };
+            
+            // If there are staged files, we need to handle them
+            if (data.staged && Array.isArray(data.staged)) {
+              data.staged.forEach(file => {
+                if (typeof file === 'string') {
+                  normalizedData.modified.push(file);
+                } else if (file && file.path) {
+                  // Handle object format
+                  const status = file.status || 'M';
+                  if (status === 'A') {
+                    normalizedData.added.push(file.path);
+                  } else if (status === 'D') {
+                    normalizedData.deleted.push(file.path);
+                  } else {
+                    normalizedData.modified.push(file.path);
+                  }
+                }
+              });
+            }
+          }
+          
+          console.log('✅ Setting git status with files:', {
+            modified: normalizedData.modified?.length || 0,
+            added: normalizedData.added?.length || 0,
+            deleted: normalizedData.deleted?.length || 0,
+            untracked: normalizedData.untracked?.length || 0
+          });
+          setGitStatus(normalizedData);
+          setCurrentBranch(normalizedData.branch || 'main');
+          
+          // Auto-select all changed files
+          const allFiles = new Set([
+            ...(normalizedData.modified || []),
+            ...(normalizedData.added || []),
+            ...(normalizedData.deleted || []),
+            ...(normalizedData.untracked || [])
+          ]);
+          setSelectedFiles(allFiles);
+          
+          // Fetch diffs for changed files
+          for (const file of [...(data.modified || []), ...(data.added || [])]) {
+            fetchFileDiff(file);
+          }
         }
       } else {
         setGitStatus(null);
       }
     } catch (error) {
       console.error('Error fetching git status:', error);
+      setError('Failed to fetch git status. Please check if this is a git repository.');
     } finally {
       setIsLoading(false);
     }
@@ -90,17 +146,18 @@ export const useGitPanel = (selectedProject) => {
 
   const fetchBranches = async () => {
     try {
-      const projectName = selectedProject.fullPath.replace(/\//g, '-');
+      const projectName = encodeProjectPath(selectedProject.fullPath);
       const branches = await gitApi.fetchBranches(projectName);
       setBranches(branches);
     } catch (error) {
       console.error('Error fetching branches:', error);
+      setError('Failed to fetch branches');
     }
   };
 
   const switchBranch = async (branchName) => {
     try {
-      const projectName = selectedProject.fullPath.replace(/\//g, '-');
+      const projectName = encodeProjectPath(selectedProject.fullPath);
       const data = await gitApi.switchBranch(projectName, branchName);
       
       if (data.success) {
@@ -109,9 +166,11 @@ export const useGitPanel = (selectedProject) => {
         fetchGitStatus();
       } else {
         console.error('Failed to switch branch:', data.error);
+        setError(`Failed to switch branch: ${data.error}`);
       }
     } catch (error) {
       console.error('Error switching branch:', error);
+      setError('Failed to switch branch');
     }
   };
 
@@ -120,7 +179,7 @@ export const useGitPanel = (selectedProject) => {
     
     setIsCreatingBranch(true);
     try {
-      const projectName = selectedProject.fullPath.replace(/\//g, '-');
+      const projectName = encodeProjectPath(selectedProject.fullPath);
       const data = await gitApi.createBranch(projectName, newBranchName);
       
       if (data.success) {
@@ -132,9 +191,11 @@ export const useGitPanel = (selectedProject) => {
         fetchGitStatus();
       } else {
         console.error('Failed to create branch:', data.error);
+        setError(`Failed to create branch: ${data.error}`);
       }
     } catch (error) {
       console.error('Error creating branch:', error);
+      setError('Failed to create branch');
     } finally {
       setIsCreatingBranch(false);
     }
@@ -142,7 +203,7 @@ export const useGitPanel = (selectedProject) => {
 
   const fetchFileDiff = async (filePath) => {
     try {
-      const projectName = selectedProject.fullPath.replace(/\//g, '-');
+      const projectName = encodeProjectPath(selectedProject.fullPath);
       const diff = await gitApi.fetchFileDiff(projectName, filePath);
       
       if (diff) {
@@ -158,17 +219,18 @@ export const useGitPanel = (selectedProject) => {
 
   const fetchRecentCommits = async () => {
     try {
-      const projectName = selectedProject.fullPath.replace(/\//g, '-');
+      const projectName = encodeProjectPath(selectedProject.fullPath);
       const commits = await gitApi.fetchRecentCommits(projectName);
       setRecentCommits(commits);
     } catch (error) {
       console.error('Error fetching commits:', error);
+      setError('Failed to fetch commit history');
     }
   };
 
   const fetchCommitDiff = async (commitHash) => {
     try {
-      const projectName = selectedProject.fullPath.replace(/\//g, '-');
+      const projectName = encodeProjectPath(selectedProject.fullPath);
       const diff = await gitApi.fetchCommitDiff(projectName, commitHash);
       
       if (diff) {
@@ -185,16 +247,18 @@ export const useGitPanel = (selectedProject) => {
   const generateCommitMessage = async () => {
     setIsGeneratingMessage(true);
     try {
-      const projectName = selectedProject.fullPath.replace(/\//g, '-');
+      const projectName = encodeProjectPath(selectedProject.fullPath);
       const data = await gitApi.generateCommitMessage(projectName, Array.from(selectedFiles));
       
       if (data.message) {
         setCommitMessage(data.message);
       } else {
         console.error('Failed to generate commit message:', data.error);
+        setError('Failed to generate commit message');
       }
     } catch (error) {
       console.error('Error generating commit message:', error);
+      setError('Failed to generate commit message');
     } finally {
       setIsGeneratingMessage(false);
     }
@@ -204,8 +268,9 @@ export const useGitPanel = (selectedProject) => {
     if (!commitMessage.trim() || selectedFiles.size === 0) return;
     
     setIsCommitting(true);
+    setError(null);
     try {
-      const projectName = selectedProject.fullPath.replace(/\//g, '-');
+      const projectName = encodeProjectPath(selectedProject.fullPath);
       const data = await gitApi.commit(projectName, commitMessage, Array.from(selectedFiles));
       
       if (data.success) {
@@ -215,9 +280,11 @@ export const useGitPanel = (selectedProject) => {
         fetchGitStatus();
       } else {
         console.error('Commit failed:', data.error);
+        setError(`Commit failed: ${data.error}`);
       }
     } catch (error) {
       console.error('Error committing changes:', error);
+      setError('Failed to commit changes');
     } finally {
       setIsCommitting(false);
     }
@@ -308,6 +375,7 @@ export const useGitPanel = (selectedProject) => {
     expandedCommits,
     commitDiffs,
     isGeneratingMessage,
+    error,
     
     // Refs
     textareaRef,

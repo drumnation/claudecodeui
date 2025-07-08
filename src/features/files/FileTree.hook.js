@@ -24,17 +24,53 @@ export const useFileTree = (selectedProject) => {
     if (!selectedProject) return;
     
     console.log('🌲 FileTree: Fetching files for project:', selectedProject.name);
+    console.log('🌲 FileTree: Project path:', selectedProject.fullPath);
     setLoading(true);
     setError(null);
     try {
       const encodedProjectName = encodeURIComponent(selectedProject.name);
-      console.log('🌲 FileTree: Encoded project name:', encodedProjectName);
-      const response = await fetch(`/api/projects/${encodedProjectName}/files`);
+      const requestUrl = `/api/projects/${encodedProjectName}/files`;
+      console.log('🌲 FileTree: Request URL:', requestUrl);
+      
+      const response = await fetch(requestUrl);
+      console.log('🌲 FileTree: Response status:', response.status);
+      console.log('🌲 FileTree: Response headers:', {
+        contentType: response.headers.get('content-type'),
+        contentLength: response.headers.get('content-length')
+      });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ File fetch failed:', response.status, errorText);
-        setError(`Failed to load files: ${response.status} ${errorText || response.statusText}`);
+        let errorData;
+        try {
+          // Try to parse JSON error response
+          errorData = await response.json();
+        } catch (e) {
+          // Fallback to generic error if JSON parsing fails
+          // Cannot read text() after json() attempt failed
+          errorData = { error: `Server error: ${response.status} ${response.statusText}` };
+        }
+        
+        console.error('❌ File fetch failed:', response.status, errorData);
+        
+        // Provide specific error messages based on status code
+        let errorMessage;
+        if (response.status === 404) {
+          if (errorData.error?.includes('Project not found')) {
+            errorMessage = 'Project not found. It may have been deleted or renamed.';
+          } else if (errorData.error?.includes('directory not found')) {
+            errorMessage = `Directory not found: ${errorData.error.split(':')[1]?.trim() || selectedProject.fullPath}\n${errorData.suggestion || 'The project may have been moved or deleted.'}`;
+          } else {
+            errorMessage = errorData.error || 'Project directory not found';
+          }
+        } else if (response.status === 403) {
+          errorMessage = `Permission denied: Cannot access project directory.\n${errorData.suggestion || 'Check directory permissions.'}`;
+        } else if (response.status === 400) {
+          errorMessage = `Invalid project path: ${errorData.error}\n${errorData.type === 'file' ? 'The path points to a file, not a directory.' : ''}`;
+        } else {
+          errorMessage = errorData.error || `Server error: ${response.statusText}`;
+        }
+        
+        setError(errorMessage);
         setFiles([]);
         return;
       }
@@ -42,12 +78,49 @@ export const useFileTree = (selectedProject) => {
       const data = await response.json();
       console.log('🌲 FileTree: Received file data:', data);
       console.log('🌲 FileTree: Number of items:', Array.isArray(data) ? data.length : 'Not an array');
-      // Ensure data is an array
-      setFiles(Array.isArray(data) ? data : []);
+      
+      // Validate response data structure
+      if (!Array.isArray(data)) {
+        console.error('❌ Invalid response format: expected array, got', typeof data);
+        setError('Invalid response format from server');
+        setFiles([]);
+        return;
+      }
+      
+      // Validate each file object has required properties
+      const validFiles = data.filter(file => {
+        if (!file || typeof file !== 'object') {
+          console.warn('⚠️ Invalid file object:', file);
+          return false;
+        }
+        if (!file.name || !file.path || !file.type) {
+          console.warn('⚠️ File missing required properties:', file);
+          return false;
+        }
+        return true;
+      });
+      
+      if (validFiles.length < data.length) {
+        console.warn(`⚠️ Filtered out ${data.length - validFiles.length} invalid file objects`);
+      }
+      
+      setFiles(validFiles);
       setError(null);
     } catch (error) {
       console.error('❌ Error fetching files:', error);
-      setError(`Failed to connect to server: ${error.message}`);
+      console.error('Stack trace:', error.stack);
+      
+      // Provide specific error messages for common network issues
+      let errorMessage;
+      if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+        errorMessage = 'Cannot connect to server. Please check if the server is running.';
+      } else if (error.name === 'AbortError') {
+        errorMessage = 'Request timed out. The server may be slow or unresponsive.';
+      } else {
+        errorMessage = `Failed to load files: ${error.message}`;
+      }
+      
+      setError(errorMessage);
       setFiles([]);
     } finally {
       setLoading(false);
@@ -87,6 +160,7 @@ export const useFileTree = (selectedProject) => {
     handleFileSelect,
     handleImageSelect,
     closeFile,
-    closeImage
+    closeImage,
+    fetchFiles
   };
 };

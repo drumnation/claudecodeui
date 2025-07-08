@@ -119,3 +119,11 @@ export const ImageFileIcon = styled.div`
 export const DefaultFileIcon = styled.div`
   ${tw`w-4 h-4 text-muted-foreground flex-shrink-0`}
 `;
+
+export const RefreshButton = styled.button`
+  ${tw`mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md`}
+  ${tw`hover:bg-primary/90 transition-colors duration-200`}
+  ${tw`flex items-center justify-center mx-auto`}
+  ${tw`disabled:opacity-50 disabled:cursor-not-allowed`}
+  ${tw`focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2`}
+`;

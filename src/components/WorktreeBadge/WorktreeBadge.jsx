@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from '@emotion/styled';
 import tw from 'twin.macro';
-import { GitBranch } from 'lucide-react';
+import { GitBranch, Box } from 'lucide-react';
 
 // Desktop badge - inline with project metadata
 const Badge = styled.span`
@@ -32,13 +32,16 @@ export const WorktreeBadge = ({ branch, isMobile = false }) => {
   const title = branch ? `Worktree branch: ${branch}` : 'Git Worktree';
   
   if (isMobile) {
-    return <MicroBadge title={title}>WT</MicroBadge>;
+    return (
+      <MicroBadge title={title}>
+        <GitBranch className="w-3 h-3" />
+      </MicroBadge>
+    );
   }
   
   return (
     <Badge title={title}>
-      <GitBranch className="w-3 h-3 mr-1" />
-      WT
+      <GitBranch className="w-3 h-3" />
     </Badge>
   );
 };
@@ -47,13 +50,16 @@ export const ProjectLanguageBadge = ({ language }) => {
   // Always show language badge for debugging
   if (!language) return null;
   
-  // Shorten some language names for badges
+  // Shorten language names for badges
   const displayLanguage = language
     .replace('JavaScript/TypeScript', 'JS/TS')
-    .replace('Dart/Flutter', 'Dart')
+    .replace('Dart/Flutter', 'Flutter')
     .replace('Java/Kotlin', 'Java')
     .replace('C#/.NET', '.NET')
-    .replace('Documentation', 'Docs');
+    .replace('Documentation', 'Docs')
+    .replace('TypeScript', 'TS')
+    .replace('JavaScript', 'JS')
+    .replace('Python', 'Py');
   
   // Use different color for certain types
   if (language === 'Logs' || language === 'Documentation') {
@@ -83,7 +89,7 @@ export const ProjectMonorepoBadge = ({ isMonorepo }) => {
   
   return (
     <MonorepoBadge title="Part of a monorepo">
-      Monorepo
+      <Box className="w-3 h-3" />
     </MonorepoBadge>
   );
 };

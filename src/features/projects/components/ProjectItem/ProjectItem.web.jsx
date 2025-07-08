@@ -13,6 +13,7 @@ import { SessionList } from '../SessionList';
 import { cn } from '@/lib/utils';
 import * as S from './ProjectItem.styles';
 import { WorktreeBadge, ProjectLanguageBadge, ProjectMonorepoBadge } from '@/components/WorktreeBadge/WorktreeBadge';
+import { GitBranchBadge } from '@/features/projects/components/GitBranchBadge';
 
 export const ProjectItemWeb = ({
   project,
@@ -105,14 +106,19 @@ export const ProjectItemWeb = ({
                 </div>
               ) : (
                 <div>
-                  <div className="text-sm font-semibold truncate text-foreground" title={project.displayName}>
-                    {project.displayName}
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-semibold truncate text-foreground" title={project.displayName}>
+                      {project.displayName}
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {project.isWorktree && <WorktreeBadge />}
+                      <ProjectLanguageBadge language={project.language} />
+                      <ProjectMonorepoBadge isMonorepo={project.isMonorepo} />
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span>{displayCount} session{displayCount === 1 ? '' : 's'}</span>
-                    {project.isWorktree && <WorktreeBadge />}
-                    <ProjectLanguageBadge language={project.language} />
-                    <ProjectMonorepoBadge isMonorepo={project.isMonorepo} />
+                    <GitBranchBadge branch={project.gitBranch} gitStatus={project.gitStatus} />
                   </div>
                 </div>
               )}

@@ -1,116 +1,170 @@
+import { encodeProjectPath } from '@/lib/projectUtils';
+
 // Git API logic functions
 export const gitApi = {
   async fetchStatus(projectName) {
-    const response = await fetch(`/api/git/status?project=${encodeURIComponent(projectName)}`);
-    const data = await response.json();
-    
-    if (data.error) {
-      console.error('Git status error:', data.error);
-      return null;
+    try {
+      const url = `/api/git/status?project=${encodeURIComponent(projectName)}`;
+      console.log('🌐 Fetching git status from:', url);
+      
+      const response = await fetch(url);
+      console.log('📡 Git status response status:', response.status);
+      
+      const data = await response.json();
+      console.log('📦 Git status data:', data);
+      
+      if (data.error) {
+        console.error('Git status error:', data.error);
+        return { error: data.error };
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Git status fetch error:', error);
+      return { error: 'Failed to connect to git service' };
     }
-    
-    return data;
   },
 
   async fetchBranches(projectName) {
-    const response = await fetch(`/api/git/branches?project=${encodeURIComponent(projectName)}`);
-    const data = await response.json();
-    
-    if (data.error || !data.branches) {
+    try {
+      const response = await fetch(`/api/git/branches?project=${encodeURIComponent(projectName)}`);
+      const data = await response.json();
+      
+      if (data.error || !data.branches) {
+        console.error('Git branches error:', data.error);
+        return [];
+      }
+      
+      return data.branches;
+    } catch (error) {
+      console.error('Git branches fetch error:', error);
       return [];
     }
-    
-    return data.branches;
   },
 
   async switchBranch(projectName, branchName) {
-    const response = await fetch('/api/git/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        project: projectName,
-        branch: branchName
-      })
-    });
-    
-    const data = await response.json();
-    return data;
+    try {
+      const response = await fetch('/api/git/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project: projectName,
+          branch: branchName
+        })
+      });
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Git switch branch error:', error);
+      return { error: 'Failed to switch branch' };
+    }
   },
 
   async createBranch(projectName, branchName) {
-    const response = await fetch('/api/git/create-branch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        project: projectName,
-        branch: branchName.trim()
-      })
-    });
-    
-    const data = await response.json();
-    return data;
+    try {
+      const response = await fetch('/api/git/create-branch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project: projectName,
+          branch: branchName.trim()
+        })
+      });
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Git create branch error:', error);
+      return { error: 'Failed to create branch' };
+    }
   },
 
   async fetchFileDiff(projectName, filePath) {
-    const response = await fetch(`/api/git/diff?project=${encodeURIComponent(projectName)}&file=${encodeURIComponent(filePath)}`);
-    const data = await response.json();
-    
-    if (!data.error && data.diff) {
-      return data.diff;
+    try {
+      const response = await fetch(`/api/git/diff?project=${encodeURIComponent(projectName)}&file=${encodeURIComponent(filePath)}`);
+      const data = await response.json();
+      
+      if (!data.error && data.diff) {
+        return data.diff;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Git file diff error:', error);
+      return null;
     }
-    
-    return null;
   },
 
   async fetchRecentCommits(projectName, limit = 10) {
-    const response = await fetch(`/api/git/commits?project=${encodeURIComponent(projectName)}&limit=${limit}`);
-    const data = await response.json();
-    
-    if (!data.error && data.commits) {
-      return data.commits;
+    try {
+      const response = await fetch(`/api/git/commits?project=${encodeURIComponent(projectName)}&limit=${limit}`);
+      const data = await response.json();
+      
+      if (!data.error && data.commits) {
+        return data.commits;
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Git commits fetch error:', error);
+      return [];
     }
-    
-    return [];
   },
 
   async fetchCommitDiff(projectName, commitHash) {
-    const response = await fetch(`/api/git/commit-diff?project=${encodeURIComponent(projectName)}&commit=${commitHash}`);
-    const data = await response.json();
-    
-    if (!data.error && data.diff) {
-      return data.diff;
+    try {
+      const response = await fetch(`/api/git/commit-diff?project=${encodeURIComponent(projectName)}&commit=${commitHash}`);
+      const data = await response.json();
+      
+      if (!data.error && data.diff) {
+        return data.diff;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Git commit diff error:', error);
+      return null;
     }
-    
-    return null;
   },
 
   async generateCommitMessage(projectName, files) {
-    const response = await fetch('/api/git/generate-commit-message', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        project: projectName,
-        files: files
-      })
-    });
-    
-    const data = await response.json();
-    return data;
+    try {
+      const response = await fetch('/api/git/generate-commit-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project: projectName,
+          files: files
+        })
+      });
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Git generate commit message error:', error);
+      return { error: 'Failed to generate commit message' };
+    }
   },
 
   async commit(projectName, message, files) {
-    const response = await fetch('/api/git/commit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        project: projectName,
-        message: message,
-        files: files
-      })
-    });
-    
-    const data = await response.json();
-    return data;
+    try {
+      const response = await fetch('/api/git/commit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project: projectName,
+          message: message,
+          files: files
+        })
+      });
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Git commit error:', error);
+      return { error: 'Failed to commit changes' };
+    }
   }
 };
 

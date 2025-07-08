@@ -30,6 +30,8 @@ import {
 } from '@/features/git/GitPanel.styles';
 
 export const GitPanel = ({ selectedProject, isMobile }) => {
+  console.log('🎯 GitPanel rendered with selectedProject:', selectedProject);
+  
   const {
     // State
     gitStatus,
@@ -52,6 +54,7 @@ export const GitPanel = ({ selectedProject, isMobile }) => {
     expandedCommits,
     commitDiffs,
     isGeneratingMessage,
+    error,
     
     // Refs
     textareaRef,
@@ -83,6 +86,35 @@ export const GitPanel = ({ selectedProject, isMobile }) => {
     return (
       <EmptyStateContainer>
         <EmptyStateText>Select a project to view source control</EmptyStateText>
+      </EmptyStateContainer>
+    );
+  }
+
+  if (error) {
+    return (
+      <EmptyStateContainer>
+        <EmptyStateText style={{ color: '#ef4444' }}>Git Error</EmptyStateText>
+        <EmptyStateText style={{ marginTop: '8px', fontSize: '14px' }}>
+          {error}
+        </EmptyStateText>
+        {error.includes('not a git repository') && (
+          <EmptyStateText style={{ marginTop: '16px', fontSize: '13px', color: '#6b7280' }}>
+            Initialize a git repository in this project using 'git init'
+          </EmptyStateText>
+        )}
+        {error.includes('Project not found') && (
+          <EmptyStateText style={{ marginTop: '16px', fontSize: '13px', color: '#6b7280' }}>
+            Make sure the project path exists and is accessible
+          </EmptyStateText>
+        )}
+        <RefreshButton
+          onClick={refresh}
+          style={{ marginTop: '16px' }}
+          disabled={isLoading}
+        >
+          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          <span style={{ marginLeft: '8px' }}>Retry</span>
+        </RefreshButton>
       </EmptyStateContainer>
     );
   }

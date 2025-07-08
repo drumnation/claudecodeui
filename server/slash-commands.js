@@ -1,4 +1,4 @@
-const pty = require('node-pty');
+// const pty = require('node-pty'); // Temporarily disabled
 const path = require('path');
 
 let cachedCommands = null;
@@ -10,6 +10,16 @@ async function getSlashCommands() {
   if (cachedCommands && Date.now() - lastFetchTime < CACHE_DURATION) {
     return cachedCommands;
   }
+
+  // Temporarily return hardcoded commands while pty is disabled
+  const defaultCommands = [
+    { command: '/help', description: 'Get help with using Claude' },
+    { command: '/clear', description: 'Clear the conversation' },
+    { command: '/exit', description: 'Exit the session' }
+  ];
+  cachedCommands = defaultCommands;
+  lastFetchTime = Date.now();
+  return defaultCommands;
 
   return new Promise((resolve, reject) => {
     const commands = [];

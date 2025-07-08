@@ -188,11 +188,21 @@ async function getProjects() {
         
         // Try to find the actual project path
         let actualProjectPath = fullPath;
+        let resolvedPath = null;
         
         // Check if the original path exists
         try {
           await fs.access(actualProjectPath);
+          const stats = await fs.lstat(actualProjectPath);
+          if (stats.isDirectory()) {
+            resolvedPath = actualProjectPath;
+          }
         } catch {
+          // Path doesn't exist or isn't accessible
+        }
+        
+        // If original path doesn't exist or isn't a directory, try fallback paths
+        if (!resolvedPath) {
           // Try common variations for moved/renamed projects
           const projectBaseName = path.basename(actualProjectPath);
           const parentDir = path.dirname(actualProjectPath);
@@ -222,13 +232,25 @@ async function getProjects() {
           for (const tryPath of possiblePaths) {
             try {
               await fs.access(tryPath);
-              actualProjectPath = tryPath;
-              break;
+              const stats = await fs.lstat(tryPath);
+              if (stats.isDirectory()) {
+                resolvedPath = tryPath;
+                console.log(`Project path resolved from '${fullPath}' to '${resolvedPath}'`);
+                break;
+              }
             } catch {
               // Continue to next path
             }
           }
+          
+          // Final fallback: use the original path even if it doesn't exist
+          if (!resolvedPath) {
+            console.warn(`Unable to find valid directory for project '${entry.name}' at path '${fullPath}'`);
+            resolvedPath = fullPath;
+          }
         }
+        
+        actualProjectPath = resolvedPath;
         
         // Detect language and monorepo info using the actual project path
         const language = await detectLanguage(actualProjectPath);
@@ -242,7 +264,7 @@ async function getProjects() {
           name: entry.name,
           path: projectPath,
           displayName: customName || autoDisplayName,
-          fullPath: fullPath,
+          fullPath: actualProjectPath, // Use the resolved path instead of the original
           isCustomName: !!customName,
           language: language,
           isMonorepo: isMonorepo,

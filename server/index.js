@@ -34,7 +34,7 @@ const cors = require('cors');
 const fs = require('fs').promises;
 const { spawn } = require('child_process');
 const os = require('os');
-const pty = require('node-pty');
+// const pty = require('node-pty'); // Temporarily disabled due to build issues
 const fetch = require('node-fetch');
 const { getProjects, getSessions, getSessionMessages, renameProject, deleteSession, deleteProject, addProjectManually, updateSessionSummary } = require('./projects');
 const { spawnClaude, abortClaudeSession, markSessionAsManuallyEdited, clearManualEditFlag } = require('./claude-cli');
@@ -166,7 +166,17 @@ serverManager = new ServerManager({
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../dist')));
+
+// Serve static files with proper MIME types
+app.use(express.static(path.join(__dirname, '../dist'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    } else if (path.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    }
+  }
+}));
 
 // Git API Routes
 app.use('/api/git', gitRoutes);
@@ -675,26 +685,74 @@ app.get('/api/projects/:projectName/files', async (req, res) => {
     // Use the actual path from the project resolution logic
     let actualPath = project.fullPath;
     console.log('📂 Project path:', actualPath);
+    console.log('📍 Original path vs resolved path:', project.name.replace(/-/g, '/'), '->', actualPath);
     
-    // Check if path exists
+    // Check if path exists and is a directory
     try {
       await fs.access(actualPath);
+      const stats = await fs.lstat(actualPath);
+      
+      if (!stats.isDirectory()) {
+        console.error('❌ Project path is not a directory:', actualPath);
+        return res.status(400).json({ 
+          error: 'Project path is not a directory',
+          path: actualPath,
+          type: stats.isFile() ? 'file' : 'other' 
+        });
+      }
     } catch (e) {
       console.error('❌ Project path not accessible:', actualPath);
-      return res.status(404).json({ error: `Project path not found: ${actualPath}` });
+      console.error('Error details:', e.code, e.message);
+      
+      if (e.code === 'ENOENT') {
+        return res.status(404).json({ 
+          error: `Project directory not found: ${actualPath}`,
+          suggestion: 'The project may have been moved or deleted'
+        });
+      } else if (e.code === 'EACCES' || e.code === 'EPERM') {
+        return res.status(403).json({ 
+          error: `Permission denied accessing project directory: ${actualPath}`,
+          suggestion: 'Check directory permissions'
+        });
+      } else {
+        return res.status(500).json({ 
+          error: `Failed to access project directory: ${actualPath}`,
+          details: e.message
+        });
+      }
     }
     
-    const files = await getFileTree(actualPath, 3, 0, true);
+    // Parse optional query parameters
+    const maxDepth = parseInt(req.query.depth) || 3;
+    const showHidden = req.query.hidden !== 'false'; // Default to true
+    
+    console.log('🔍 Getting file tree with maxDepth:', maxDepth, 'showHidden:', showHidden);
+    
+    const files = await getFileTree(actualPath, maxDepth, 0, showHidden);
     const hiddenFiles = files.filter(f => f.name.startsWith('.'));
     console.log('📄 Found', files.length, 'files/folders, including', hiddenFiles.length, 'hidden files');
+    
     if (files.length === 0) {
-      console.log('⚠️ No files found in directory:', actualPath);
+      console.log('⚠️ Empty directory or access issues:', actualPath);
+      // Check if it's truly empty or if we have permission issues
+      try {
+        const dirContents = await fs.readdir(actualPath);
+        if (dirContents.length === 0) {
+          console.log('📂 Directory is truly empty');
+        } else {
+          console.log('⚠️ Directory has', dirContents.length, 'items but getFileTree returned empty');
+        }
+      } catch (e) {
+        console.log('⚠️ Cannot read directory contents:', e.message);
+      }
     } else {
       console.log('🔍 Sample files:', files.slice(0, 5).map(f => ({ name: f.name, type: f.type })));
     }
+    
     res.json(files);
   } catch (error) {
     console.error('❌ File tree error:', error.message);
+    console.error('Stack trace:', error.stack);
     res.status(500).json({ error: error.message });
   }
 });
@@ -784,7 +842,14 @@ function handleChatConnection(ws) {
 
 // Handle shell WebSocket connections
 function handleShellConnection(ws) {
-  console.log('🐚 Shell client connected');
+  console.log('🐚 Shell client connected - PTY disabled');
+  ws.send(JSON.stringify({
+    type: 'output',
+    data: '\r\n\x1b[31mShell functionality is temporarily disabled due to node-pty build issues.\x1b[0m\r\n'
+  }));
+  ws.close();
+  return;
+  
   let shellProcess = null;
   
   ws.on('message', async (message) => {
@@ -1101,8 +1166,12 @@ Agent instructions:`;
   }
 });
 
-// Serve React app for all other routes
+// Serve React app for all other routes (except static assets)
 app.get('*', (req, res) => {
+  // Don't serve HTML for asset requests
+  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+    return res.status(404).send('Not found');
+  }
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
@@ -1110,13 +1179,47 @@ async function getFileTree(dirPath, maxDepth = 3, currentDepth = 0, showHidden =
   const fs = require('fs').promises;
   const items = [];
   
+  // Validate directory path at the start
+  try {
+    const stats = await fs.lstat(dirPath);
+    if (!stats.isDirectory()) {
+      console.error(`getFileTree called on non-directory: ${dirPath}`);
+      if (stats.isFile()) {
+        // If it's a file, return it as a single item
+        return [{
+          name: path.basename(dirPath),
+          path: dirPath,
+          type: 'file'
+        }];
+      }
+      // For other types (symlink, etc.), return empty
+      return [];
+    }
+  } catch (error) {
+    console.error(`getFileTree: Cannot access path ${dirPath}:`, error.code, error.message);
+    
+    // Return empty array for most errors, but log specific ones
+    if (error.code === 'ENOTDIR') {
+      console.error(`Path is not a directory: ${dirPath}`);
+    } else if (error.code === 'ENOENT') {
+      console.error(`Path does not exist: ${dirPath}`);
+    }
+    
+    return [];
+  }
+  
   try {
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
     
+    // If directory is empty, log it
+    if (entries.length === 0 && currentDepth === 0) {
+      console.log(`📂 Directory is empty: ${dirPath}`);
+    }
+    
     for (const entry of entries) {
       // Debug: log all entries including hidden files
-      if (entry.name.startsWith('.')) {
-        console.log('📁 Found hidden file/folder:', entry.name, 'at depth:', currentDepth);
+      if (entry.name.startsWith('.') && currentDepth === 0) {
+        console.log('📁 Found hidden file/folder:', entry.name);
       }
       
       // Skip only heavy build directories
@@ -1137,7 +1240,10 @@ async function getFileTree(dirPath, maxDepth = 3, currentDepth = 0, showHidden =
           await fs.access(item.path, fs.constants.R_OK);
           item.children = await getFileTree(item.path, maxDepth, currentDepth + 1, showHidden);
         } catch (e) {
-          // Silently skip directories we can't access (permission denied, etc.)
+          // Log permission errors at root level for debugging
+          if (currentDepth === 0 && (e.code === 'EACCES' || e.code === 'EPERM')) {
+            console.log(`⚠️ Cannot access subdirectory: ${item.name} (${e.code})`);
+          }
           item.children = [];
         }
       }
@@ -1145,10 +1251,19 @@ async function getFileTree(dirPath, maxDepth = 3, currentDepth = 0, showHidden =
       items.push(item);
     }
   } catch (error) {
-    // Only log non-permission errors to avoid spam
-    if (error.code !== 'EACCES' && error.code !== 'EPERM') {
-      console.error('Error reading directory:', error);
+    // Log all errors with more context
+    console.error(`Error reading directory ${dirPath}:`, error.code, error.message);
+    
+    if (error.code === 'EACCES' || error.code === 'EPERM') {
+      console.error('Permission denied - check directory permissions');
+    } else if (error.code === 'ENOTDIR') {
+      console.error('Path is not a directory - this should not happen after validation');
+    } else if (error.code === 'ENOENT') {
+      console.error('Directory was removed during traversal');
     }
+    
+    // Return empty array instead of throwing
+    return [];
   }
   
   return items.sort((a, b) => {
