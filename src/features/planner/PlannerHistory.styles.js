@@ -2,11 +2,11 @@ import styled from '@emotion/styled';
 import tw from 'twin.macro';
 
 export const Container = styled.div`
-  ${tw`flex flex-col h-full bg-background`}
+  ${tw`flex flex-col h-full bg-background dark:bg-gray-900`}
 `;
 
 export const Header = styled.div`
-  ${tw`flex items-center justify-between p-4 border-b border-border`}
+  ${tw`flex items-center justify-between p-4 border-b border-border dark:border-gray-700`}
 `;
 
 export const HeaderLeft = styled.div`
@@ -26,8 +26,8 @@ export const TaskList = styled.div`
 `;
 
 export const TaskItem = styled.div`
-  ${tw`p-4 border-b border-border cursor-pointer transition-colors hover:bg-muted/50`}
-  ${({ selected }) => selected && tw`bg-muted`}
+  ${tw`p-4 border-b border-border dark:border-gray-700 cursor-pointer transition-colors hover:bg-muted/50 dark:hover:bg-gray-800/50`}
+  ${({ selected }) => selected && tw`bg-muted dark:bg-gray-800`}
 `;
 
 export const TaskHeader = styled.div`

@@ -2,11 +2,11 @@ import styled from '@emotion/styled';
 import tw from 'twin.macro';
 
 export const Container = styled.div`
-  ${tw`flex flex-col h-full bg-background`}
+  ${tw`flex flex-col h-full bg-background dark:bg-gray-900`}
 `;
 
 export const Header = styled.div`
-  ${tw`flex items-center justify-between px-4 py-3 border-b border-border`}
+  ${tw`flex items-center justify-between px-4 py-3 border-b border-border dark:border-gray-700`}
 `;
 
 export const HeaderContent = styled.div`
@@ -14,7 +14,7 @@ export const HeaderContent = styled.div`
 `;
 
 export const HeaderIcon = styled.div`
-  ${tw`w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center`}
+  ${tw`w-8 h-8 bg-primary/10 dark:bg-primary/20 rounded-lg flex items-center justify-center`}
 `;
 
 export const HeaderTitle = styled.h1`
@@ -22,7 +22,7 @@ export const HeaderTitle = styled.h1`
 `;
 
 export const TabBar = styled.div`
-  ${tw`flex border-b border-border`}
+  ${tw`flex border-b border-border dark:border-gray-700`}
 `;
 
 export const Tab = styled.button`

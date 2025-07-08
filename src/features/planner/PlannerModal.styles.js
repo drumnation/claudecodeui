@@ -2,12 +2,12 @@ import styled from '@emotion/styled';
 import tw from 'twin.macro';
 
 export const Container = styled.div`
-  ${tw`md:p-3 md:border-b md:border-border md:bg-muted/30`}
+  ${tw`md:p-3 md:border-b md:border-border md:bg-muted/30 dark:md:bg-muted/20`}
 `;
 
 // Desktop styles
 export const DesktopForm = styled.div`
-  ${tw`hidden md:block space-y-3`}
+  ${tw`hidden md:block space-y-3 bg-background dark:bg-gray-900 rounded-lg p-4`}
 `;
 
 export const FormHeader = styled.div`
@@ -23,7 +23,7 @@ export const SectionLabel = styled.label`
 `;
 
 export const TextArea = styled.textarea`
-  ${tw`w-full text-sm p-2 rounded-md border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors resize-none`}
+  ${tw`w-full text-sm p-2 rounded-md border border-border bg-background dark:bg-gray-800 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors resize-none`}
 `;
 
 export const CharacterCount = styled.div`
@@ -37,8 +37,8 @@ export const AgentGrid = styled.div`
 export const AgentCard = styled.div`
   ${tw`p-3 rounded-md border cursor-pointer transition-all hover:shadow-sm`}
   ${({ selected }) => selected 
-    ? tw`border-primary bg-primary/5` 
-    : tw`border-border hover:border-primary/50`
+    ? tw`border-primary bg-primary/5 dark:bg-primary/10` 
+    : tw`border-border dark:border-gray-600 hover:border-primary/50 dark:hover:border-primary/70`
   }
   ${({ disabled }) => disabled && tw`opacity-50 cursor-not-allowed`}
 `;
@@ -82,7 +82,7 @@ export const ProgressPercentage = styled.div`
 `;
 
 export const ProgressBar = styled.div`
-  ${tw`w-full h-2 bg-muted rounded-full overflow-hidden`}
+  ${tw`w-full h-2 bg-muted dark:bg-gray-700 rounded-full overflow-hidden`}
 `;
 
 export const ProgressFill = styled.div`
@@ -139,7 +139,15 @@ export const PlanPreview = styled.div`
 `;
 
 export const ErrorMessage = styled.div`
-  ${tw`flex items-center gap-2 text-sm text-red-600 dark:text-red-400 bg-red-500/10 p-2 rounded-md border border-red-500/20`}
+  ${tw`flex items-start gap-2 text-sm text-red-600 dark:text-red-400 bg-red-500/10 p-2 rounded-md border border-red-500/20`}
+`;
+
+export const ErrorHelp = styled.div`
+  ${tw`mt-1 text-xs text-red-500 dark:text-red-300`}
+  
+  code {
+    ${tw`bg-red-900/20 px-1 py-0.5 rounded font-mono`}
+  }
 `;
 
 export const FormActions = styled.div`
@@ -148,14 +156,14 @@ export const FormActions = styled.div`
 
 // Mode selection tabs
 export const ModeTabs = styled.div`
-  ${tw`flex rounded-lg bg-muted p-1 gap-1`}
+  ${tw`flex rounded-lg bg-muted dark:bg-gray-800 p-1 gap-1`}
 `;
 
 export const ModeTab = styled.button`
   ${tw`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-all`}
   ${({ active }) => active 
-    ? tw`bg-background text-foreground shadow-sm` 
-    : tw`text-muted-foreground hover:text-foreground`
+    ? tw`bg-background dark:bg-gray-700 text-foreground dark:text-gray-100 shadow-sm` 
+    : tw`text-muted-foreground dark:text-gray-400 hover:text-foreground dark:hover:text-gray-200`
   }
 `;
 
@@ -222,7 +230,7 @@ export const MobileOverlay = styled.div`
 `;
 
 export const MobileModal = styled.div`
-  ${tw`absolute left-0 right-0 bg-card rounded-t-lg border-t border-border p-4 space-y-4`}
+  ${tw`absolute left-0 right-0 bg-card dark:bg-gray-900 rounded-t-lg border-t border-border dark:border-gray-700 p-4 space-y-4`}
   bottom: calc(env(safe-area-inset-bottom, 0px) + 48px);
   animation: slide-up 0.3s ease-out;
   max-height: 85vh;
@@ -275,7 +283,7 @@ export const MobileSectionLabel = styled.label`
 `;
 
 export const MobileTextArea = styled.textarea`
-  ${tw`w-full text-sm p-3 rounded-md border border-border bg-background focus:border-primary transition-colors resize-none`}
+  ${tw`w-full text-sm p-3 rounded-md border border-border bg-background dark:bg-gray-800 focus:border-primary transition-colors resize-none`}
 `;
 
 export const MobileCharacterCount = styled.div`
@@ -289,8 +297,8 @@ export const MobileAgentGrid = styled.div`
 export const MobileAgentCard = styled.div`
   ${tw`p-3 rounded-md border active:scale-95 transition-all`}
   ${({ selected }) => selected 
-    ? tw`border-primary bg-primary/5` 
-    : tw`border-border`
+    ? tw`border-primary bg-primary/5 dark:bg-primary/10` 
+    : tw`border-border dark:border-gray-600`
   }
   ${({ disabled }) => disabled && tw`opacity-50`}
 `;
@@ -387,7 +395,15 @@ export const MobilePlanPreview = styled.div`
 `;
 
 export const MobileErrorMessage = styled.div`
-  ${tw`flex items-center gap-2 text-sm text-red-600 dark:text-red-400 bg-red-500/10 p-2 rounded-md border border-red-500/20`}
+  ${tw`flex items-start gap-2 text-sm text-red-600 dark:text-red-400 bg-red-500/10 p-2 rounded-md border border-red-500/20`}
+`;
+
+export const MobileErrorHelp = styled.div`
+  ${tw`mt-1 text-xs text-red-500 dark:text-red-300`}
+  
+  code {
+    ${tw`bg-red-900/20 px-1 py-0.5 rounded font-mono text-xs`}
+  }
 `;
 
 export const MobileActions = styled.div`
