@@ -2,7 +2,7 @@ import styled from '@emotion/styled';
 import tw from 'twin.macro';
 
 export const ProjectContainer = styled.div`
-  ${tw`md:space-y-3`}
+  ${tw`md:space-y-4`}
 `;
 
 export const ProjectHeader = styled.div`
@@ -15,7 +15,7 @@ export const MobileProjectWrapper = styled.div`
 `;
 
 export const MobileProjectItem = styled.div`
-  ${tw`px-3 pt-6 pb-3 mx-3 my-3 rounded-lg bg-card border border-border/50 active:scale-[0.98] transition-all duration-150 cursor-pointer hover:border-border/70`}
+  ${tw`px-4 pt-5 pb-4 mx-3 my-3 rounded-lg bg-card border border-border/50 active:scale-[0.98] transition-all duration-150 cursor-pointer hover:border-border/70`}
   ${props => props.isSelected && tw`bg-primary/5 border-primary/20`}
 `;
 

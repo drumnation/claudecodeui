@@ -344,7 +344,7 @@ const server = createServer(app);
 // Setup WebSocket server with URL-based routing
 const wss = new WebSocketServer({ 
   server,
-  verifyClient: (info) => {
+  verifyClient: (info: any) => {
     logger.info('[WebSocket] Connection attempt', { url: info.req.url });
     return true; // Accept all connections for now
   }

@@ -40,13 +40,17 @@ export class FilesService {
         return [];
       }
     } catch (error: any) {
-      logger.error(`getFileTree: Cannot access path ${dirPath}:`, error.code, error.message);
+      logger.error('getFileTree: Cannot access path', { 
+        path: dirPath, 
+        code: error.code, 
+        message: error.message 
+      });
       
       // Return empty array for most errors, but log specific ones
       if (error.code === 'ENOTDIR') {
-        logger.error(`Path is not a directory: ${dirPath}`);
+        logger.error('Path is not a directory', { path: dirPath });
       } else if (error.code === 'ENOENT') {
-        logger.error(`Path does not exist: ${dirPath}`);
+        logger.error('Path does not exist', { path: dirPath });
       }
       
       return [];
@@ -96,7 +100,11 @@ export class FilesService {
       }
     } catch (error: any) {
       // Log all errors with more context
-      logger.error(`Error reading directory ${dirPath}:`, error.code, error.message);
+      logger.error('Error reading directory', { 
+        path: dirPath, 
+        code: error.code, 
+        message: error.message 
+      });
       
       if (error.code === 'EACCES' || error.code === 'EPERM') {
         logger.error('Permission denied - check directory permissions');

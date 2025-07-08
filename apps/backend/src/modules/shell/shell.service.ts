@@ -1,6 +1,8 @@
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, ChildProcess, execFile } from 'child_process';
 import { createLogger } from '@kit/logger/node';
 import { EventEmitter } from 'events';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const logger = createLogger({ scope: 'shell-service' });
 
@@ -51,20 +53,60 @@ export class ShellService extends EventEmitter {
       });
 
       // Spawn claude process
-      logger.info('Spawning claude with args', { args: claudeArgs });
+      const claudePath = process.env.CLAUDE_CLI_PATH || 'claude';
+      logger.info('Spawning claude with args', { command: claudePath, args: claudeArgs });
       
-      this.process = spawn('claude', claudeArgs, {
-        cwd: projectPath,
-        env: {
-          ...process.env,
-          TERM: 'xterm-256color',
-          COLORTERM: 'truecolor',
-          FORCE_COLOR: '3',
-          // Override browser opening commands to echo URL for detection
-          BROWSER: 'echo "OPEN_URL:"'
-        },
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
+      // If we have a custom path and it exists, check if it's a Node.js script
+      if (process.env.CLAUDE_CLI_PATH && fs.existsSync(claudePath)) {
+        const content = fs.readFileSync(claudePath, 'utf8');
+        if (content.startsWith('#!/usr/bin/env node') || content.startsWith('#!/usr/bin/node')) {
+          // It's a Node.js script, spawn it with node directly
+          const nodeExecutable = process.execPath; // Path to the current Node.js executable
+          this.process = spawn(nodeExecutable, [claudePath, ...claudeArgs], {
+            cwd: projectPath,
+            env: {
+              ...process.env,
+              PATH: process.env.PATH + ':/Users/dmieloch/.npm-global/bin',
+              TERM: 'xterm-256color',
+              COLORTERM: 'truecolor',
+              FORCE_COLOR: '3',
+              // Override browser opening commands to echo URL for detection
+              BROWSER: 'echo "OPEN_URL:"'
+            },
+            stdio: ['pipe', 'pipe', 'pipe']
+          });
+        } else {
+          // It's a binary or other executable
+          this.process = spawn(claudePath, claudeArgs, {
+            cwd: projectPath,
+            env: {
+              ...process.env,
+              PATH: process.env.PATH + ':/Users/dmieloch/.npm-global/bin',
+              TERM: 'xterm-256color',
+              COLORTERM: 'truecolor',
+              FORCE_COLOR: '3',
+              // Override browser opening commands to echo URL for detection
+              BROWSER: 'echo "OPEN_URL:"'
+            },
+            stdio: ['pipe', 'pipe', 'pipe']
+          });
+        }
+      } else {
+        // Use system claude command
+        this.process = spawn(claudePath, claudeArgs, {
+          cwd: projectPath,
+          env: {
+            ...process.env,
+            PATH: process.env.PATH + ':/Users/dmieloch/.npm-global/bin',
+            TERM: 'xterm-256color',
+            COLORTERM: 'truecolor',
+            FORCE_COLOR: '3',
+            // Override browser opening commands to echo URL for detection
+            BROWSER: 'echo "OPEN_URL:"'
+          },
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
+      }
 
       this.isRunning = true;
 
@@ -197,19 +239,57 @@ export class ShellService extends EventEmitter {
       this.emit('output', `\x1b[36mStarting new Claude session in: ${projectPath}\x1b[0m\r\n`);
 
       // Spawn claude process without resume
-      logger.info('Spawning fresh claude');
+      const claudePath = process.env.CLAUDE_CLI_PATH || 'claude';
+      logger.info('Spawning fresh claude', { command: claudePath });
       
-      this.process = spawn('claude', [], {
-        cwd: projectPath,
-        env: {
-          ...process.env,
-          TERM: 'xterm-256color',
-          COLORTERM: 'truecolor',
-          FORCE_COLOR: '3',
-          BROWSER: 'echo "OPEN_URL:"'
-        },
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
+      // If we have a custom path and it exists, check if it's a Node.js script
+      if (process.env.CLAUDE_CLI_PATH && fs.existsSync(claudePath)) {
+        const content = fs.readFileSync(claudePath, 'utf8');
+        if (content.startsWith('#!/usr/bin/env node') || content.startsWith('#!/usr/bin/node')) {
+          // It's a Node.js script, spawn it with node directly
+          const nodeExecutable = process.execPath; // Path to the current Node.js executable
+          this.process = spawn(nodeExecutable, [claudePath], {
+            cwd: projectPath,
+            env: {
+              ...process.env,
+              PATH: process.env.PATH + ':/Users/dmieloch/.npm-global/bin',
+              TERM: 'xterm-256color',
+              COLORTERM: 'truecolor',
+              FORCE_COLOR: '3',
+              BROWSER: 'echo "OPEN_URL:"'
+            },
+            stdio: ['pipe', 'pipe', 'pipe']
+          });
+        } else {
+          // It's a binary or other executable
+          this.process = spawn(claudePath, [], {
+            cwd: projectPath,
+            env: {
+              ...process.env,
+              PATH: process.env.PATH + ':/Users/dmieloch/.npm-global/bin',
+              TERM: 'xterm-256color',
+              COLORTERM: 'truecolor',
+              FORCE_COLOR: '3',
+              BROWSER: 'echo "OPEN_URL:"'
+            },
+            stdio: ['pipe', 'pipe', 'pipe']
+          });
+        }
+      } else {
+        // Use system claude command
+        this.process = spawn(claudePath, [], {
+          cwd: projectPath,
+          env: {
+            ...process.env,
+            PATH: process.env.PATH + ':/Users/dmieloch/.npm-global/bin',
+            TERM: 'xterm-256color',
+            COLORTERM: 'truecolor',
+            FORCE_COLOR: '3',
+            BROWSER: 'echo "OPEN_URL:"'
+          },
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
+      }
 
       this.isRunning = true;
 
@@ -248,7 +328,21 @@ export class ShellService extends EventEmitter {
 
   private async checkClaudeAvailable(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const checkProcess = spawn('which', ['claude']);
+      const claudePath = process.env.CLAUDE_CLI_PATH || 'claude';
+      
+      // If a custom path is provided, check if the file exists
+      if (process.env.CLAUDE_CLI_PATH) {
+        if (fs.existsSync(claudePath)) {
+          resolve();
+          return;
+        } else {
+          reject(new Error(`Claude CLI not found at configured path: ${claudePath}`));
+          return;
+        }
+      }
+      
+      // Otherwise check if claude is in PATH
+      const checkProcess = spawn('which', [claudePath]);
       
       checkProcess.on('close', (code) => {
         if (code === 0) {

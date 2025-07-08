@@ -3,6 +3,7 @@ import path from 'path';
 import os from 'os';
 import { createLogger } from '@kit/logger/node';
 import { projectDetectionService } from './project-detection.service';
+import { getCanonicalProjectRoot } from '../../lib/getCanonicalProjectRoot';
 
 const logger = createLogger({ scope: 'projects-service' });
 
@@ -41,7 +42,98 @@ export interface Project {
 }
 
 export class ProjectsService {
-  private getProjectDisplayName(projectPath: string): string {
+  private decodeProjectPath(encoded: string): string {
+    // First check if this is a base64url encoded path
+    try {
+      // Try to decode as base64url
+      const decoded = Buffer.from(encoded, 'base64url').toString('utf8');
+      // Verify it looks like a path
+      if (decoded.startsWith('/') || decoded.match(/^[A-Z]:\\/)) {
+        return decoded;
+      }
+    } catch (e) {
+      // Not valid base64url, continue to legacy handling
+    }
+    
+    // Legacy dash-based decoding
+    // Remove leading dash if present
+    const normalized = encoded.startsWith('-') ? encoded.substring(1) : encoded;
+    
+    // Known patterns where dashes should be preserved
+    // This is a temporary workaround for paths with actual dashes
+    const knownPatterns = [
+      // Match patterns like singularity-core, claude-code-worktree
+      /singularity-core/,
+      /claude-code-worktree/,
+      /mind-control/,
+      // Common patterns with dashes
+      /[a-z]+-[a-z]+/
+    ];
+    
+    // Check if this path contains known patterns that should preserve dashes
+    let decodedPath = normalized;
+    let hasKnownPattern = false;
+    
+    for (const pattern of knownPatterns) {
+      if (pattern.test(normalized)) {
+        hasKnownPattern = true;
+        break;
+      }
+    }
+    
+    if (hasKnownPattern) {
+      // More careful replacement - only replace dashes between major path components
+      // Split by common path separators in the encoded format
+      const parts = normalized.split('-');
+      const pathParts = [];
+      let current = '';
+      
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        
+        // Check if this looks like a path component separator
+        if (part === 'Users' || part === 'home' || part === 'var' || 
+            part === 'opt' || part === 'Dev' || part === 'dev' ||
+            part === 'Documents' || part === 'Desktop' || part === 'Downloads' ||
+            /^[A-Z][a-z]*$/.test(part)) {
+          // This looks like a path component
+          if (current) {
+            pathParts.push(current);
+          }
+          current = part;
+        } else {
+          // This might be part of a hyphenated name
+          current = current ? current + '-' + part : part;
+        }
+      }
+      
+      if (current) {
+        pathParts.push(current);
+      }
+      
+      decodedPath = '/' + pathParts.join('/');
+    } else {
+      // Simple dash replacement for paths without known patterns
+      decodedPath = '/' + normalized.replace(/-/g, '/');
+    }
+    
+    return decodedPath;
+  }
+
+  private async getProjectDisplayName(projectPath: string): Promise<string> {
+    try {
+      // Read package.json from the canonical root
+      const packageJsonPath = path.join(projectPath, 'package.json');
+      const packageJson = await fs.readFile(packageJsonPath, 'utf8');
+      const parsed = JSON.parse(packageJson);
+      
+      if (parsed.name) {
+        return parsed.name;
+      }
+    } catch {
+      // Fall back to directory name if package.json doesn't exist or has no name
+    }
+    
     const parts = projectPath.split('/').filter(Boolean);
     const lastPart = parts[parts.length - 1] || projectPath;
     return lastPart.replace(/-/g, ' ');
@@ -138,89 +230,48 @@ export class ProjectsService {
           const sessions = await this.getSessionsForProject(projectPath);
           
           // Get the original encoded path
-          const fullPath = entry.name.startsWith('-') 
-            ? '/' + entry.name.substring(1).replace(/-/g, '/')
-            : entry.name.replace(/-/g, '/');
+          // Use proper decoding to handle both legacy dash-based and new base64url formats
+          const decodedPath = this.decodeProjectPath(entry.name);
           
-          // Try to find the actual project path
-          let actualProjectPath = fullPath;
-          let resolvedPath = null;
-          
-          // Check if the original path exists
-          try {
-            await fs.access(actualProjectPath);
-            const stats = await fs.lstat(actualProjectPath);
-            if (stats.isDirectory()) {
-              resolvedPath = actualProjectPath;
-            }
-          } catch {
-            // Path doesn't exist or isn't accessible
-          }
-          
-          // If original path doesn't exist or isn't a directory, try fallback paths
-          if (!resolvedPath) {
-            const projectBaseName = path.basename(actualProjectPath);
-            const possiblePaths = [
-              actualProjectPath,
-              // Check with different case variations
-              actualProjectPath.replace('/Dev/', '/dev/'),
-              actualProjectPath.replace('/dev/', '/Dev/'),
-              // Check if it's in cc-ui subdirectory
-              path.join('/Users/dmieloch/Dev/experiments/cc-ui', projectBaseName),
-              path.join('/Users/dmieloch/dev/experiments/cc-ui', projectBaseName),
-              // Check with -original suffix
-              path.join(path.dirname(actualProjectPath), `${projectBaseName}-original`),
-              // Check without -original suffix
-              actualProjectPath.replace('-original', ''),
-              // Check current working directory
-              path.join(process.cwd(), projectBaseName),
-              process.cwd(), // Check exact current working directory
-              // For monorepo subdirectories like 'backend', 'frontend', etc.
-              path.join('/Users/dmieloch/Dev/experiments/cc-ui/claudecodeui', projectBaseName),
-              path.join('/Users/dmieloch/dev/experiments/cc-ui/claudecodeui', projectBaseName),
-              // Check in singularityApps locations
-              path.join('/Users/dmieloch/Dev/singularityApps', projectBaseName),
-              path.join('/Users/dmieloch/dev/singularityApps', projectBaseName)
-            ];
-            
-            for (const tryPath of possiblePaths) {
-              try {
-                await fs.access(tryPath);
-                const stats = await fs.lstat(tryPath);
-                if (stats.isDirectory()) {
-                  resolvedPath = tryPath;
-                  logger.info(`Project path resolved from '${fullPath}' to '${resolvedPath}'`);
-                  break;
-                }
-              } catch {
-                // Continue to next path
-              }
-            }
-            
-            // Final fallback: use the original path even if it doesn't exist
-            if (!resolvedPath) {
-              logger.warn(`Unable to find valid directory for project '${entry.name}' at path '${fullPath}'`);
-              resolvedPath = fullPath;
+          // Try to use the session's cwd if available for better project resolution
+          let actualProjectPath = decodedPath;
+          if (sessions.length > 0) {
+            // Look for a session with a cwd
+            const sessionWithCwd = sessions.find(s => s.actualProjectPath);
+            if (sessionWithCwd && sessionWithCwd.actualProjectPath) {
+              actualProjectPath = sessionWithCwd.actualProjectPath;
+              logger.info('Using session cwd for project resolution', {
+                sessionCwd: actualProjectPath,
+                originalPath: decodedPath
+              });
             }
           }
           
-          actualProjectPath = resolvedPath;
+          // Get the canonical project root
+          const canonicalRoot = await getCanonicalProjectRoot(actualProjectPath);
+          logger.info('Resolved project to canonical root', {
+            encoded: entry.name,
+            decoded: decodedPath,
+            actualPath: actualProjectPath,
+            canonical: canonicalRoot
+          });
           
-          // Detect additional project properties
-          const [language, monorepoInfo, isWorktree, mainRepoPath, gitBranch, gitStatus] = await Promise.all([
-            projectDetectionService.detectLanguage(actualProjectPath),
-            projectDetectionService.detectMonorepo(actualProjectPath),
-            projectDetectionService.detectWorktree(actualProjectPath),
-            projectDetectionService.getMainRepoPath(actualProjectPath),
-            projectDetectionService.getGitBranch(actualProjectPath),
-            projectDetectionService.getGitStatus(actualProjectPath)
+          // Detect additional project properties using the canonical root
+          const [language, monorepoInfo, isWorktree, mainRepoPath, gitBranch, gitStatus, displayName] = await Promise.all([
+            projectDetectionService.detectLanguage(canonicalRoot),
+            projectDetectionService.detectMonorepo(canonicalRoot),
+            projectDetectionService.detectWorktree(canonicalRoot),
+            projectDetectionService.getMainRepoPath(canonicalRoot),
+            projectDetectionService.getGitBranch(canonicalRoot),
+            projectDetectionService.getGitStatus(canonicalRoot),
+            this.getProjectDisplayName(canonicalRoot)
           ]);
           
           projects.push({
             name: entry.name,
             path: projectPath,
-            displayName: this.getProjectDisplayName(actualProjectPath),
-            fullPath: actualProjectPath, // Use the resolved path
+            displayName,
+            fullPath: canonicalRoot, // Use the canonical root
             isCustomName: false,
             sessions,
             sessionMeta: {
@@ -231,7 +282,7 @@ export class ProjectsService {
             isMonorepo: monorepoInfo.isMonorepo,
             monorepoRoot: monorepoInfo.monorepoRoot,
             isWorktree,
-            mainRepoPath,
+            mainRepoPath: mainRepoPath || undefined,
             gitBranch,
             gitStatus
           });
@@ -245,7 +296,9 @@ export class ProjectsService {
     projects.sort((a, b) => {
       const aTime = a.sessions[0]?.lastActivity || '0';
       const bTime = b.sessions[0]?.lastActivity || '0';
-      return bTime.localeCompare(aTime);
+      const aTimeStr = typeof aTime === 'string' ? aTime : aTime.toISOString();
+      const bTimeStr = typeof bTime === 'string' ? bTime : bTime.toISOString();
+      return bTimeStr.localeCompare(aTimeStr);
     });
     
     return projects;

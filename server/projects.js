@@ -2,6 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const readline = require('readline');
 const { detectLanguage, annotateMonorepo, detectWorktree, getMainRepoPath } = require('./monorepo');
+const { getCanonicalProjectRoot, decodeProjectPath } = require('./core/projectUtils');
 
 /**
  * @typedef {Object} Session
@@ -179,92 +180,29 @@ async function getProjects() {
         const projectPath = path.join(claudeDir, entry.name);
         
         // Get display name from config or generate one
-        // Handle leading dash by ensuring it becomes a leading slash
-        const fullPath = entry.name.startsWith('-') 
-          ? '/' + entry.name.substring(1).replace(/-/g, '/')
-          : entry.name.replace(/-/g, '/');
+        // Use the proper decoding function to handle legacy and new formats
+        const decodedPath = decodeProjectPath(entry.name);
+        
+        // Get the canonical project root
+        const canonicalRoot = getCanonicalProjectRoot(decodedPath);
+        console.log(`Resolved project to canonical root: ${decodedPath} -> ${canonicalRoot}`);
+        
         const customName = config[entry.name]?.displayName;
-        const autoDisplayName = await generateDisplayName(entry.name, fullPath);
+        const autoDisplayName = await generateDisplayName(entry.name, canonicalRoot);
         
-        // Try to find the actual project path
-        let actualProjectPath = fullPath;
-        let resolvedPath = null;
-        
-        // Check if the original path exists
-        try {
-          await fs.access(actualProjectPath);
-          const stats = await fs.lstat(actualProjectPath);
-          if (stats.isDirectory()) {
-            resolvedPath = actualProjectPath;
-          }
-        } catch {
-          // Path doesn't exist or isn't accessible
-        }
-        
-        // If original path doesn't exist or isn't a directory, try fallback paths
-        if (!resolvedPath) {
-          // Try common variations for moved/renamed projects
-          const projectBaseName = path.basename(actualProjectPath);
-          const parentDir = path.dirname(actualProjectPath);
-          const possiblePaths = [
-            actualProjectPath,
-            // Check with different case variations
-            actualProjectPath.replace('/Dev/', '/dev/'),
-            actualProjectPath.replace('/dev/', '/Dev/'),
-            // Check if it's in cc-ui subdirectory
-            path.join('/Users/dmieloch/Dev/experiments/cc-ui', projectBaseName),
-            path.join('/Users/dmieloch/dev/experiments/cc-ui', projectBaseName),
-            // Check with -original suffix
-            path.join(path.dirname(actualProjectPath), `${projectBaseName}-original`),
-            // Check without -original suffix
-            actualProjectPath.replace('-original', ''),
-            // Check current working directory
-            path.join(process.cwd(), projectBaseName),
-            process.cwd(), // Check exact current working directory
-            // For monorepo subdirectories like 'backend', 'frontend', etc.
-            path.join('/Users/dmieloch/Dev/experiments/cc-ui/claudecodeui', projectBaseName),
-            path.join('/Users/dmieloch/dev/experiments/cc-ui/claudecodeui', projectBaseName),
-            // Check in singularityApps locations
-            path.join('/Users/dmieloch/Dev/singularityApps', projectBaseName),
-            path.join('/Users/dmieloch/dev/singularityApps', projectBaseName)
-          ];
-          
-          for (const tryPath of possiblePaths) {
-            try {
-              await fs.access(tryPath);
-              const stats = await fs.lstat(tryPath);
-              if (stats.isDirectory()) {
-                resolvedPath = tryPath;
-                console.log(`Project path resolved from '${fullPath}' to '${resolvedPath}'`);
-                break;
-              }
-            } catch {
-              // Continue to next path
-            }
-          }
-          
-          // Final fallback: use the original path even if it doesn't exist
-          if (!resolvedPath) {
-            console.warn(`Unable to find valid directory for project '${entry.name}' at path '${fullPath}'`);
-            resolvedPath = fullPath;
-          }
-        }
-        
-        actualProjectPath = resolvedPath;
-        
-        // Detect language and monorepo info using the actual project path
-        const language = await detectLanguage(actualProjectPath);
-        const { isMonorepo, monorepoRoot } = await annotateMonorepo(actualProjectPath);
+        // Detect language and monorepo info using the canonical root
+        const language = await detectLanguage(canonicalRoot);
+        const { isMonorepo, monorepoRoot } = await annotateMonorepo(canonicalRoot);
         
         // Detect if this is a Git worktree
-        const isWorktree = await detectWorktree(actualProjectPath);
-        const mainRepoPath = isWorktree ? await getMainRepoPath(actualProjectPath) : undefined;
+        const isWorktree = await detectWorktree(canonicalRoot);
+        const mainRepoPath = isWorktree ? await getMainRepoPath(canonicalRoot) : undefined;
         
         const project = {
           name: entry.name,
           path: projectPath,
           displayName: customName || autoDisplayName,
-          fullPath: actualProjectPath, // Use the resolved path instead of the original
+          fullPath: canonicalRoot, // Use the canonical root
           isCustomName: !!customName,
           language: language,
           isMonorepo: isMonorepo,

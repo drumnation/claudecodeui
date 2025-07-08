@@ -31,7 +31,9 @@
     "typecheck:server": "tsc --project tsconfig.server.json --noEmit",
     "build:server": "tsc --project tsconfig.server.json",
     "dev:server:ts": "NODE_ENV=development tsx server/index.js",
-    "test:server:coverage": "vitest run --coverage --config server/vitest.config.js"
+    "test:server:coverage": "vitest run --coverage --config server/vitest.config.js",
+    "migrate:projects": "node scripts/migrateProjectDirs.js",
+    "migrate:projects:dry-run": "node scripts/migrateProjectDirs.js --dry-run"
   },
   "keywords": [
     "claude",

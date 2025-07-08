@@ -96,7 +96,7 @@ export const ProjectItemMobile = ({
                 ) : (
                   <>
                     <S.ProjectName>{project.displayName}</S.ProjectName>
-                    <S.ProjectMeta style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                    <S.ProjectMeta style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px', marginTop: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span>{`${displayCount} session${displayCount === 1 ? '' : 's'}`}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -106,7 +106,7 @@ export const ProjectItemMobile = ({
                         </div>
                       </div>
                       {project.gitBranch && (
-                        <div style={{ marginTop: '4px' }}>
+                        <div style={{ marginTop: '8px' }}>
                           <GitBranchBadge branch={project.gitBranch} gitStatus={project.gitStatus} />
                         </div>
                       )}

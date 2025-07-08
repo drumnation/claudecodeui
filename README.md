@@ -74,7 +74,7 @@ npm run dev
 ```
 
 5. **Open your browser:**
-   - Development: `http://localhost:3001`
+   - Development: `http://localhost:8766`
 
 ## Security & Tools Configuration
 

@@ -22,8 +22,11 @@ export async function handleGetProjectFiles(req: Request, res: Response) {
     
     // Use the actual path from the project resolution logic
     const actualPath = project.fullPath;
-    logger.info('📂 Project path:', actualPath);
-    logger.info('📍 Original path vs resolved path:', project.name.replace(/-/g, '/'), '->', actualPath);
+    logger.info('📂 Project path', { path: actualPath });
+    logger.info('📍 Original path vs resolved path', { 
+      original: project.name.replace(/-/g, '/'), 
+      resolved: actualPath 
+    });
     
     // Check if path exists and is a directory
     try {
@@ -40,8 +43,8 @@ export async function handleGetProjectFiles(req: Request, res: Response) {
         });
       }
     } catch (e: any) {
-      logger.error('❌ Project path not accessible:', actualPath);
-      logger.error('Error details:', e.code, e.message);
+      logger.error('❌ Project path not accessible', { path: actualPath });
+      logger.error('Error details', { code: e.code, message: e.message });
       
       if (e.code === 'ENOENT') {
         return res.status(404).json({ 
@@ -65,14 +68,17 @@ export async function handleGetProjectFiles(req: Request, res: Response) {
     const maxDepth = parseInt(req.query.depth as string) || 3;
     const showHidden = req.query.hidden !== 'false'; // Default to true
     
-    logger.info('🔍 Getting file tree with maxDepth:', maxDepth, 'showHidden:', showHidden);
+    logger.info('🔍 Getting file tree', { maxDepth, showHidden });
     
     const files = await filesService.getFileTree(actualPath, maxDepth, 0, showHidden);
     const hiddenFiles = files.filter(f => f.name.startsWith('.'));
-    logger.info('📄 Found', files.length, 'files/folders, including', hiddenFiles.length, 'hidden files');
+    logger.info('📄 Found files/folders', { 
+      total: files.length, 
+      hidden: hiddenFiles.length 
+    });
     
     if (files.length === 0) {
-      logger.info('⚠️ Empty directory or access issues:', actualPath);
+      logger.info('⚠️ Empty directory or access issues', { path: actualPath });
       // Check if it's truly empty or if we have permission issues
       try {
         const fs = await import('fs');
@@ -80,13 +86,17 @@ export async function handleGetProjectFiles(req: Request, res: Response) {
         if (dirContents.length === 0) {
           logger.info('📂 Directory is truly empty');
         } else {
-          logger.info('⚠️ Directory has', dirContents.length, 'items but getFileTree returned empty');
+          logger.info('⚠️ Directory has items but getFileTree returned empty', { 
+            itemCount: dirContents.length 
+          });
         }
       } catch (e: any) {
-        logger.info('⚠️ Cannot read directory contents:', e.message);
+        logger.info('⚠️ Cannot read directory contents', { message: e.message });
       }
     } else {
-      logger.info('🔍 Sample files:', files.slice(0, 5).map(f => ({ name: f.name, type: f.type })));
+      logger.info('🔍 Sample files', { 
+        files: files.slice(0, 5).map(f => ({ name: f.name, type: f.type })) 
+      });
     }
     
     res.json(files);

@@ -20,7 +20,7 @@ const {
   calculateSessionStats,
   mergeSessionUpdates
 } = require('../core/sessionUtils');
-const { encodeProjectPath } = require('../core/projectUtils');
+const { encodeProjectPath, getCanonicalProjectRoot } = require('../core/projectUtils');
 
 class SessionService {
   constructor() {
@@ -98,7 +98,13 @@ class SessionService {
    */
   async createSession(projectPath, options = {}) {
     try {
-      logger.info('Creating session', { projectPath, options });
+      // Canonicalize the project path before creating the session
+      const canonicalPath = getCanonicalProjectRoot(projectPath);
+      logger.info('Creating session', { 
+        originalPath: projectPath, 
+        canonicalPath,
+        options 
+      });
       
       const sessionId = options.id || this._generateSessionId();
       const now = new Date().toISOString();
@@ -109,22 +115,22 @@ class SessionService {
         lastActivity: now,
         summary: options.summary || '',
         messageCount: 0,
-        cwd: options.cwd || projectPath,
+        cwd: options.cwd ? getCanonicalProjectRoot(options.cwd) : canonicalPath,
         ...options
       };
       
-      // Create session directory
-      const sessionDir = this._getSessionDir(projectPath, sessionId);
+      // Create session directory using canonical path
+      const sessionDir = this._getSessionDir(canonicalPath, sessionId);
       await fs.ensureDir(sessionDir);
       
       // Create empty conversation file
       const conversationFile = path.join(sessionDir, 'conversation.jsonl');
       await fs.writeFile(conversationFile, '');
       
-      // Add to sessions list
-      await this._addSessionToList(projectPath, session);
+      // Add to sessions list using canonical path
+      await this._addSessionToList(canonicalPath, session);
       
-      logger.info('Session created', { projectPath, sessionId });
+      logger.info('Session created', { canonicalPath, sessionId });
       return session;
     } catch (error) {
       logger.logError(error, 'Failed to create session');
@@ -294,6 +300,7 @@ class SessionService {
   }
 
   _getProjectDir(projectPath) {
+    // Note: projectPath should already be canonicalized before calling this
     return path.join(this.claudeDir, 'projects', encodeProjectPath(projectPath));
   }
 

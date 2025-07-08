@@ -3,13 +3,134 @@
  * These functions have no side effects and are easily testable
  */
 
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
+// Monorepo sentinel files that indicate a project root
+const MONOREPO_SENTINELS = [
+  'pnpm-workspace.yaml',
+  'lerna.json',
+  'nx.json',
+  'turbo.json',
+  'rush.json',
+  'workspace.json'
+];
+
+// VCS markers that indicate a repository root
+const VCS_MARKERS = ['.git', '.hg', '.svn'];
+
+// Common manifest files that might indicate a project root
+const MANIFEST_FILES = [
+  'package.json',
+  'pyproject.toml',
+  'Cargo.toml',
+  'go.mod',
+  'pom.xml',
+  'build.gradle',
+  'composer.json'
+];
+
+/**
+ * Get the canonical project root for a given path
+ * @param {string} absPath - The absolute path to resolve
+ * @returns {string} The canonical project root path
+ */
+function getCanonicalProjectRoot(absPath) {
+  if (!absPath) return absPath;
+  
+  try {
+    // Ensure the path is absolute
+    const resolvedPath = path.resolve(absPath);
+    
+    // Check if the path exists
+    if (!fs.existsSync(resolvedPath)) {
+      console.warn(`Path does not exist: ${resolvedPath}`);
+      return resolvedPath;
+    }
+    
+    // First, try to use Git to find the repository root
+    try {
+      const gitRoot = execSync('git rev-parse --show-toplevel', {
+        cwd: resolvedPath,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'ignore'] // Suppress stderr
+      }).trim();
+      
+      if (gitRoot && fs.existsSync(gitRoot)) {
+        console.log(`Found Git root for ${resolvedPath}: ${gitRoot}`);
+        return gitRoot;
+      }
+    } catch (gitError) {
+      // Git command failed, continue with fallback
+      console.log(`Git detection failed for ${resolvedPath}, using fallback`);
+    }
+    
+    // Fallback: Walk up directory tree looking for project markers
+    let current = resolvedPath;
+    const home = os.homedir();
+    const root = path.parse(current).root;
+    
+    while (current !== root && current !== home) {
+      try {
+        const entries = fs.readdirSync(current);
+        
+        // Check for monorepo sentinel files (highest priority)
+        const hasMonorepoSentinel = MONOREPO_SENTINELS.some(sentinel => 
+          entries.includes(sentinel)
+        );
+        if (hasMonorepoSentinel) {
+          console.log(`Found monorepo root at ${current}`);
+          return current;
+        }
+        
+        // Check for VCS markers
+        const hasVCSMarker = VCS_MARKERS.some(marker => 
+          entries.includes(marker)
+        );
+        
+        // Check for manifest files
+        const hasManifest = MANIFEST_FILES.some(manifest => 
+          entries.includes(manifest)
+        );
+        
+        // If we have a VCS marker and at least one manifest, this is likely the root
+        if (hasVCSMarker && hasManifest) {
+          console.log(`Found project root (VCS + manifest) at ${current}`);
+          return current;
+        }
+        
+        // Move up one directory
+        const parent = path.dirname(current);
+        if (parent === current) break; // Reached filesystem root
+        current = parent;
+      } catch (error) {
+        console.error(`Error reading directory ${current}: ${error.message}`);
+        break;
+      }
+    }
+    
+    // No root found, return the original path
+    console.log(`No project root found for ${resolvedPath}, using original path`);
+    return resolvedPath;
+  } catch (error) {
+    console.error(`Error in getCanonicalProjectRoot: ${error.message}`);
+    return absPath;
+  }
+}
+
 /**
  * Encode a project path to a safe directory name
+ * Note: Input should be canonicalized before encoding
+ * Uses base64url encoding to preserve all characters including dashes
  * @param {string} projectPath - The project path to encode
  * @returns {string} The encoded path
  */
 function encodeProjectPath(projectPath) {
-  return projectPath.replace(/\//g, '-').replace(/^-+|-+$/g, '');
+  // Use base64url encoding to safely encode paths with special characters
+  // This preserves dashes and other characters in the original path
+  return Buffer.from(projectPath).toString('base64url');
 }
 
 /**
@@ -18,6 +139,29 @@ function encodeProjectPath(projectPath) {
  * @returns {string} The decoded project path
  */
 function decodeProjectPath(encoded) {
+  // First check if this is a legacy dash-encoded path
+  // Legacy format: paths were encoded by replacing / with -
+  if (!encoded.match(/^[A-Za-z0-9_-]+$/)) {
+    // Contains characters not in base64url, must be legacy
+    return '/' + encoded.replace(/-/g, '/');
+  }
+  
+  try {
+    // Try to decode as base64url
+    const decoded = Buffer.from(encoded, 'base64url').toString('utf8');
+    // Verify it looks like a path
+    if (decoded.startsWith('/') || decoded.match(/^[A-Z]:\\/)) {
+      return decoded;
+    }
+  } catch (e) {
+    // Not valid base64url, fall back to legacy format
+  }
+  
+  // Fall back to legacy dash-based decoding
+  if (encoded.startsWith('-')) {
+    // Legacy format with leading dash
+    return '/' + encoded.substring(1).replace(/-/g, '/');
+  }
   return '/' + encoded.replace(/-/g, '/');
 }
 
@@ -233,5 +377,6 @@ module.exports = {
   sortProjects,
   filterProjects,
   transformProjectForAPI,
-  calculateProjectStats
+  calculateProjectStats,
+  getCanonicalProjectRoot
 };

@@ -72,7 +72,7 @@ export const ProjectItemWeb = ({
             onToggleProject(project.name);
           }}
         >
-          <div className="flex items-center justify-between w-full py-2 px-3">
+          <div className="flex items-center justify-between w-full py-4 px-4">
             <div className="flex items-center gap-3 min-w-0 flex-1">
             {isExpanded ? (
               <FolderOpen className={cn(
@@ -105,7 +105,7 @@ export const ProjectItemWeb = ({
                   </div>
                 </div>
               ) : (
-                <div>
+                <div className="space-y-2">
                   <div className="text-sm font-semibold truncate text-foreground" title={project.displayName}>
                     {project.displayName}
                   </div>

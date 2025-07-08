@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Badge } from '@/shared-components/Badge/Badge';
 import { 
   MessageSquare, 
@@ -8,9 +8,86 @@ import {
   Trash2, 
   Check, 
   X,
-  RefreshCw
+  RefreshCw,
+  MoreVertical
 } from 'lucide-react';
 import * as S from './SessionItem.styles';
+
+// Component for mobile action menu modal
+const SessionActionMenu = ({ 
+  isOpen, 
+  onClose, 
+  session, 
+  project,
+  isGeneratingSummary,
+  isRegeneratingTitle,
+  onGenerateSessionSummary,
+  onRegenerateSessionTitle,
+  onEditSession,
+  onDeleteSession 
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <S.MobileActionOverlay onClick={onClose}>
+      <S.MobileActionModal onClick={e => e.stopPropagation()}>
+        <S.MobileActionHeader>
+          <S.MobileActionTitle>Session Actions</S.MobileActionTitle>
+          <S.MobileActionCloseButton onClick={onClose}>
+            <X className="w-4 h-4" />
+          </S.MobileActionCloseButton>
+        </S.MobileActionHeader>
+        
+        <S.MobileActionList>
+          {!session.summary ? (
+            <S.MobileActionButton
+              onClick={() => {
+                onGenerateSessionSummary(project.name, session.id);
+                onClose();
+              }}
+              disabled={isGeneratingSummary}
+            >
+              <RefreshCw className={`w-5 h-5 ${isGeneratingSummary ? 'animate-spin' : ''}`} />
+              <span>Generate Summary</span>
+            </S.MobileActionButton>
+          ) : (
+            <S.MobileActionButton
+              onClick={() => {
+                onRegenerateSessionTitle(project.name, session.id);
+                onClose();
+              }}
+              disabled={isRegeneratingTitle}
+            >
+              <RefreshCw className={`w-5 h-5 ${isRegeneratingTitle ? 'animate-spin' : ''}`} />
+              <span>Regenerate Title</span>
+            </S.MobileActionButton>
+          )}
+          
+          <S.MobileActionButton
+            onClick={() => {
+              onEditSession();
+              onClose();
+            }}
+          >
+            <Edit3 className="w-5 h-5" />
+            <span>Edit Title</span>
+          </S.MobileActionButton>
+          
+          <S.MobileActionButton
+            onClick={() => {
+              onDeleteSession(project.name, session.id);
+              onClose();
+            }}
+            variant="destructive"
+          >
+            <Trash2 className="w-5 h-5" />
+            <span>Delete Session</span>
+          </S.MobileActionButton>
+        </S.MobileActionList>
+      </S.MobileActionModal>
+    </S.MobileActionOverlay>
+  );
+};
 
 export const SessionItemMobile = ({
   session,
@@ -33,6 +110,7 @@ export const SessionItemMobile = ({
   setEditingSessionName,
   handleTouchClick
 }) => {
+  const [showActionMenu, setShowActionMenu] = useState(false);
   
   return (
     <S.SessionContainer>
@@ -48,131 +126,130 @@ export const SessionItemMobile = ({
           onSessionSelect(session);
         })}
       >
-        <S.SessionContent>
+        {/* Row 1: Icon + Session Title + Action Menu Button */}
+        <S.SessionMainContent>
           <S.SessionIcon isSelected={isSelected} isActive={isActive}>
-            <MessageSquare className="w-3 h-3" />
+            <MessageSquare className="w-4 h-4" />
           </S.SessionIcon>
-          <S.SessionInfo>
-            <S.SessionTitle>
-              {isEditing ? (
-                <S.EditInput
-                  type="text"
-                  value={editingSessionName}
-                  onChange={(e) => setEditingSessionName(e.target.value)}
-                  onKeyDown={(e) => {
-                    e.stopPropagation();
-                    if (e.key === 'Enter') {
-                      onUpdateSessionSummary(project.name, session.id, editingSessionName);
-                    } else if (e.key === 'Escape') {
-                      setEditingSession(null);
-                      setEditingSessionName('');
-                    }
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  autoFocus
-                />
-              ) : (
-                session.summary || 'New Session'
-              )}
-            </S.SessionTitle>
-            <S.SessionMeta>
-              <S.TimeIcon isActive={isActive}>
-                <Clock className="w-full h-full" />
-              </S.TimeIcon>
-              <S.TimeText isActive={isActive}>
-                {formatTimeAgo(session.lastActivity, currentTime)}
-              </S.TimeText>
-            </S.SessionMeta>
-          </S.SessionInfo>
-          <S.SessionActions>
-            {/* Show UI-created indicator */}
+          
+          <S.SessionTitleArea>
+            {isEditing ? (
+              <S.EditInput
+                type="text"
+                value={editingSessionName}
+                onChange={(e) => setEditingSessionName(e.target.value)}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  if (e.key === 'Enter') {
+                    onUpdateSessionSummary(project.name, session.id, editingSessionName);
+                  } else if (e.key === 'Escape') {
+                    setEditingSession(null);
+                    setEditingSessionName('');
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                autoFocus
+              />
+            ) : (
+              <S.SessionTitle>
+                {session.summary || 'New Session'}
+              </S.SessionTitle>
+            )}
+          </S.SessionTitleArea>
+          
+          {isEditing ? (
+            <S.EditActions>
+              <S.SaveButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  onUpdateSessionSummary(project.name, session.id, editingSessionName);
+                }}
+                onTouchEnd={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+              >
+                <Check className="w-4 h-4" />
+              </S.SaveButton>
+              <S.CancelButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setEditingSession(null);
+                  setEditingSessionName('');
+                }}
+                onTouchEnd={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+              >
+                <X className="w-4 h-4" />
+              </S.CancelButton>
+            </S.EditActions>
+          ) : (
+            <S.MenuButton
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setShowActionMenu(true);
+              }}
+              onTouchStart={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setShowActionMenu(true);
+              }}
+            >
+              <MoreVertical className="w-5 h-5" />
+            </S.MenuButton>
+          )}
+        </S.SessionMainContent>
+
+        {/* Row 2: Time + Badges */}
+        <S.SessionMetaContent>
+          <S.SessionMeta>
+            <S.TimeIcon isActive={isActive}>
+              <Clock className="w-3 h-3" />
+            </S.TimeIcon>
+            <S.TimeText isActive={isActive}>
+              {formatTimeAgo(session.lastActivity, currentTime)}
+            </S.TimeText>
+          </S.SessionMeta>
+          
+          <S.SessionBadges>
             {(session.metadata?.origin === 'webui' || session.id?.startsWith('ui-')) && (
-              <Badge variant="outline" className="text-xs px-1.5 py-0 text-blue-600 border-blue-600">
+              <Badge variant="outline" className="text-xs px-1.5 py-0.5 text-blue-600 border-blue-600">
                 UI
               </Badge>
             )}
             {session.messageCount > 0 && (
-              <Badge variant="secondary" className="text-xs px-1.5 py-0">
+              <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
                 {session.messageCount}
               </Badge>
             )}
             {isActive && (
               <S.ActiveIndicator />
             )}
-            {isEditing ? (
-              <S.MobileActions>
-                <S.SaveButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onUpdateSessionSummary(project.name, session.id, editingSessionName);
-                  }}
-                >
-                  <Check className="w-3 h-3" />
-                </S.SaveButton>
-                <S.CancelButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setEditingSession(null);
-                    setEditingSessionName('');
-                  }}
-                >
-                  <X className="w-3 h-3" />
-                </S.CancelButton>
-              </S.MobileActions>
-            ) : (
-              <S.MobileActions>
-                {!session.summary && (
-                  <S.GenerateButton
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onGenerateSessionSummary(project.name, session.id);
-                    }}
-                  >
-                    {isGeneratingSummary ? (
-                      <S.LoadingSpinner />
-                    ) : (
-                      <RefreshCw className="w-3 h-3" />
-                    )}
-                  </S.GenerateButton>
-                )}
-                {session.summary && (
-                  <S.GenerateButton
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRegenerateSessionTitle(project.name, session.id);
-                    }}
-                    onTouchEnd={handleTouchClick(() => onRegenerateSessionTitle(project.name, session.id))}
-                  >
-                    {isRegeneratingTitle ? (
-                      <S.LoadingSpinner />
-                    ) : (
-                      <RefreshCw className="w-3 h-3" />
-                    )}
-                  </S.GenerateButton>
-                )}
-                <S.EditButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setEditingSession(session.id);
-                    setEditingSessionName(session.summary || '');
-                  }}
-                >
-                  <Edit3 className="w-3 h-3" />
-                </S.EditButton>
-                <S.DeleteButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteSession(project.name, session.id);
-                  }}
-                  onTouchEnd={handleTouchClick(() => onDeleteSession(project.name, session.id))}
-                >
-                  <Trash2 className="w-3 h-3" />
-                </S.DeleteButton>
-              </S.MobileActions>
-            )}
-          </S.SessionActions>
-        </S.SessionContent>
+          </S.SessionBadges>
+        </S.SessionMetaContent>
       </S.MobileSessionItem>
+
+      {/* Action Menu Modal */}
+      <SessionActionMenu
+        isOpen={showActionMenu}
+        onClose={() => setShowActionMenu(false)}
+        session={session}
+        project={project}
+        isGeneratingSummary={isGeneratingSummary}
+        isRegeneratingTitle={isRegeneratingTitle}
+        onGenerateSessionSummary={onGenerateSessionSummary}
+        onRegenerateSessionTitle={onRegenerateSessionTitle}
+        onEditSession={() => {
+          setEditingSession(session.id);
+          setEditingSessionName(session.summary || '');
+        }}
+        onDeleteSession={onDeleteSession}
+      />
     </S.SessionContainer>
   );
 };

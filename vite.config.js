@@ -62,6 +62,11 @@ export default defineConfig(async () => {
       '/ws': {
         target: `ws://localhost:${process.env.VITE_API_PORT || 8765}`,
         ws: true
+      },
+      '/shell': {
+        target: `ws://localhost:${process.env.VITE_API_PORT || 8765}`,
+        ws: true,
+        changeOrigin: true
       }
     }
   },

@@ -1,5 +1,4 @@
 {
-  "extends": "@kit/tsconfig/node",
   "compilerOptions": {
     "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
     "rootDir": ".",
@@ -13,7 +12,9 @@
     "forceConsistentCasingInFileNames": true,
     "module": "ES2022",
     "moduleResolution": "bundler",
-    "target": "ES2022"
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "types": ["node"]
   },
   "include": ["**/*.ts", "**/*.tsx", "**/*.d.ts"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]

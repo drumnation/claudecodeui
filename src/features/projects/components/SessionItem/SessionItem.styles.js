@@ -11,10 +11,25 @@ export const MobileWrapper = styled.div`
 `;
 
 export const MobileSessionItem = styled.div`
-  ${tw`p-2 mx-3 my-0 rounded-md bg-card border active:scale-[0.98] transition-all duration-150 relative`}
+  ${tw`p-3 mx-3 my-1 rounded-lg bg-card border active:scale-[0.98] transition-all duration-150 relative space-y-3 cursor-pointer`}
   ${props => props.isSelected && tw`bg-primary/5 border-primary/20`}
   ${props => props.isActive && !props.isSelected && tw`border-green-500/30 bg-green-50/5 dark:bg-green-900/5`}
   ${props => !props.isSelected && !props.isActive && tw`border-border/30`}
+  
+  /* Ensure button areas don't trigger parent click */
+  & button {
+    position: relative;
+    z-index: 10;
+  }
+`;
+
+// Multi-row layout containers
+export const SessionMainContent = styled.div`
+  ${tw`flex items-center gap-3`}
+`;
+
+export const SessionMetaContent = styled.div`
+  ${tw`flex items-center justify-between ml-8`}
 `;
 
 export const SessionContent = styled.div`
@@ -32,8 +47,17 @@ export const SessionInfo = styled.div`
   ${tw`min-w-0 flex-1`}
 `;
 
+// New layout components
+export const SessionTitleArea = styled.div`
+  ${tw`min-w-0 flex-1`}
+`;
+
 export const SessionTitle = styled.div`
-  ${tw`text-xs font-medium truncate text-foreground`}
+  ${tw`text-sm font-medium text-foreground leading-5`}
+`;
+
+export const SessionBadges = styled.div`
+  ${tw`flex items-center gap-2`}
 `;
 
 export const SessionMeta = styled.div`
@@ -64,6 +88,24 @@ export const MobileActions = styled.div`
   ${tw`flex items-center gap-1 ml-1`}
 `;
 
+// New mobile button styles
+export const MenuButton = styled.button`
+  ${tw`w-8 h-8 rounded-lg flex items-center justify-center active:scale-95 transition-all bg-muted/50 hover:bg-muted text-muted-foreground flex-shrink-0 relative z-10`}
+  
+  &:focus {
+    outline: 2px solid rgba(59, 130, 246, 0.5);
+    outline-offset: 2px;
+  }
+  
+  &:active {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+`;
+
+export const EditActions = styled.div`
+  ${tw`flex items-center gap-2 relative z-10 flex-shrink-0`}
+`;
+
 export const ActionButton = styled.button`
   ${tw`w-5 h-5 rounded-md flex items-center justify-center active:scale-95 transition-transform opacity-70`}
 `;
@@ -80,16 +122,26 @@ export const DeleteButton = styled(ActionButton)`
   ${tw`bg-red-50 dark:bg-red-900/20`}
 `;
 
-export const SaveButton = styled(ActionButton)`
-  ${tw`bg-green-50 dark:bg-green-900/20`}
+export const SaveButton = styled.button`
+  ${tw`w-8 h-8 rounded-lg flex items-center justify-center active:scale-95 transition-all bg-green-50 dark:bg-green-900/20 text-green-600 relative z-10 flex-shrink-0`}
+  
+  &:focus {
+    outline: 2px solid rgba(34, 197, 94, 0.5);
+    outline-offset: 2px;
+  }
 `;
 
-export const CancelButton = styled(ActionButton)`
-  ${tw`bg-gray-50 dark:bg-gray-900/20`}
+export const CancelButton = styled.button`
+  ${tw`w-8 h-8 rounded-lg flex items-center justify-center active:scale-95 transition-all bg-gray-50 dark:bg-gray-900/20 text-gray-600 relative z-10 flex-shrink-0`}
+  
+  &:focus {
+    outline: 2px solid rgba(107, 114, 128, 0.5);
+    outline-offset: 2px;
+  }
 `;
 
 export const EditInput = styled.input`
-  ${tw`w-24 px-2 py-1 text-xs border border-border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary`}
+  ${tw`w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary`}
 `;
 
 export const LoadingSpinner = styled.div`
@@ -137,4 +189,51 @@ export const DesktopCancelButton = styled(DesktopActionButton)`
 
 export const DesktopEditInput = styled.input`
   ${tw`w-32 px-2 py-1 text-xs border border-border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary`}
+`;
+
+// Mobile Action Modal Styles
+export const MobileActionOverlay = styled.div`
+  ${tw`md:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm`}
+`;
+
+export const MobileActionModal = styled.div`
+  ${tw`absolute left-0 right-0 bg-card rounded-t-xl border-t border-border`}
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 48px);
+  animation: slide-up 0.3s ease-out;
+  
+  @keyframes slide-up {
+    from {
+      transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px) + 48px));
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+`;
+
+export const MobileActionHeader = styled.div`
+  ${tw`flex items-center justify-between p-4 border-b border-border`}
+`;
+
+export const MobileActionTitle = styled.h3`
+  ${tw`text-base font-semibold text-foreground`}
+`;
+
+export const MobileActionCloseButton = styled.button`
+  ${tw`w-8 h-8 rounded-lg flex items-center justify-center active:scale-95 transition-all hover:bg-accent text-muted-foreground`}
+`;
+
+export const MobileActionList = styled.div`
+  ${tw`p-2 space-y-1`}
+`;
+
+export const MobileActionButton = styled.button`
+  ${tw`w-full flex items-center gap-3 p-4 rounded-lg text-left active:scale-[0.98] transition-all font-medium`}
+  ${tw`hover:bg-accent text-foreground`}
+  ${props => props.variant === 'destructive' && tw`text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20`}
+  ${props => props.disabled && tw`opacity-50 pointer-events-none`}
+  
+  span {
+    ${tw`text-sm`}
+  }
 `;
