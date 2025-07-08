@@ -194,7 +194,7 @@ export const SessionItemMobile = ({
                 e.preventDefault();
                 setShowActionMenu(true);
               }}
-              onTouchStart={(e) => {
+              onTouchEnd={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 setShowActionMenu(true);

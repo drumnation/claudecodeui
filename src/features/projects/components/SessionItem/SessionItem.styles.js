@@ -19,7 +19,8 @@ export const MobileSessionItem = styled.div`
   /* Ensure button areas don't trigger parent click */
   & button {
     position: relative;
-    z-index: 10;
+    z-index: 100;
+    pointer-events: auto;
   }
 `;
 
@@ -90,7 +91,12 @@ export const MobileActions = styled.div`
 
 // New mobile button styles
 export const MenuButton = styled.button`
-  ${tw`w-8 h-8 rounded-lg flex items-center justify-center active:scale-95 transition-all bg-muted/50 hover:bg-muted text-muted-foreground flex-shrink-0 relative z-10`}
+  ${tw`w-8 h-8 rounded-lg flex items-center justify-center active:scale-95 transition-all bg-muted/50 hover:bg-muted text-muted-foreground flex-shrink-0`}
+  position: relative;
+  z-index: 100;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto;
   
   &:focus {
     outline: 2px solid rgba(59, 130, 246, 0.5);
@@ -103,7 +109,10 @@ export const MenuButton = styled.button`
 `;
 
 export const EditActions = styled.div`
-  ${tw`flex items-center gap-2 relative z-10 flex-shrink-0`}
+  ${tw`flex items-center gap-2 flex-shrink-0`}
+  position: relative;
+  z-index: 100;
+  pointer-events: auto;
 `;
 
 export const ActionButton = styled.button`
