@@ -154,7 +154,7 @@ export const EditInput = styled.input`
 `;
 
 export const LoadingSpinner = styled.div`
-  ${tw`w-2.5 h-2.5 animate-spin rounded-full border border-blue-600 dark:border-blue-400 border-t-transparent`}
+  ${tw`w-4 h-4 animate-spin rounded-full border-2 border-blue-600 dark:border-blue-400 border-t-transparent`}
 `;
 
 // Desktop styles
@@ -198,6 +198,37 @@ export const DesktopCancelButton = styled(DesktopActionButton)`
 
 export const DesktopEditInput = styled.input`
   ${tw`w-32 px-2 py-1 text-xs border border-border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary`}
+`;
+
+export const DesktopEditContainer = styled.div`
+  ${tw`absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1.5`}
+`;
+
+// Desktop 3-dot menu styles
+export const DesktopMenuWrapper = styled.div`
+  ${tw`relative`}
+`;
+
+export const DesktopMenuButton = styled.button`
+  ${tw`w-7 h-7 rounded-md flex items-center justify-center hover:bg-accent transition-colors`}
+`;
+
+export const DesktopMenuDropdown = styled.div`
+  ${tw`absolute right-0 top-full mt-1 w-48 bg-background border border-border rounded-lg shadow-lg py-1 z-50`}
+`;
+
+export const DesktopMenuItem = styled.button`
+  ${tw`w-full flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors`}
+  ${props => props.variant === 'destructive' && tw`text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20`}
+  ${props => props.disabled && tw`opacity-50 cursor-not-allowed`}
+  
+  span {
+    ${tw`text-sm`}
+  }
+`;
+
+export const DesktopMenuDivider = styled.div`
+  ${tw`h-px bg-border my-1 mx-2`}
 `;
 
 // Mobile Action Modal Styles

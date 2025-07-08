@@ -102,41 +102,93 @@ export class CodeQAIAdapter {
   }
 
   getAgentQueries(agentType: AgentType, featureDescription: string): string[] {
+    // Extract key terms from feature description for more targeted searches
+    const featureKeywords = this.extractKeywords(featureDescription);
+    
     switch (agentType) {
       case AgentType.ARCH:
         return [
+          // Core architecture queries
           'main architectural modules',
           'core services',
-          'entry points',
-          'configuration files',
-          'routing patterns',
-          'database models',
-          'API endpoints'
+          'entry points index main app',
+          'configuration files config settings',
+          'routing patterns routes router',
+          'database models schema migrations',
+          'API endpoints controllers handlers',
+          'state management store redux context',
+          'authentication auth session',
+          'middleware interceptors guards',
+          'websocket socket realtime',
+          'event emitter bus messaging',
+          // Feature-specific architectural queries
+          ...featureKeywords.map(keyword => `architecture ${keyword}`),
+          ...featureKeywords.map(keyword => `${keyword} service module component`)
         ];
       
       case AgentType.DIFF:
         return [
+          // Direct feature searches
+          ...featureKeywords.map(keyword => `${keyword}`),
           `files related to ${featureDescription}`,
-          'recent changes',
-          'impacted modules',
-          'test files',
-          'component files',
-          'service files'
+          // Component and module searches
+          'component tsx jsx',
+          'service module class',
+          'controller handler route',
+          'hook custom use',
+          'util helper function',
+          // UI/UX related
+          'modal dialog form',
+          'button action trigger',
+          'style css styled emotion',
+          // Testing
+          'test spec suite describe it',
+          'mock stub spy',
+          // Recent changes context
+          'TODO FIXME NOTE',
+          'recent modified updated'
         ];
       
       case AgentType.DEPS:
         return [
+          // Package management
+          'package.json dependencies',
+          'requirements.txt pip',
+          'go.mod go.sum',
+          'cargo.toml',
+          // Import analysis
+          'import from require',
           'external dependencies',
-          'internal dependencies',
-          'library usage',
-          'package.json',
-          'import statements',
-          'utility functions'
+          'node_modules vendor',
+          // Library usage
+          ...featureKeywords.map(keyword => `import ${keyword}`),
+          'utility functions utils helpers',
+          'shared common lib',
+          // API and SDK usage
+          'client sdk api',
+          'fetch axios http request',
+          // Build and tooling
+          'webpack vite rollup',
+          'babel typescript tsconfig',
+          'eslint prettier lint'
         ];
       
       default:
-        return ['code structure', 'main files'];
+        return ['code structure', 'main files', ...featureKeywords];
     }
+  }
+  
+  private extractKeywords(description: string): string[] {
+    // Extract meaningful keywords from the feature description
+    const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'up', 'about', 'into', 'through', 'during', 'how', 'when', 'where', 'why', 'what', 'which', 'who', 'whom', 'this', 'that', 'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'can', 'shall']);
+    
+    const words = description.toLowerCase()
+      .replace(/[^\w\s]/g, ' ')  // Remove punctuation
+      .split(/\s+/)              // Split by whitespace
+      .filter(word => word.length > 2 && !stopWords.has(word)); // Filter short words and stop words
+    
+    // Return unique keywords
+    return [...new Set(words)];
   }
 
   async getAgentContext(
@@ -150,7 +202,8 @@ export class CodeQAIAdapter {
     
     for (const query of queries) {
       const searchResult = await this.search(projectPath, query, {
-        maxResults: options.maxResults || 3,
+        maxResults: options.maxResults || 5, // Increased from 3
+        contextLength: options.contextLength || 1000, // Increased from 500
         ...options
       });
       

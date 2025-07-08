@@ -163,12 +163,12 @@ export class PlannerService extends EventEmitter {
     });
 
     try {
-      // Get agent-specific code context
+      // Get agent-specific code context with more comprehensive search
       const codeContext = await this.codeqaiAdapter.getAgentContext(
         request.projectPath,
         agentType,
         request.featureDescription,
-        { maxResults: 8, contextLength: 500 }
+        { maxResults: 20, contextLength: 1500 } // Significantly increased for deeper research
       );
 
       // Determine prompt path
@@ -181,6 +181,7 @@ export class PlannerService extends EventEmitter {
         promptPath,
         codeContext,
         featureDescription: request.featureDescription,
+        screenshots: request.screenshots,
         archOutput: previousOutputs.arch,
         diffOutput: previousOutputs.diff,
         depsOutput: previousOutputs.deps,
@@ -222,7 +223,15 @@ export class PlannerService extends EventEmitter {
     } catch (error: any) {
       logger.error('Agent execution failed', { 
         agentType,
-        error: error.message
+        error: error.message,
+        stack: error.stack
+      });
+
+      // Emit error to WebSocket
+      this.emit('planner-error', {
+        error: `${agentType} agent failed: ${error.message}`,
+        sessionId: this.state.sessionId,
+        agentType
       });
 
       return {
@@ -242,7 +251,7 @@ export class PlannerService extends EventEmitter {
 
   private getPromptPath(agentType: AgentType): string {
     const promptMap = {
-      [AgentType.ARCH]: '.brain/prompts/plan-generation/ARCH/arch-analysis.prompt.md',
+      [AgentType.ARCH]: '.brain/prompts/plan-generation/ARCH/arch-deep-analysis.prompt.md',
       [AgentType.DIFF]: '.brain/prompts/plan-generation/DIFF/diff-analysis.prompt.md',
       [AgentType.DEPS]: '.brain/prompts/plan-generation/DEPS/deps-analysis.prompt.md'
     };
@@ -253,7 +262,8 @@ export class PlannerService extends EventEmitter {
   private generateFinalPlan(agentResults: AgentResult[]): string {
     const sections = [];
     
-    sections.push('# Multi-Agent Feature Planning Results');
+    const title = agentResults.length === 1 ? 'Single Agent Feature Planning Results' : 'Multi-Agent Feature Planning Results';
+    sections.push(`# ${title}`);
     sections.push(`\nGenerated on: ${new Date().toISOString()}`);
     sections.push(`\nTotal agents executed: ${agentResults.length}`);
     sections.push(`\nTotal planning time: ${this.formatDuration(Date.now() - this.state.startTime)}`);

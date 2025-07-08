@@ -70,6 +70,9 @@ export const createPlannerWebSocketMessage = (data) => {
     projectPath: data.projectPath,
     featureDescription: data.featureDescription,
     selectedAgents: data.selectedAgents,
+    plannerMode: data.plannerMode,
+    autoGenerateCode: data.autoGenerateCode,
+    screenshots: data.screenshots,
     sessionId: data.sessionId
   };
 };

@@ -5,6 +5,7 @@ import * as fs from 'fs/promises';
 import { createHash } from 'crypto';
 import { backlogCliService } from './backlog-cli.service.js';
 import { createLogger } from '@kit/logger/node';
+import { resolveCli, getEnhancedEnv } from '../../lib/cliResolver.js';
 
 const execFileAsync = promisify(execFile);
 const logger = createLogger({ scope: 'backlog-service' });
@@ -74,7 +75,11 @@ export class BacklogService {
   private async ensureCliAvailable(): Promise<void> {
     const status = await backlogCliService.checkInstallation();
     if (!status.installed) {
-      throw new Error('Backlog CLI is not installed. Please install it to use backlog features.');
+      throw new Error(
+        'Backlog CLI is not installed. Please install it with: npm install -g backlog.md\n' +
+        'If already installed, ensure npm global bin directory is in your PATH.\n' +
+        'For more help, check the installation guide in the backlog tab.'
+      );
     }
   }
 
@@ -102,9 +107,16 @@ export class BacklogService {
       // Create directory if it doesn't exist
       await fs.mkdir(backlogPath, { recursive: true });
       
-      // Initialize backlog
+      // Initialize backlog with enhanced environment
       try {
-        await execFileAsync(backlogCommand, ['init'], { cwd: backlogPath });
+        const cliPath = await resolveCli('backlog', 'BACKLOG_CLI_PATH');
+        const command = cliPath || backlogCommand;
+        const env = getEnhancedEnv();
+        
+        await execFileAsync(command, ['init'], { 
+          cwd: backlogPath,
+          env
+        });
       } catch (execError: any) {
         logger.error('Failed to initialize backlog', { error: execError, backlogPath });
         throw new Error(`Failed to initialize backlog: ${execError.message}`);
@@ -117,9 +129,13 @@ export class BacklogService {
     const backlogPath = this.getBacklogPath(projectPath);
     
     try {
-      const backlogCommand = backlogCliService.getCommand();
-      const { stdout } = await execFileAsync(backlogCommand, ['task', 'list', '--json'], { 
-        cwd: backlogPath 
+      const cliPath = await resolveCli('backlog', 'BACKLOG_CLI_PATH');
+      const command = cliPath || backlogCliService.getCommand();
+      const env = getEnhancedEnv();
+      
+      const { stdout } = await execFileAsync(command, ['task', 'list', '--json'], { 
+        cwd: backlogPath,
+        env
       });
       
       let tasks: Task[] = JSON.parse(stdout);
@@ -166,8 +182,14 @@ export class BacklogService {
     }
     
     try {
-      const backlogCommand = backlogCliService.getCommand();
-      const { stdout } = await execFileAsync(backlogCommand, args, { cwd: backlogPath });
+      const cliPath = await resolveCli('backlog', 'BACKLOG_CLI_PATH');
+      const command = cliPath || backlogCliService.getCommand();
+      const env = getEnhancedEnv();
+      
+      const { stdout } = await execFileAsync(command, args, { 
+        cwd: backlogPath,
+        env
+      });
       const taskId = this.extractTaskIdFromOutput(stdout);
       
       // Retrieve the created task
@@ -217,8 +239,14 @@ export class BacklogService {
     }
     
     try {
-      const backlogCommand = backlogCliService.getCommand();
-      await execFileAsync(backlogCommand, args, { cwd: backlogPath });
+      const cliPath = await resolveCli('backlog', 'BACKLOG_CLI_PATH');
+      const command = cliPath || backlogCliService.getCommand();
+      const env = getEnhancedEnv();
+      
+      await execFileAsync(command, args, { 
+        cwd: backlogPath,
+        env
+      });
       
       // Retrieve the updated task
       const tasks = await this.listTasks(projectPath);
@@ -240,8 +268,14 @@ export class BacklogService {
     const backlogPath = this.getBacklogPath(projectPath);
     
     try {
-      const backlogCommand = backlogCliService.getCommand();
-      await execFileAsync(backlogCommand, ['task', 'archive', taskId], { cwd: backlogPath });
+      const cliPath = await resolveCli('backlog', 'BACKLOG_CLI_PATH');
+      const command = cliPath || backlogCliService.getCommand();
+      const env = getEnhancedEnv();
+      
+      await execFileAsync(command, ['task', 'archive', taskId], { 
+        cwd: backlogPath,
+        env
+      });
     } catch (error: any) {
       console.error('Failed to delete task:', error);
       throw new Error(`Failed to delete task: ${error.message}`);

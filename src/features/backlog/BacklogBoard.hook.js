@@ -9,12 +9,34 @@ import {
   validateTaskMove 
 } from './BacklogBoard.logic';
 
+// Simple debounce implementation
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
 export function useBacklogBoard(selectedProject) {
+  console.log('🎣 useBacklogBoard hook called with project:', selectedProject?.name);
+  
   // Core state
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [cliAvailable, setCliAvailable] = useState(null);
+  
+  // CLI check state
+  const [isCheckingCli, setIsCheckingCli] = useState(false);
+  const [cliCheckRetries, setCliCheckRetries] = useState(0);
+  const [lastCliCheck, setLastCliCheck] = useState(0);
+  const MAX_CLI_RETRIES = 3;
+  const CLI_CHECK_DELAY = 1000; // 1 second between retries
   
   // UI state
   const [selectedTask, setSelectedTask] = useState(null);
@@ -44,9 +66,29 @@ export function useBacklogBoard(selectedProject) {
   const wsRef = useRef(null);
   const location = useLocation();
 
-  // Check CLI availability
-  const checkCliAvailability = useCallback(async () => {
-    console.log('Checking CLI availability...');
+  // Check CLI availability with debouncing and retry logic
+  const checkCliAvailabilityInternal = useCallback(async () => {
+    // Prevent concurrent checks
+    if (isCheckingCli) {
+      console.log('CLI check already in progress, skipping...');
+      return cliAvailable;
+    }
+    
+    // Prevent rapid repeated checks
+    const now = Date.now();
+    if (now - lastCliCheck < CLI_CHECK_DELAY) {
+      console.log('Too soon since last CLI check, skipping...');
+      return cliAvailable;
+    }
+    
+    console.log('Checking CLI availability...', { 
+      attempt: cliCheckRetries + 1, 
+      maxRetries: MAX_CLI_RETRIES 
+    });
+    
+    setIsCheckingCli(true);
+    setLastCliCheck(now);
+    
     try {
       const response = await fetch('/api/backlog/health');
       console.log('Health check response:', response.status, response.statusText);
@@ -55,25 +97,70 @@ export function useBacklogBoard(selectedProject) {
         console.error('Backlog health check failed:', response.status, response.statusText);
         const text = await response.text();
         console.error('Response body:', text);
-        setCliAvailable(false);
+        
+        // Retry logic with exponential backoff
+        if (cliCheckRetries < MAX_CLI_RETRIES) {
+          console.log(`Retrying CLI check in ${(cliCheckRetries + 1) * CLI_CHECK_DELAY}ms...`);
+          setTimeout(() => {
+            setCliCheckRetries(prev => prev + 1);
+            checkCliAvailabilityInternal();
+          }, (cliCheckRetries + 1) * CLI_CHECK_DELAY);
+        } else {
+          console.error('Max CLI check retries reached');
+          setCliAvailable(false);
+          setError('Failed to check backlog CLI availability after multiple attempts');
+        }
+        
         return false;
       }
       
       const data = await response.json();
       console.log('Health check data:', data);
       setCliAvailable(data.backlogAvailable);
+      setCliCheckRetries(0); // Reset retry counter on success
+      setError(null);
       return data.backlogAvailable;
     } catch (err) {
       console.error('Error checking backlog CLI:', err);
-      setCliAvailable(false);
+      
+      // Retry logic for network errors
+      if (cliCheckRetries < MAX_CLI_RETRIES) {
+        console.log(`Retrying CLI check after error in ${(cliCheckRetries + 1) * CLI_CHECK_DELAY}ms...`);
+        setTimeout(() => {
+          setCliCheckRetries(prev => prev + 1);
+          checkCliAvailabilityInternal();
+        }, (cliCheckRetries + 1) * CLI_CHECK_DELAY);
+      } else {
+        setCliAvailable(false);
+        setError(`Network error checking backlog CLI: ${err.message}`);
+      }
+      
       return false;
+    } finally {
+      setIsCheckingCli(false);
     }
+  }, [isCheckingCli, lastCliCheck, cliCheckRetries, cliAvailable]);
+  
+  // Create a stable debounced function using useRef
+  const debouncedCheckRef = useRef(null);
+  if (!debouncedCheckRef.current) {
+    debouncedCheckRef.current = debounce(checkCliAvailabilityInternal, 300);
+  }
+  
+  const checkCliAvailability = useCallback(() => {
+    debouncedCheckRef.current();
   }, []);
 
   // Fetch tasks
   const fetchTasks = useCallback(async () => {
     console.log('fetchTasks called for project:', selectedProject?.name);
     if (!selectedProject) return;
+    
+    // Prevent fetching if already loading
+    if (loading) {
+      console.log('Already loading tasks, skipping fetch');
+      return;
+    }
     
     setLoading(true);
     setError(null);
@@ -111,7 +198,7 @@ export function useBacklogBoard(selectedProject) {
       console.log('Setting loading to false');
       setLoading(false);
     }
-  }, [selectedProject, filters]);
+  }, [selectedProject, filters, loading]);
 
   // Create task
   const createTask = useCallback(async (taskData) => {
@@ -373,24 +460,35 @@ export function useBacklogBoard(selectedProject) {
     setIsPlanningMode(prev => !prev);
   }, []);
 
-  // Initialize CLI check
+  // Initialize on mount and when project changes
   useEffect(() => {
-    if (selectedProject && cliAvailable === null) {
-      console.log('Initial CLI check for project:', selectedProject.name);
-      checkCliAvailability();
+    console.log('Main initialization effect running', {
+      project: selectedProject?.name,
+      cliAvailable,
+      loading
+    });
+    
+    if (!selectedProject) {
+      setLoading(false);
+      return;
     }
-  }, [selectedProject?.name]); // Only run when project changes
-
-  // Fetch tasks when CLI is available
-  useEffect(() => {
-    if (selectedProject && cliAvailable === true) {
-      console.log('CLI is available, fetching tasks');
+    
+    // Check CLI if not yet checked
+    if (cliAvailable === null) {
+      console.log('Starting CLI availability check');
+      checkCliAvailabilityInternal();
+    } 
+    // Fetch tasks if CLI is available and not loading
+    else if (cliAvailable === true && !loading) {
+      console.log('CLI available, fetching tasks');
       fetchTasks();
-    } else if (cliAvailable === false) {
-      console.log('CLI not available');
+    }
+    // Set loading false if CLI not available
+    else if (cliAvailable === false) {
+      console.log('CLI not available, stopping loading');
       setLoading(false);
     }
-  }, [selectedProject?.name, cliAvailable]); // Run when project or CLI availability changes
+  }, [selectedProject?.name, cliAvailable]); // Minimal dependencies
 
   // Setup WebSocket for real-time updates
   useEffect(() => {

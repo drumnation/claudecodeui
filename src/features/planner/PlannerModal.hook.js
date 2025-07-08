@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useWebSocket } from '@/utils/websocket';
 import { createPlannerWebSocketMessage } from './PlannerModal.logic';
 
@@ -7,6 +7,7 @@ export const usePlanner = (selectedProject, onPlanComplete) => {
   const [plannerMode, setPlannerMode] = useState('multi'); // 'single' or 'multi'
   const [selectedAgents, setSelectedAgents] = useState(['ARCH', 'DIFF', 'DEPS']);
   const [autoGenerateCode, setAutoGenerateCode] = useState(false);
+  const [screenshots, setScreenshots] = useState([]); // Array of {id, file, preview}
   const [isPlanning, setIsPlanning] = useState(false);
   const [plannerState, setPlannerState] = useState({
     progress: null,
@@ -143,8 +144,15 @@ export const usePlanner = (selectedProject, onPlanComplete) => {
   };
 
   const startPlanning = async () => {
-    if (!selectedProject || !featureDescription.trim() || selectedAgents.length === 0) {
-      setError('Please provide a feature description and select at least one agent');
+    if (!selectedProject || !featureDescription.trim()) {
+      setError('Please provide a feature description');
+      return;
+    }
+    
+    // In single agent mode, ensure we have at least ARCH selected
+    const agentsToUse = plannerMode === 'single' ? ['ARCH'] : selectedAgents;
+    if (agentsToUse.length === 0) {
+      setError('Please select at least one agent');
       return;
     }
 
@@ -176,19 +184,29 @@ export const usePlanner = (selectedProject, onPlanComplete) => {
       }
     });
 
+    // Convert screenshots to base64 strings for transmission
+    const screenshotData = screenshots.map(s => ({
+      name: s.name,
+      data: s.preview,
+      type: s.file.type
+    }));
+
     // Send planner command via WebSocket
     const plannerMessage = createPlannerWebSocketMessage({
       type: 'planner-command',
       projectPath: selectedProject.fullPath,
       featureDescription: featureDescription.trim(),
-      selectedAgents: plannerMode === 'single' ? ['ARCH'] : selectedAgents,
+      selectedAgents: agentsToUse,
       plannerMode,
       autoGenerateCode,
+      screenshots: screenshotData,
       sessionId
     });
 
     try {
+      console.log('Sending planner message:', plannerMessage);
       sendMessage(plannerMessage);
+      console.log('Planner message sent successfully');
     } catch (error) {
       console.error('Failed to send planner command:', error);
       setError('Failed to start planning session');
@@ -270,6 +288,51 @@ export const usePlanner = (selectedProject, onPlanComplete) => {
     };
   }, []);
 
+  // Handle screenshot paste
+  const handleScreenshotPaste = useCallback((event) => {
+    const items = event.clipboardData?.items || [];
+    
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          addScreenshot(file);
+        }
+      }
+    }
+  }, []);
+
+  // Handle screenshot file input
+  const handleScreenshotFile = useCallback((files) => {
+    for (const file of files) {
+      if (file.type.startsWith('image/')) {
+        addScreenshot(file);
+      }
+    }
+  }, []);
+
+  // Add screenshot to state
+  const addScreenshot = useCallback((file) => {
+    const id = `screenshot-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      setScreenshots(prev => [...prev, {
+        id,
+        file,
+        preview: e.target.result,
+        name: file.name || `Screenshot ${prev.length + 1}`
+      }]);
+    };
+    
+    reader.readAsDataURL(file);
+  }, []);
+
+  // Remove screenshot
+  const removeScreenshot = useCallback((id) => {
+    setScreenshots(prev => prev.filter(s => s.id !== id));
+  }, []);
+
   return {
     // Form state
     featureDescription,
@@ -280,6 +343,8 @@ export const usePlanner = (selectedProject, onPlanComplete) => {
     setSelectedAgents,
     autoGenerateCode,
     setAutoGenerateCode,
+    screenshots,
+    setScreenshots,
     
     // Planning state
     isPlanning,
@@ -295,6 +360,10 @@ export const usePlanner = (selectedProject, onPlanComplete) => {
     startPlanning,
     cancelPlanning,
     createSessionFromPlan,
+    handleScreenshotPaste,
+    handleScreenshotFile,
+    addScreenshot,
+    removeScreenshot,
     
     // Validation
     isValidForm,

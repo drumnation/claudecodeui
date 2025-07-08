@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/shared-components/Button/Button';
 import { Badge } from '@/shared-components/Badge/Badge';
 import { 
@@ -9,7 +9,8 @@ import {
   Trash2, 
   Check, 
   X,
-  RefreshCw
+  RefreshCw,
+  MoreVertical
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as S from './SessionItem.styles';
@@ -35,6 +36,22 @@ export const SessionItemWeb = ({
   setEditingSessionName,
   handleTouchClick
 }) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowMenu(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showMenu]);
   
   return (
     <S.SessionContainer className="group">
@@ -87,98 +104,122 @@ export const SessionItemWeb = ({
           </div>
         </div>
       </Button>
-      {/* Desktop hover buttons */}
-      <S.DesktopHoverActions>
-        {isEditing ? (
-          <>
-            <S.DesktopEditInput
-              type="text"
-              value={editingSessionName}
-              onChange={(e) => setEditingSessionName(e.target.value)}
-              onKeyDown={(e) => {
-                e.stopPropagation();
-                if (e.key === 'Enter') {
-                  onUpdateSessionSummary(project.name, session.id, editingSessionName);
-                } else if (e.key === 'Escape') {
-                  setEditingSession(null);
-                  setEditingSessionName('');
-                }
-              }}
-              onClick={(e) => e.stopPropagation()}
-              autoFocus
-            />
-            <S.DesktopSaveButton
+      {/* Desktop 3-dot menu - Only show when not editing */}
+      {!isEditing && (
+        <S.DesktopHoverActions ref={menuRef}>
+          <S.DesktopMenuWrapper>
+            <S.DesktopMenuButton
               onClick={(e) => {
                 e.stopPropagation();
-                onUpdateSessionSummary(project.name, session.id, editingSessionName);
+                setShowMenu(!showMenu);
               }}
+              title="More options"
             >
-              <Check className="w-3 h-3 text-green-600" />
-            </S.DesktopSaveButton>
-            <S.DesktopCancelButton
-              onClick={(e) => {
-                e.stopPropagation();
+              <MoreVertical className="w-4 h-4 text-muted-foreground" />
+            </S.DesktopMenuButton>
+            {showMenu && (
+              <S.DesktopMenuDropdown>
+                {!session.summary && (
+                  <S.DesktopMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onGenerateSessionSummary(project.name, session.id);
+                      setShowMenu(false);
+                    }}
+                    disabled={isGeneratingSummary}
+                  >
+                    {isGeneratingSummary ? (
+                      <S.LoadingSpinner />
+                    ) : (
+                      <RefreshCw className="w-4 h-4" />
+                    )}
+                    <span>Generate summary</span>
+                  </S.DesktopMenuItem>
+                )}
+                {session.summary && (
+                  <S.DesktopMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRegenerateSessionTitle(project.name, session.id);
+                      setShowMenu(false);
+                    }}
+                    disabled={isRegeneratingTitle}
+                  >
+                    {isRegeneratingTitle ? (
+                      <S.LoadingSpinner />
+                    ) : (
+                      <RefreshCw className="w-4 h-4" />
+                    )}
+                    <span>Regenerate title</span>
+                  </S.DesktopMenuItem>
+                )}
+                <S.DesktopMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingSession(session.id);
+                    setEditingSessionName(session.summary || '');
+                    setShowMenu(false);
+                  }}
+                >
+                  <Edit3 className="w-4 h-4" />
+                  <span>Edit title</span>
+                </S.DesktopMenuItem>
+                <S.DesktopMenuDivider />
+                <S.DesktopMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteSession(project.name, session.id);
+                    setShowMenu(false);
+                  }}
+                  variant="destructive"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Delete session</span>
+                </S.DesktopMenuItem>
+              </S.DesktopMenuDropdown>
+            )}
+          </S.DesktopMenuWrapper>
+        </S.DesktopHoverActions>
+      )}
+      
+      {/* Edit mode inline actions */}
+      {isEditing && (
+        <S.DesktopEditContainer>
+          <S.DesktopEditInput
+            type="text"
+            value={editingSessionName}
+            onChange={(e) => setEditingSessionName(e.target.value)}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === 'Enter') {
+                onUpdateSessionSummary(project.name, session.id, editingSessionName);
+              } else if (e.key === 'Escape') {
                 setEditingSession(null);
                 setEditingSessionName('');
-              }}
-            >
-              <X className="w-3 h-3 text-gray-500" />
-            </S.DesktopCancelButton>
-          </>
-        ) : (
-          <>
-            {!session.summary && (
-              <S.DesktopGenerateButton
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onGenerateSessionSummary(project.name, session.id);
-                }}
-                title="Generate summary"
-              >
-                {isGeneratingSummary ? (
-                  <S.LoadingSpinner />
-                ) : (
-                  <RefreshCw className="w-3 h-3 text-blue-600" />
-                )}
-              </S.DesktopGenerateButton>
-            )}
-            {session.summary && (
-              <S.DesktopGenerateButton
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRegenerateSessionTitle(project.name, session.id);
-                }}
-                title="Regenerate title"
-              >
-                {isRegeneratingTitle ? (
-                  <S.LoadingSpinner />
-                ) : (
-                  <RefreshCw className="w-3 h-3 text-blue-600" />
-                )}
-              </S.DesktopGenerateButton>
-            )}
-            <S.DesktopEditButton
-              onClick={(e) => {
-                e.stopPropagation();
-                setEditingSession(session.id);
-                setEditingSessionName(session.summary || '');
-              }}
-              title="Edit session"
-            >
-              <Edit3 className="w-3 h-3 text-gray-600" />
-            </S.DesktopEditButton>
-            <S.DesktopDeleteButton
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteSession(project.name, session.id);
-              }}
-              title="Delete session"
-            >
-              <Trash2 className="w-3 h-3 text-red-600" />
-            </S.DesktopDeleteButton>
-          </>
-        )}
-      </S.DesktopHoverActions>
+              }
+            }}
+            onClick={(e) => e.stopPropagation()}
+            autoFocus
+          />
+          <S.DesktopSaveButton
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdateSessionSummary(project.name, session.id, editingSessionName);
+            }}
+          >
+            <Check className="w-3 h-3 text-green-600" />
+          </S.DesktopSaveButton>
+          <S.DesktopCancelButton
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingSession(null);
+              setEditingSessionName('');
+            }}
+          >
+            <X className="w-3 h-3 text-gray-500" />
+          </S.DesktopCancelButton>
+        </S.DesktopEditContainer>
+      )}
     </S.SessionContainer>
   );
 };

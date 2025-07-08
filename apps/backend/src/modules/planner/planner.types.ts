@@ -6,11 +6,20 @@ export enum AgentType {
   DEPS = 'DEPS'
 }
 
+export interface Screenshot {
+  name: string;
+  data: string; // base64 encoded image
+  type: string; // mime type
+}
+
 export interface PlannerRequest {
   type: 'planner-command';
   projectPath: string;
   featureDescription: string;
   selectedAgents: AgentType[];
+  plannerMode?: 'single' | 'multi';
+  autoGenerateCode?: boolean;
+  screenshots?: Screenshot[];
   sessionId?: string;
 }
 
@@ -80,6 +89,7 @@ export interface AgentPromptContext {
   featureDescription: string;
   projectPath: string;
   codeContext: CodeContext[];
+  screenshots?: Screenshot[];
   archOutput?: string;
   diffOutput?: string;
   depsOutput?: string;

@@ -7,7 +7,8 @@ import {
   Loader2, 
   Terminal,
   Info,
-  RefreshCw
+  RefreshCw,
+  HelpCircle
 } from 'lucide-react';
 import { Button } from '../../../../shared-components/Button';
 
@@ -123,11 +124,53 @@ const SuccessMessage = styled.div`
   gap: 0.5rem;
 `;
 
+const DiagnosticInfo = styled.div`
+  margin-top: 1rem;
+  padding: 1rem;
+  background: ${props => props.theme.colors.surface};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  text-align: left;
+  max-width: 600px;
+`;
+
+const DiagnosticItem = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const DiagnosticLabel = styled.span`
+  font-weight: 600;
+  color: ${props => props.theme.colors.text};
+  min-width: 100px;
+`;
+
+const DiagnosticValue = styled.span`
+  color: ${props => props.theme.colors.textSecondary};
+  font-family: ${props => props.theme.fonts.mono};
+  word-break: break-word;
+`;
+
 export default function BacklogInstaller({ onInstallComplete, onSkip }) {
   const [status, setStatus] = useState('checking'); // checking, not-installed, installing, installed, error
   const [installProgress, setInstallProgress] = useState(null);
   const [error, setError] = useState(null);
   const [showManualInstructions, setShowManualInstructions] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [detailedError, setDetailedError] = useState(null);
+  
+  // Get platform information
+  const platform = navigator.platform.toLowerCase();
+  const isWindows = platform.includes('win');
+  const isMac = platform.includes('mac');
+  const isLinux = platform.includes('linux');
 
   useEffect(() => {
     checkBacklogStatus();
@@ -155,6 +198,11 @@ export default function BacklogInstaller({ onInstallComplete, onSkip }) {
         }
       } else {
         setStatus('not-installed');
+        if (data.error && data.error.includes('PATH')) {
+          setDetailedError('path-issue');
+        } else if (data.error && data.error.includes('npm')) {
+          setDetailedError('npm-issue');
+        }
       }
     } catch (error) {
       console.error('Error checking backlog status:', error);
@@ -340,13 +388,89 @@ export default function BacklogInstaller({ onInstallComplete, onSkip }) {
             Manual Installation
           </InstructionTitle>
           <p style={{ fontSize: '0.875rem', marginBottom: '1rem' }}>
-            Install backlog.md globally using npm:
+            Install backlog.md globally using your package manager:
           </p>
-          <CodeBlock>npm install -g backlog.md</CodeBlock>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+          <div style={{ marginBottom: '1rem' }}>
+            <strong style={{ fontSize: '0.75rem' }}>Using npm:</strong>
+            <CodeBlock>npm install -g backlog.md</CodeBlock>
+          </div>
+          <div style={{ marginBottom: '1rem' }}>
+            <strong style={{ fontSize: '0.75rem' }}>Using pnpm:</strong>
+            <CodeBlock>pnpm add -g backlog.md</CodeBlock>
+          </div>
+          
+          {detailedError === 'path-issue' && (
+            <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(251, 191, 36, 0.1)', borderRadius: '0.375rem' }}>
+              <InstructionTitle style={{ fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                <AlertCircle size={14} />
+                PATH Configuration Required
+              </InstructionTitle>
+              <p style={{ fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                The CLI appears to be installed but not found in your PATH.
+              </p>
+              <strong style={{ fontSize: '0.75rem' }}>Find npm global directory:</strong>
+              <CodeBlock>npm config get prefix</CodeBlock>
+              {isMac || isLinux ? (
+                <>
+                  <strong style={{ fontSize: '0.75rem' }}>Add to PATH (bash/zsh):</strong>
+                  <CodeBlock>echo 'export PATH="$PATH:$(npm config get prefix)/bin"' {'>>'}{'~/.zshrc'}</CodeBlock>
+                </>
+              ) : isWindows ? (
+                <p style={{ fontSize: '0.75rem' }}>
+                  Add the npm prefix to your Windows PATH environment variable (usually %APPDATA%\npm)
+                </p>
+              ) : null}
+            </div>
+          )}
+          
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '1rem' }}>
             After installation, click "Check Again" to verify.
           </p>
         </ManualInstructions>
+      )}
+      
+      <Button
+        onClick={() => setShowDiagnostics(!showDiagnostics)}
+        variant="ghost"
+        size="small"
+        style={{ marginTop: '0.5rem' }}
+      >
+        <HelpCircle size={14} />
+        {showDiagnostics ? 'Hide' : 'Show'} Diagnostics
+      </Button>
+      
+      {showDiagnostics && process.env.NODE_ENV === 'development' && (
+        <DiagnosticInfo>
+          <InstructionTitle style={{ fontSize: '0.75rem', marginBottom: '0.75rem' }}>
+            <Info size={14} />
+            System Diagnostics
+          </InstructionTitle>
+          <DiagnosticItem>
+            <DiagnosticLabel>Platform:</DiagnosticLabel>
+            <DiagnosticValue>{navigator.platform}</DiagnosticValue>
+          </DiagnosticItem>
+          <DiagnosticItem>
+            <DiagnosticLabel>User Agent:</DiagnosticLabel>
+            <DiagnosticValue>{navigator.userAgent.split(' ').slice(0, 3).join(' ')}</DiagnosticValue>
+          </DiagnosticItem>
+          <DiagnosticItem>
+            <DiagnosticLabel>Error Type:</DiagnosticLabel>
+            <DiagnosticValue>{detailedError || 'Unknown'}</DiagnosticValue>
+          </DiagnosticItem>
+          <div style={{ marginTop: '1rem' }}>
+            <strong style={{ fontSize: '0.75rem' }}>Commands to verify installation:</strong>
+            <CodeBlock>
+{`# Check if backlog is installed
+which backlog
+
+# Check npm global packages
+npm list -g --depth=0 | grep backlog
+
+# Check npm global bin directory
+npm config get prefix`}
+            </CodeBlock>
+          </div>
+        </DiagnosticInfo>
       )}
     </Container>
   );

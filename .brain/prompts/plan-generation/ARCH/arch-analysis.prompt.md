@@ -16,6 +16,9 @@ You are analyzing the following feature for architectural considerations:
 **Code Context (from CodeQAI):**
 {{CODE_CONTEXT}}
 
+**Screenshots/Visual Context:**
+{{SCREENSHOTS}}
+
 **Timestamp:**
 {{TIMESTAMP}}
 

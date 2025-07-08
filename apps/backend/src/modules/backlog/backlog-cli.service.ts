@@ -2,6 +2,7 @@ import { execFile, spawn } from 'child_process';
 import { promisify } from 'util';
 import { createLogger } from '@kit/logger/node';
 import * as os from 'os';
+import { resolveCli, getEnhancedEnv, clearCliCache, validateCli } from '../../lib/cliResolver.js';
 
 const execFileAsync = promisify(execFile);
 const logger = createLogger({ scope: 'backlog-cli-service' });
@@ -25,6 +26,22 @@ export class BacklogCliService {
   private cachedStatus: BacklogCliStatus | null = null;
   private lastCheckTime = 0;
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  
+  /**
+   * Get enhanced environment with proper PATH
+   */
+  private getEnhancedEnv(): NodeJS.ProcessEnv {
+    return getEnhancedEnv();
+  }
+  
+  /**
+   * Clear CLI resolution cache for backlog
+   */
+  clearCliCache(): void {
+    clearCliCache('backlog');
+    this.cachedStatus = null;
+    this.lastCheckTime = 0;
+  }
 
   async checkInstallation(): Promise<BacklogCliStatus> {
     // Return cached status if recent
@@ -41,29 +58,63 @@ export class BacklogCliService {
     this.isChecking = true;
 
     try {
-      // Try to run backlog --version
-      const { stdout } = await execFileAsync(this.backlogCommand, ['--version']);
-      const version = stdout.trim();
+      // Use CLI resolver to find backlog with enhanced PATH
+      const cliPath = await resolveCli('backlog', 'BACKLOG_CLI_PATH');
       
-      // Get the path to backlog
-      const { stdout: pathOutput } = await execFileAsync('which', [this.backlogCommand]);
-      const path = pathOutput.trim();
+      if (!cliPath) {
+        logger.warn('Backlog CLI not found in PATH', {
+          PATH: process.env.PATH,
+          hint: 'Try installing with: npm install -g backlog.md'
+        });
+        
+        this.cachedStatus = {
+          installed: false,
+          error: 'Backlog CLI not found. Please install it with: npm install -g backlog.md\n' +
+                 'If already installed, ensure npm global bin directory is in your PATH.\n' +
+                 'Alternatively, set BACKLOG_CLI_PATH environment variable to the CLI location.'
+        };
+        this.lastCheckTime = Date.now();
+        
+        return this.cachedStatus;
+      }
+
+      // Validate the CLI by checking version
+      const validation = await validateCli(cliPath, ['--version']);
+      
+      if (!validation.valid) {
+        logger.error('Backlog CLI validation failed', { 
+          cliPath, 
+          error: validation.error 
+        });
+        
+        this.cachedStatus = {
+          installed: false,
+          error: `Found backlog at ${cliPath} but it's not working properly: ${validation.error}`
+        };
+        this.lastCheckTime = Date.now();
+        
+        return this.cachedStatus;
+      }
 
       this.cachedStatus = {
         installed: true,
-        version,
-        path
+        version: validation.version,
+        path: cliPath
       };
       this.lastCheckTime = Date.now();
       
-      logger.info('Backlog CLI found', { version, path });
+      logger.info('Backlog CLI found and validated', { 
+        version: validation.version, 
+        path: cliPath 
+      });
+      
       return this.cachedStatus;
     } catch (error: any) {
-      logger.warn('Backlog CLI not found', { error: error.message });
+      logger.error('Error checking backlog installation', { error });
       
       this.cachedStatus = {
         installed: false,
-        error: 'Backlog CLI not found. Please install it to use backlog features.'
+        error: `Failed to check backlog installation: ${error.message}`
       };
       this.lastCheckTime = Date.now();
       
@@ -107,10 +158,11 @@ export class BacklogCliService {
         progress: 30
       });
 
-      // Install backlog globally using npm
+      // Install backlog globally using npm with enhanced PATH
+      const enhancedEnv = getEnhancedEnv();
       const installProcess = spawn('npm', ['install', '-g', 'backlog.md'], {
         shell: true,
-        env: { ...process.env }
+        env: enhancedEnv
       });
 
       let output = '';
@@ -158,6 +210,7 @@ export class BacklogCliService {
 
       // Clear cache and check installation again
       this.cachedStatus = null;
+      clearCliCache('backlog');
       const newStatus = await this.checkInstallation();
 
       if (newStatus.installed) {
@@ -203,6 +256,9 @@ export class BacklogCliService {
     instructions += `### Using npm (Node.js required)\n`;
     instructions += `\`\`\`bash\nnpm install -g backlog.md\n\`\`\`\n\n`;
     
+    instructions += `### Using pnpm\n`;
+    instructions += `\`\`\`bash\npnpm add -g backlog.md\n\`\`\`\n\n`;
+    
     if (platform === 'darwin') {
       instructions += `### Using Homebrew (macOS)\n`;
       instructions += `\`\`\`bash\nbrew install backlog\n\`\`\`\n\n`;
@@ -211,10 +267,32 @@ export class BacklogCliService {
     instructions += `### Verify Installation\n`;
     instructions += `\`\`\`bash\nbacklog --version\n\`\`\`\n\n`;
     
+    instructions += `## PATH Configuration\n\n`;
+    instructions += `If backlog is installed but not found, add npm's global bin directory to your PATH:\n\n`;
+    
+    instructions += `### Find npm global bin directory\n`;
+    instructions += `\`\`\`bash\nnpm config get prefix\n# The bin directory is <prefix>/bin on Unix or <prefix> on Windows\n\`\`\`\n\n`;
+    
+    if (platform === 'darwin' || platform === 'linux') {
+      instructions += `### Add to PATH (bash/zsh)\n`;
+      instructions += `\`\`\`bash\n# Add to ~/.bashrc or ~/.zshrc\nexport PATH="$PATH:$(npm config get prefix)/bin"\n\`\`\`\n\n`;
+    } else if (platform === 'win32') {
+      instructions += `### Add to PATH (Windows)\n`;
+      instructions += `1. Open System Properties > Environment Variables\n`;
+      instructions += `2. Add npm prefix to PATH (usually %APPDATA%\\npm)\n`;
+      instructions += `3. Restart your terminal\n\n`;
+    }
+    
+    instructions += `## Environment Variable Override\n\n`;
+    instructions += `If backlog is installed in a custom location, set the BACKLOG_CLI_PATH environment variable:\n`;
+    instructions += `\`\`\`bash\nexport BACKLOG_CLI_PATH="/custom/path/to/backlog"\n\`\`\`\n\n`;
+    
     instructions += `## Troubleshooting\n\n`;
     instructions += `- If you get a "command not found" error, ensure npm's global bin directory is in your PATH\n`;
     instructions += `- On macOS/Linux, you may need to use sudo: \`sudo npm install -g backlog.md\`\n`;
     instructions += `- Make sure Node.js and npm are installed: \`node --version && npm --version\`\n`;
+    instructions += `- Check current PATH: \`echo $PATH\` (Unix) or \`echo %PATH%\` (Windows)\n`;
+    instructions += `- For pnpm users, ensure pnpm's global bin is in PATH: \`pnpm config get global-bin-dir\`\n`;
     
     return instructions;
   }

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Input } from '@/shared-components/Input/Input';
 import { Button } from '@/shared-components/Button/Button';
-import { Brain, X, Zap, CheckCircle, Clock, AlertCircle, FileText } from 'lucide-react';
+import { Brain, X, Zap, CheckCircle, Clock, AlertCircle, FileText, Image, Upload, Camera } from 'lucide-react';
 import { usePlanner } from './PlannerModal.hook';
 import * as S from './PlannerModal.styles';
 
@@ -19,6 +19,7 @@ export const PlannerModal = ({
     setSelectedAgents,
     autoGenerateCode,
     setAutoGenerateCode,
+    screenshots,
     isPlanning,
     plannerState,
     agentResults,
@@ -26,8 +27,14 @@ export const PlannerModal = ({
     error,
     startPlanning,
     cancelPlanning,
-    createSessionFromPlan
+    createSessionFromPlan,
+    handleScreenshotPaste,
+    handleScreenshotFile,
+    removeScreenshot
   } = usePlanner(selectedProject, onPlanComplete);
+
+  const fileInputRef = useRef(null);
+  const textAreaRef = useRef(null);
 
   const agentOptions = [
     { 
@@ -59,8 +66,42 @@ export const PlannerModal = ({
   };
 
   const handleStartPlanning = () => {
-    if (featureDescription.trim() && selectedAgents.length > 0) {
+    console.log('handleStartPlanning called', {
+      featureDescription: featureDescription.trim(),
+      selectedAgents,
+      plannerMode
+    });
+    
+    if (featureDescription.trim() && (plannerMode === 'single' || selectedAgents.length > 0)) {
+      console.log('Starting planning...');
       startPlanning();
+    } else {
+      console.log('Validation failed', {
+        hasDescription: !!featureDescription.trim(),
+        agentCount: selectedAgents.length,
+        mode: plannerMode
+      });
+    }
+  };
+
+  // Set up paste event listener
+  useEffect(() => {
+    const handlePaste = (e) => {
+      handleScreenshotPaste(e);
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => {
+      document.removeEventListener('paste', handlePaste);
+    };
+  }, [handleScreenshotPaste]);
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    handleScreenshotFile(files);
+    // Clear the input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -135,6 +176,51 @@ export const PlannerModal = ({
               <S.CharacterCount>
                 {featureDescription.length} / 1000 characters
               </S.CharacterCount>
+            </S.FormSection>
+
+            {/* Screenshot Section */}
+            <S.FormSection>
+              <S.SectionLabel>Screenshots (Optional)</S.SectionLabel>
+              <S.ScreenshotContainer>
+                {screenshots.length > 0 && (
+                  <S.ScreenshotGrid>
+                    {screenshots.map((screenshot) => (
+                      <S.ScreenshotItem key={screenshot.id}>
+                        <S.ScreenshotImage src={screenshot.preview} alt={screenshot.name} />
+                        <S.ScreenshotOverlay>
+                          <S.ScreenshotName>{screenshot.name}</S.ScreenshotName>
+                          <S.RemoveButton
+                            onClick={() => removeScreenshot(screenshot.id)}
+                            title="Remove screenshot"
+                          >
+                            <X className="w-4 h-4" />
+                          </S.RemoveButton>
+                        </S.ScreenshotOverlay>
+                      </S.ScreenshotItem>
+                    ))}
+                  </S.ScreenshotGrid>
+                )}
+                <S.ScreenshotActions>
+                  <S.ScreenshotButton
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Upload screenshot"
+                  >
+                    <Upload className="w-4 h-4" />
+                    <span>Upload</span>
+                  </S.ScreenshotButton>
+                  <S.ScreenshotHint>
+                    or paste from clipboard (Ctrl/Cmd+V)
+                  </S.ScreenshotHint>
+                </S.ScreenshotActions>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  style={{ display: 'none' }}
+                  onChange={handleFileSelect}
+                />
+              </S.ScreenshotContainer>
             </S.FormSection>
 
             {plannerMode === 'multi' && (
@@ -361,6 +447,45 @@ export const PlannerModal = ({
                   <S.MobileCharacterCount>
                     {featureDescription.length} / 1000
                   </S.MobileCharacterCount>
+                </S.MobileSection>
+
+                {/* Mobile Screenshot Section */}
+                <S.MobileSection>
+                  <S.MobileSectionLabel>Add Screenshots</S.MobileSectionLabel>
+                  {screenshots.length > 0 && (
+                    <S.MobileScreenshotGrid>
+                      {screenshots.map((screenshot) => (
+                        <S.MobileScreenshotItem key={screenshot.id}>
+                          <S.MobileScreenshotImage src={screenshot.preview} alt={screenshot.name} />
+                          <S.MobileRemoveButton
+                            onClick={() => removeScreenshot(screenshot.id)}
+                          >
+                            <X className="w-3 h-3" />
+                          </S.MobileRemoveButton>
+                        </S.MobileScreenshotItem>
+                      ))}
+                    </S.MobileScreenshotGrid>
+                  )}
+                  <S.MobileScreenshotActions>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex-1 h-10 flex items-center justify-center gap-2"
+                    >
+                      <Camera className="w-4 h-4" />
+                      Add Screenshot
+                    </Button>
+                  </S.MobileScreenshotActions>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={handleFileSelect}
+                  />
                 </S.MobileSection>
 
                 {plannerMode === 'multi' && (

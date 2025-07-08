@@ -18,6 +18,7 @@ export interface AgentRunnerOptions {
   promptPath: string;
   codeContext: CodeContext[];
   featureDescription: string;
+  screenshots?: any[];
   archOutput?: string;
   diffOutput?: string;
   depsOutput?: string;
@@ -106,13 +107,20 @@ export class AgentRunner extends EventEmitter {
         prompt = prompt.replace(/\{\{DEPS_OUTPUT\}\}/g, this.options.depsOutput);
       }
       
+      // Add screenshots if available
+      if (this.options.screenshots && this.options.screenshots.length > 0) {
+        const screenshotSection = this.formatScreenshots(this.options.screenshots);
+        prompt = prompt.replace(/\{\{SCREENSHOTS\}\}/g, screenshotSection);
+      }
+      
       // Replace any remaining placeholders with empty string
       prompt = prompt.replace(/\{\{[^}]+\}\}/g, '');
       
       logger.debug('Built prompt for agent', { 
         agentType: this.options.agentType,
         promptLength: prompt.length,
-        codeContextItems: this.options.codeContext.length
+        codeContextItems: this.options.codeContext.length,
+        screenshotCount: this.options.screenshots?.length || 0
       });
       
       return prompt;
@@ -139,18 +147,32 @@ export class AgentRunner extends EventEmitter {
     return `# Code Context\n\n${formatted}`;
   }
 
+  private formatScreenshots(screenshots: any[]): string {
+    if (!screenshots || screenshots.length === 0) {
+      return '';
+    }
+    
+    const formatted = screenshots.map((screenshot, index) => {
+      return `## Screenshot ${index + 1}: ${screenshot.name}\n\n[Base64 image data provided to Claude]`;
+    }).join('\n\n');
+    
+    return `# Screenshots\n\n${formatted}\n\nNote: The screenshots have been provided to Claude as image inputs for visual context.`;
+  }
+
   private executeClaudeCommand(prompt: string): Promise<string> {
     return new Promise((resolve, reject) => {
+      // Use actual Claude execution with proper model parameter
       const args = [
-        '--print', prompt,
-        '--model', 'sonnet',
-        '--output-format', 'text',
-        '--verbose'
+        '--model', 'claude-3-5-sonnet-20241022',
+        '--max-tokens', '8192'
       ];
       
-      logger.debug('Executing Claude command', { 
+      logger.info('Executing Claude command', { 
         agentType: this.options.agentType,
-        args: args.filter(arg => arg !== prompt) // Don't log the full prompt
+        claudeBinary: this.claudeBinary,
+        args,
+        projectPath: this.options.projectPath,
+        promptLength: prompt.length
       });
       
       this.process = spawn(this.claudeBinary, args, {
@@ -209,6 +231,14 @@ export class AgentRunner extends EventEmitter {
         });
         reject(error);
       });
+      
+      // Write the prompt to stdin
+      if (this.process.stdin) {
+        this.process.stdin.write(prompt);
+        this.process.stdin.end();
+      } else {
+        reject(new Error('Failed to write prompt to Claude process'));
+      }
     });
   }
 

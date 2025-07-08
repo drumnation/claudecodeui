@@ -45,6 +45,7 @@ import {
 import { Button } from '../../shared-components/Button';
 
 export default function BacklogBoard({ selectedProject, selectedSession }) {
+  console.log('🚀 BacklogBoard component mounted/rendered');
   console.log('BacklogBoard rendering with:', { selectedProject, selectedSession });
   
   const {

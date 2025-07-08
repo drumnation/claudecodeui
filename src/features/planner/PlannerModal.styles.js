@@ -99,11 +99,11 @@ export const AgentStatusCard = styled.div`
   ${({ status }) => {
     switch (status) {
       case 'completed':
-        return tw`border-green-200 bg-green-50`;
+        return tw`border-green-500/20 bg-green-500/10 dark:border-green-400/20 dark:bg-green-400/10`;
       case 'running':
-        return tw`border-blue-200 bg-blue-50`;
+        return tw`border-blue-500/20 bg-blue-500/10 dark:border-blue-400/20 dark:bg-blue-400/10`;
       case 'failed':
-        return tw`border-red-200 bg-red-50`;
+        return tw`border-red-500/20 bg-red-500/10 dark:border-red-400/20 dark:bg-red-400/10`;
       default:
         return tw`border-border bg-muted/30`;
     }
@@ -115,7 +115,7 @@ export const AgentStatusHeader = styled.div`
 `;
 
 export const AgentStatusName = styled.div`
-  ${tw`text-sm font-medium flex-1`}
+  ${tw`text-sm font-medium flex-1 text-foreground`}
 `;
 
 export const AgentDuration = styled.div`
@@ -127,19 +127,19 @@ export const AgentOutput = styled.div`
 `;
 
 export const PlanResultSection = styled.div`
-  ${tw`space-y-2 p-3 rounded-md bg-green-50 border border-green-200`}
+  ${tw`space-y-2 p-3 rounded-md bg-green-500/10 border border-green-500/20 dark:bg-green-400/10 dark:border-green-400/20`}
 `;
 
 export const PlanHeader = styled.div`
-  ${tw`flex items-center gap-2 text-sm font-medium text-green-700`}
+  ${tw`flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-400`}
 `;
 
 export const PlanPreview = styled.div`
-  ${tw`text-xs text-green-600 font-mono bg-white p-2 rounded border`}
+  ${tw`text-xs text-green-600 dark:text-green-400 font-mono bg-white dark:bg-gray-800 p-2 rounded border border-green-200 dark:border-green-600`}
 `;
 
 export const ErrorMessage = styled.div`
-  ${tw`flex items-center gap-2 text-sm text-red-600 bg-red-50 p-2 rounded-md border border-red-200`}
+  ${tw`flex items-center gap-2 text-sm text-red-600 dark:text-red-400 bg-red-500/10 p-2 rounded-md border border-red-500/20`}
 `;
 
 export const FormActions = styled.div`
@@ -170,6 +170,50 @@ export const ToggleCheckbox = styled.input`
 
 export const ToggleLabel = styled.label`
   ${tw`text-sm text-foreground cursor-pointer`}
+`;
+
+// Screenshot styles
+export const ScreenshotContainer = styled.div`
+  ${tw`space-y-3`}
+`;
+
+export const ScreenshotGrid = styled.div`
+  ${tw`grid grid-cols-2 gap-2`}
+`;
+
+export const ScreenshotItem = styled.div`
+  ${tw`relative rounded-lg overflow-hidden border border-border`}
+`;
+
+export const ScreenshotImage = styled.img`
+  ${tw`w-full h-24 object-cover`}
+`;
+
+export const ScreenshotOverlay = styled.div`
+  ${tw`absolute inset-0 bg-black/60 opacity-0 transition-opacity flex flex-col justify-between p-2`}
+  ${ScreenshotItem}:hover & {
+    ${tw`opacity-100`}
+  }
+`;
+
+export const ScreenshotName = styled.div`
+  ${tw`text-xs text-white truncate`}
+`;
+
+export const RemoveButton = styled.button`
+  ${tw`self-end w-6 h-6 bg-red-500 hover:bg-red-600 rounded flex items-center justify-center transition-colors`}
+`;
+
+export const ScreenshotActions = styled.div`
+  ${tw`flex items-center gap-3`}
+`;
+
+export const ScreenshotButton = styled.button`
+  ${tw`flex items-center gap-2 px-3 py-2 text-sm border border-dashed border-border rounded-md hover:border-primary hover:text-primary transition-colors`}
+`;
+
+export const ScreenshotHint = styled.span`
+  ${tw`text-xs text-muted-foreground`}
 `;
 
 // Mobile styles
@@ -307,11 +351,11 @@ export const MobileAgentStatusItem = styled.div`
   ${({ status }) => {
     switch (status) {
       case 'completed':
-        return tw`border-green-200 bg-green-50`;
+        return tw`border-green-500/20 bg-green-500/10 dark:border-green-400/20 dark:bg-green-400/10`;
       case 'running':
-        return tw`border-blue-200 bg-blue-50`;
+        return tw`border-blue-500/20 bg-blue-500/10 dark:border-blue-400/20 dark:bg-blue-400/10`;
       case 'failed':
-        return tw`border-red-200 bg-red-50`;
+        return tw`border-red-500/20 bg-red-500/10 dark:border-red-400/20 dark:bg-red-400/10`;
       default:
         return tw`border-border bg-muted/30`;
     }
@@ -323,7 +367,7 @@ export const MobileAgentStatusHeader = styled.div`
 `;
 
 export const MobileAgentStatusName = styled.div`
-  ${tw`text-sm font-medium flex-1`}
+  ${tw`text-sm font-medium flex-1 text-foreground`}
 `;
 
 export const MobileAgentDuration = styled.div`
@@ -331,22 +375,43 @@ export const MobileAgentDuration = styled.div`
 `;
 
 export const MobilePlanResult = styled.div`
-  ${tw`space-y-2 p-3 rounded-md bg-green-50 border border-green-200`}
+  ${tw`space-y-2 p-3 rounded-md bg-green-500/10 border border-green-500/20 dark:bg-green-400/10 dark:border-green-400/20`}
 `;
 
 export const MobilePlanHeader = styled.div`
-  ${tw`flex items-center gap-2 text-sm font-medium text-green-700`}
+  ${tw`flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-400`}
 `;
 
 export const MobilePlanPreview = styled.div`
-  ${tw`text-xs text-green-600 font-mono bg-white p-2 rounded border`}
+  ${tw`text-xs text-green-600 dark:text-green-400 font-mono bg-white dark:bg-gray-800 p-2 rounded border border-green-200 dark:border-green-600`}
 `;
 
 export const MobileErrorMessage = styled.div`
-  ${tw`flex items-center gap-2 text-sm text-red-600 bg-red-50 p-2 rounded-md border border-red-200`}
+  ${tw`flex items-center gap-2 text-sm text-red-600 dark:text-red-400 bg-red-500/10 p-2 rounded-md border border-red-500/20`}
 `;
 
 export const MobileActions = styled.div`
+  ${tw`flex gap-2`}
+`;
+
+// Mobile screenshot styles
+export const MobileScreenshotGrid = styled.div`
+  ${tw`grid grid-cols-3 gap-2 mb-3`}
+`;
+
+export const MobileScreenshotItem = styled.div`
+  ${tw`relative rounded-lg overflow-hidden border border-border`}
+`;
+
+export const MobileScreenshotImage = styled.img`
+  ${tw`w-full h-20 object-cover`}
+`;
+
+export const MobileRemoveButton = styled.button`
+  ${tw`absolute top-1 right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center`}
+`;
+
+export const MobileScreenshotActions = styled.div`
   ${tw`flex gap-2`}
 `;
 
