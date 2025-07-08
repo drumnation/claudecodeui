@@ -95,17 +95,17 @@ export const ProjectItemMobile = ({
                   />
                 ) : (
                   <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <S.ProjectName>{project.displayName}</S.ProjectName>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                        {project.isWorktree && <WorktreeBadge isMobile={true} />}
-                        <ProjectLanguageBadge language={project.language} />
-                        {project.isMonorepo && <ProjectMonorepoBadge isMonorepo={project.isMonorepo} />}
+                    <S.ProjectName>{project.displayName}</S.ProjectName>
+                    <S.ProjectMeta style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>{`${displayCount} session${displayCount === 1 ? '' : 's'}`}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          {project.isWorktree && <WorktreeBadge isMobile={true} />}
+                          <ProjectLanguageBadge language={project.language} />
+                          {project.isMonorepo && <ProjectMonorepoBadge isMonorepo={project.isMonorepo} />}
+                        </div>
                       </div>
-                    </div>
-                    <S.ProjectMeta>
-                      <span>{`${displayCount} session${displayCount === 1 ? '' : 's'}`}</span>
-                      <GitBranchBadge branch={project.gitBranch} gitStatus={project.gitStatus} />
+                      {project.gitBranch && <GitBranchBadge branch={project.gitBranch} gitStatus={project.gitStatus} />}
                     </S.ProjectMeta>
                   </>
                 )}

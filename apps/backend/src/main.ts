@@ -6,6 +6,14 @@ import { createLogger } from '@kit/logger/node';
 import { handleGetProjects } from './projects.controller';
 import { handleClaudeWebSocketConnection } from './modules/claude-cli';
 import { handleGetProjectFiles } from './modules/files';
+import { 
+  handleGitStatus, 
+  handleGitBranches, 
+  handleGitDiff, 
+  handleGitCommit, 
+  handleGitCheckout, 
+  handleGitCreateBranch 
+} from './modules/git/git.controller';
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
@@ -148,26 +156,13 @@ async function getSessionsForProject(projectPath: string, limit = 5): Promise<an
   return sessions;
 }
 
-// Git routes (placeholder for now)
-app.get('/api/git/status', (req, res) => {
-  // Return empty git status
-  res.json({
-    modified: [],
-    untracked: [],
-    staged: [],
-    branch: 'main',
-    ahead: 0,
-    behind: 0
-  });
-});
-
-app.get('/api/git/branches', (req, res) => {
-  // Return default branch
-  res.json({
-    current: 'main',
-    branches: ['main']
-  });
-});
+// Git routes - using actual implementation from server/routes/git.js
+app.get('/api/git/status', handleGitStatus);
+app.get('/api/git/branches', handleGitBranches);
+app.get('/api/git/diff', handleGitDiff);
+app.post('/api/git/commit', handleGitCommit);
+app.post('/api/git/checkout', handleGitCheckout);
+app.post('/api/git/create-branch', handleGitCreateBranch);
 
 // File routes
 app.get('/api/files', (req, res) => {

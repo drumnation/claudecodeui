@@ -30,7 +30,7 @@ export const LoadingStateDescription = styled.p`
 `;
 
 export const ScrollContainer = styled.div`
-  ${tw`flex-1 p-4`}
+  ${tw`flex-1 p-4 overflow-auto`}
 `;
 
 export const EmptyStateContainer = styled.div`

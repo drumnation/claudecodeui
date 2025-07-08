@@ -1,6 +1,5 @@
 import React from 'react';
 import { Folder, FolderOpen, File, FileText, FileCode, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
-import { ScrollArea } from '@/shared-components/ScrollArea';
 import { CodeEditor } from '@/shared-components/CodeEditor';
 import { ImageViewer } from '@/features/files/components/ImageViewer';
 import { useFileTree } from '@/features/files/FileTree.hook';
@@ -127,7 +126,7 @@ export const FileTree = ({ selectedProject }) => {
 
   return (
     <S.Container>
-      <ScrollArea className="flex-1 p-4">
+      <S.ScrollContainer className="overflow-auto">
         {error ? (
           <S.ErrorStateContainer>
             <S.ErrorStateIcon>
@@ -210,7 +209,7 @@ export const FileTree = ({ selectedProject }) => {
             {renderFileTree(files)}
           </S.FileTreeContainer>
         )}
-      </ScrollArea>
+      </S.ScrollContainer>
       
       {selectedFile && (
         <CodeEditor

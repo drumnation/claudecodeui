@@ -61,9 +61,12 @@ export const useGitPanel = (selectedProject) => {
     setError(null);
     try {
       // Convert project path to the format expected by the server
-      const projectName = encodeProjectPath(selectedProject.fullPath);
+      // The backend expects project names with a leading dash
+      const encodedPath = encodeProjectPath(selectedProject.fullPath);
+      const projectName = '-' + encodedPath;
       console.log('🔍 Fetching git status for project:', projectName);
       console.log('🔍 Original path:', selectedProject.fullPath);
+      console.log('🔍 Encoded path:', encodedPath);
       
       const data = await gitApi.fetchStatus(projectName);
       console.log('📦 Git status response:', data);
@@ -291,16 +294,42 @@ export const useGitPanel = (selectedProject) => {
   };
 
   // Toggle functions
-  const toggleFileExpanded = (filePath) => {
+  const toggleFileExpanded = async (filePath) => {
     setExpandedFiles(prev => {
       const newSet = new Set(prev);
       if (newSet.has(filePath)) {
         newSet.delete(filePath);
       } else {
         newSet.add(filePath);
+        // Fetch diff for this file if not already fetched
+        if (!gitDiff[filePath]) {
+          fetchFileDiff(filePath);
+        }
       }
       return newSet;
     });
+  };
+  
+  const fetchFileDiff = async (filePath) => {
+    if (!selectedProject) return;
+    
+    try {
+      // The backend expects project names with a leading dash
+      const encodedPath = encodeProjectPath(selectedProject.fullPath);
+      const projectName = '-' + encodedPath;
+      
+      console.log('🔍 Fetching diff for file:', filePath);
+      const diff = await gitApi.fetchFileDiff(projectName, filePath);
+      
+      if (diff) {
+        setGitDiff(prev => ({
+          ...prev,
+          [filePath]: diff
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching file diff:', error);
+    }
   };
 
   const toggleCommitExpanded = (commitHash) => {
