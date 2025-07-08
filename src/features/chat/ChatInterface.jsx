@@ -31,6 +31,7 @@ import {
   handleTextareaClick as handleTextareaClickLogic
 } from '@/features/chat/ChatInterface.logic';
 import { ChatInterfaceContainer, ChatInterfaceStyles } from '@/features/chat/ChatInterface.styles';
+import { ErrorBoundary } from '@/shared-components/ErrorBoundary';
 
 export const ChatInterface = memo(({ 
   selectedProject, 
@@ -226,7 +227,7 @@ export const ChatInterface = memo(({
   }
 
   return (
-    <>
+    <ErrorBoundary level="component" showDetails={process.env.NODE_ENV === 'development'}>
       <ChatInterfaceStyles />
       <ChatInterfaceContainer>
         <MessagesArea 
@@ -284,6 +285,6 @@ export const ChatInterface = memo(({
           messageQueue={messageQueue}
         />
       </ChatInterfaceContainer>
-    </>
+    </ErrorBoundary>
   );
 });

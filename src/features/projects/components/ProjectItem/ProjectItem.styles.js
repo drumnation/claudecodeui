@@ -15,7 +15,7 @@ export const MobileProjectWrapper = styled.div`
 `;
 
 export const MobileProjectItem = styled.div`
-  ${tw`px-4 pt-5 pb-4 mx-3 my-3 rounded-lg bg-card border border-border/50 active:scale-[0.98] transition-all duration-150 cursor-pointer hover:border-border/70`}
+  ${tw`px-4 py-5 mx-3 my-3 rounded-lg bg-card border border-border/50 active:scale-[0.98] transition-all duration-150 cursor-pointer hover:border-border/70`}
   ${props => props.isSelected && tw`bg-primary/5 border-primary/20`}
 `;
 
@@ -45,11 +45,20 @@ export const ProjectMeta = styled.div`
 `;
 
 export const ProjectActions = styled.div`
-  ${tw`flex items-center gap-1`}
+  ${tw`flex items-center`}
+  position: relative;
+  z-index: 100;
+  margin-left: auto;
+  pointer-events: auto;
 `;
 
 export const ActionButton = styled.button`
-  ${tw`w-8 h-8 rounded-lg flex items-center justify-center active:scale-90 transition-all duration-150 shadow-sm active:shadow-none`}
+  ${tw`w-8 h-8 rounded-lg flex items-center justify-center active:scale-90 transition-all duration-150 shadow-sm active:shadow-none relative`}
+  min-width: 44px;
+  min-height: 44px;
+  z-index: 10;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 `;
 
 export const SaveButton = styled(ActionButton)`
@@ -72,8 +81,28 @@ export const ChevronWrapper = styled.div`
   ${tw`w-6 h-6 rounded-md bg-muted/30 flex items-center justify-center`}
 `;
 
+export const MenuButton = styled.button`
+  ${tw`w-8 h-8 rounded-lg flex items-center justify-center active:scale-95 transition-all bg-muted/50 hover:bg-muted text-muted-foreground flex-shrink-0`}
+  position: relative;
+  z-index: 100;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto;
+  
+  &:focus {
+    outline: 2px solid rgba(59, 130, 246, 0.5);
+    outline-offset: 2px;
+  }
+  
+  &:active {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+`;
+
 export const EditInput = styled.input`
-  ${tw`w-full px-3 py-2 text-sm border-2 border-primary/40 focus:border-primary rounded-lg bg-background text-foreground shadow-sm focus:shadow-md transition-all duration-200 focus:outline-none`}
+  ${tw`w-full px-3 py-2 text-sm border-2 border-primary/40 focus:border-primary rounded-lg bg-background text-foreground shadow-sm focus:shadow-md transition-all duration-200 focus:outline-none relative`}
+  z-index: 5;
+  max-width: calc(100% - 100px); // Leave space for the action buttons
 `;
 
 // Desktop hover actions
@@ -142,4 +171,51 @@ export const NewSessionButtonMobile = styled.div`
 
 export const NewSessionButton = styled.button`
   ${tw`w-full h-8 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md flex items-center justify-center gap-2 font-medium text-xs active:scale-[0.98] transition-all duration-150`}
+`;
+
+// Mobile Action Modal styles
+export const MobileActionOverlay = styled.div`
+  ${tw`md:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm`}
+`;
+
+export const MobileActionModal = styled.div`
+  ${tw`absolute left-0 right-0 bg-card rounded-t-xl border-t border-border`}
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 48px);
+  animation: slide-up 0.3s ease-out;
+  
+  @keyframes slide-up {
+    from {
+      transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px) + 48px));
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+`;
+
+export const MobileActionHeader = styled.div`
+  ${tw`flex items-center justify-between p-4 border-b border-border`}
+`;
+
+export const MobileActionTitle = styled.h3`
+  ${tw`text-base font-semibold text-foreground`}
+`;
+
+export const MobileActionCloseButton = styled.button`
+  ${tw`w-8 h-8 rounded-lg flex items-center justify-center active:scale-95 transition-all hover:bg-accent text-muted-foreground`}
+`;
+
+export const MobileActionList = styled.div`
+  ${tw`p-2 space-y-1`}
+`;
+
+export const MobileActionButton = styled.button`
+  ${tw`w-full flex items-center gap-3 p-4 rounded-lg text-left active:scale-[0.98] transition-all font-medium`}
+  ${tw`hover:bg-accent text-foreground`}
+  ${props => props.variant === 'destructive' && tw`text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20`}
+  ${props => props.disabled && tw`opacity-50 pointer-events-none`}
+  
+  span {
+    ${tw`text-sm`}
+  }
 `;

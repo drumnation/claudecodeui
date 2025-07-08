@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Input } from '@/shared-components/Input/Input';
 import { Button } from '@/shared-components/Button/Button';
-import { FolderPlus, X } from 'lucide-react';
+import { FolderPlus, X, FolderOpen, Edit3 } from 'lucide-react';
+import { DirectoryBrowser } from './DirectoryBrowser';
 import * as S from './NewProjectModal.styles';
 
 export const NewProjectModal = ({
@@ -11,6 +12,17 @@ export const NewProjectModal = ({
   onCreateProject,
   onCancel
 }) => {
+  const [useBrowser, setUseBrowser] = useState(false);
+
+  const handlePathSelect = (path) => {
+    setNewProjectPath(path);
+    setUseBrowser(false);
+  };
+
+  const toggleInputMode = () => {
+    setUseBrowser(!useBrowser);
+  };
+
   return (
     <S.Container>
       {/* Desktop Form */}
@@ -18,18 +30,47 @@ export const NewProjectModal = ({
         <S.FormHeader>
           <FolderPlus className="w-4 h-4" />
           Create New Project
+          <div className="ml-auto flex gap-1">
+            <Button
+              size="sm"
+              variant={useBrowser ? "default" : "outline"}
+              onClick={toggleInputMode}
+              className="h-6 px-2 text-xs"
+            >
+              <FolderOpen className="w-3 h-3 mr-1" />
+              Browse
+            </Button>
+            <Button
+              size="sm"
+              variant={!useBrowser ? "default" : "outline"}
+              onClick={toggleInputMode}
+              className="h-6 px-2 text-xs"
+            >
+              <Edit3 className="w-3 h-3 mr-1" />
+              Type
+            </Button>
+          </div>
         </S.FormHeader>
-        <Input
-          value={newProjectPath}
-          onChange={(e) => setNewProjectPath(e.target.value)}
-          placeholder="/path/to/project or relative/path"
-          className="text-sm focus:ring-2 focus:ring-primary/20"
-          autoFocus
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') onCreateProject();
-            if (e.key === 'Escape') onCancel();
-          }}
-        />
+        
+        {useBrowser ? (
+          <DirectoryBrowser 
+            onSelectPath={handlePathSelect}
+            selectedPath={newProjectPath}
+          />
+        ) : (
+          <Input
+            value={newProjectPath}
+            onChange={(e) => setNewProjectPath(e.target.value)}
+            placeholder="/path/to/project or relative/path"
+            className="text-sm focus:ring-2 focus:ring-primary/20"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onCreateProject();
+              if (e.key === 'Escape') onCancel();
+            }}
+          />
+        )}
+        
         <S.FormActions>
           <Button
             size="sm"
@@ -72,17 +113,46 @@ export const NewProjectModal = ({
           </S.MobileHeader>
           
           <S.MobileFormContent>
-            <Input
-              value={newProjectPath}
-              onChange={(e) => setNewProjectPath(e.target.value)}
-              placeholder="/path/to/project or relative/path"
-              className="text-sm h-10 rounded-md focus:border-primary transition-colors"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') onCreateProject();
-                if (e.key === 'Escape') onCancel();
-              }}
-            />
+            {/* Mobile mode toggle */}
+            <div className="flex gap-1 mb-3">
+              <Button
+                size="sm"
+                variant={useBrowser ? "default" : "outline"}
+                onClick={toggleInputMode}
+                className="flex-1 h-7 text-xs"
+              >
+                <FolderOpen className="w-3 h-3 mr-1" />
+                Browse
+              </Button>
+              <Button
+                size="sm"
+                variant={!useBrowser ? "default" : "outline"}
+                onClick={toggleInputMode}
+                className="flex-1 h-7 text-xs"
+              >
+                <Edit3 className="w-3 h-3 mr-1" />
+                Type
+              </Button>
+            </div>
+            
+            {useBrowser ? (
+              <DirectoryBrowser 
+                onSelectPath={handlePathSelect}
+                selectedPath={newProjectPath}
+              />
+            ) : (
+              <Input
+                value={newProjectPath}
+                onChange={(e) => setNewProjectPath(e.target.value)}
+                placeholder="/path/to/project or relative/path"
+                className="text-sm h-10 rounded-md focus:border-primary transition-colors"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') onCreateProject();
+                  if (e.key === 'Escape') onCancel();
+                }}
+              />
+            )}
             
             <S.MobileActions>
               <Button

@@ -7,6 +7,7 @@ import { FileList } from '@/features/git/FileList';
 import { CommitHistory } from '@/features/git/CommitHistory';
 import { NewBranchModal } from '@/features/git/NewBranchModal';
 import { getStatusLabel } from '@/features/git/GitPanel.logic';
+import { MinimalErrorBoundary } from '@/shared-components/ErrorBoundary';
 import {
   GitPanelContainer,
   GitPanelHeader,
@@ -123,7 +124,8 @@ export const GitPanel = ({ selectedProject, isMobile, gitStatus: externalGitStat
                     (gitStatus?.untracked?.length || 0);
 
   return (
-    <GitPanelContainer>
+    <MinimalErrorBoundary name="GitPanel">
+      <GitPanelContainer>
       {/* Header */}
       <GitPanelHeader>
         <BranchSelector
@@ -276,6 +278,7 @@ export const GitPanel = ({ selectedProject, isMobile, gitStatus: externalGitStat
         onBranchNameChange={setNewBranchName}
         onCreate={createBranch}
       />
-    </GitPanelContainer>
+      </GitPanelContainer>
+    </MinimalErrorBoundary>
   );
 };

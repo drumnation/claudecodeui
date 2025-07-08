@@ -1,18 +1,67 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Folder, 
   FolderOpen, 
-  ChevronRight, 
-  ChevronDown, 
   Edit3, 
   Trash2, 
   Check, 
-  X
+  X,
+  MoreVertical
 } from 'lucide-react';
 import { SessionList } from '../SessionList';
 import * as S from './ProjectItem.styles';
 import { WorktreeBadge, ProjectLanguageBadge, ProjectMonorepoBadge } from '@/components/WorktreeBadge/WorktreeBadge';
 import { GitBranchBadge } from '@/features/projects/components/GitBranchBadge';
+
+// Component for mobile action menu modal
+const ProjectActionMenu = ({ 
+  isOpen, 
+  onClose, 
+  project,
+  sessionCount,
+  onStartEditing,
+  onDeleteProject
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <S.MobileActionOverlay onClick={onClose}>
+      <S.MobileActionModal onClick={e => e.stopPropagation()}>
+        <S.MobileActionHeader>
+          <S.MobileActionTitle>Project Actions</S.MobileActionTitle>
+          <S.MobileActionCloseButton onClick={onClose}>
+            <X className="w-4 h-4" />
+          </S.MobileActionCloseButton>
+        </S.MobileActionHeader>
+        
+        <S.MobileActionList>
+          <S.MobileActionButton
+            onClick={() => {
+              onStartEditing(project);
+              onClose();
+            }}
+          >
+            <Edit3 className="w-5 h-5" />
+            <span>Edit Project Name</span>
+          </S.MobileActionButton>
+          
+          {sessionCount === 0 && (
+            <S.MobileActionButton
+              onClick={() => {
+                onDeleteProject(project.name);
+                onClose();
+              }}
+              className="text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="w-5 h-5" />
+              <span>Delete Empty Project</span>
+            </S.MobileActionButton>
+          )}
+        </S.MobileActionList>
+      </S.MobileActionModal>
+    </S.MobileActionOverlay>
+  );
+};
 
 export const ProjectItemMobile = ({
   project,
@@ -50,6 +99,7 @@ export const ProjectItemMobile = ({
   setEditingSessionName,
   handleTouchClick
 }) => {
+  const [showActionMenu, setShowActionMenu] = useState(false);
   const sessions = getAllSessions(project);
   const sessionCount = project.sessionMeta?.total || sessions.length;
   const hasMore = sessionCount > sessions.length;
@@ -96,17 +146,17 @@ export const ProjectItemMobile = ({
                 ) : (
                   <>
                     <S.ProjectName>{project.displayName}</S.ProjectName>
-                    <S.ProjectMeta style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px', marginTop: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <S.ProjectMeta style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '10px', marginTop: '14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                         <span>{`${displayCount} session${displayCount === 1 ? '' : 's'}`}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                           {project.isWorktree && <WorktreeBadge isMobile={true} />}
                           <ProjectLanguageBadge language={project.language} />
                           {project.isMonorepo && <ProjectMonorepoBadge isMonorepo={project.isMonorepo} />}
                         </div>
                       </div>
                       {project.gitBranch && (
-                        <div style={{ marginTop: '8px' }}>
+                        <div style={{ marginTop: '6px' }}>
                           <GitBranchBadge branch={project.gitBranch} gitStatus={project.gitStatus} />
                         </div>
                       )}
@@ -123,6 +173,10 @@ export const ProjectItemMobile = ({
                       e.stopPropagation();
                       onSaveProjectName(project.name);
                     }}
+                    onTouchEnd={handleTouchClick((e) => {
+                      e.stopPropagation();
+                      onSaveProjectName(project.name);
+                    })}
                   >
                     <Check className="w-4 h-4 text-white" />
                   </S.SaveButton>
@@ -131,39 +185,30 @@ export const ProjectItemMobile = ({
                       e.stopPropagation();
                       onCancelEditing();
                     }}
+                    onTouchEnd={handleTouchClick((e) => {
+                      e.stopPropagation();
+                      onCancelEditing();
+                    })}
                   >
                     <X className="w-4 h-4 text-white" />
                   </S.CancelButton>
                 </>
               ) : (
                 <>
-                  {sessionCount === 0 && (
-                    <S.DeleteButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteProject(project.name);
-                      }}
-                      onTouchEnd={handleTouchClick(() => onDeleteProject(project.name))}
-                    >
-                      <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
-                    </S.DeleteButton>
-                  )}
-                  <S.EditButton
+                  <S.MenuButton
                     onClick={(e) => {
                       e.stopPropagation();
-                      onStartEditing(project);
+                      e.preventDefault();
+                      setShowActionMenu(true);
                     }}
-                    onTouchEnd={handleTouchClick(() => onStartEditing(project))}
+                    onTouchEnd={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setShowActionMenu(true);
+                    }}
                   >
-                    <Edit3 className="w-4 h-4 text-primary" />
-                  </S.EditButton>
-                  <S.ChevronWrapper>
-                    {isExpanded ? (
-                      <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="w-3 h-3 text-muted-foreground" />
-                    )}
-                  </S.ChevronWrapper>
+                    <MoreVertical className="w-4 h-4" />
+                  </S.MenuButton>
                 </>
               )}
             </S.ProjectActions>
@@ -201,6 +246,16 @@ export const ProjectItemMobile = ({
           />
         </S.SessionsContainer>
       )}
+
+      {/* Action Menu Modal */}
+      <ProjectActionMenu
+        isOpen={showActionMenu}
+        onClose={() => setShowActionMenu(false)}
+        project={project}
+        sessionCount={sessionCount}
+        onStartEditing={onStartEditing}
+        onDeleteProject={onDeleteProject}
+      />
     </S.ProjectContainer>
   );
 };

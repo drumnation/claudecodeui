@@ -109,6 +109,135 @@ app.get('/api/shell/health', async (req, res) => {
 // Project routes
 app.get('/api/projects', handleGetProjects);
 
+// Create project endpoint
+app.post('/api/projects/create', async (req, res) => {
+  const { path: projectPath } = req.body;
+  
+  if (!projectPath || !projectPath.trim()) {
+    return res.status(400).json({ error: 'Project path is required' });
+  }
+  
+  try {
+    const trimmedPath = projectPath.trim();
+    
+    // Check if path exists and is a directory
+    const stats = await fs.stat(trimmedPath);
+    if (!stats.isDirectory()) {
+      return res.status(400).json({ 
+        error: 'Path must be a directory',
+        path: trimmedPath
+      });
+    }
+    
+    // Create the project directory in ~/.claude/projects/
+    // Use base64url encoding for the project name to handle paths with special characters
+    const encodedName = Buffer.from(trimmedPath).toString('base64url');
+    const claudeProjectsDir = path.join(os.homedir(), '.claude', 'projects');
+    const projectDir = path.join(claudeProjectsDir, encodedName);
+    
+    // Ensure ~/.claude/projects/ exists
+    await fs.mkdir(claudeProjectsDir, { recursive: true });
+    
+    // Create the project directory
+    await fs.mkdir(projectDir, { recursive: true });
+    
+    // Generate a new session ID for the auto-started session
+    const sessionId = `ui-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    
+    logger.info('Project created', { 
+      path: trimmedPath, 
+      encodedName,
+      projectDir,
+      autoSessionId: sessionId
+    });
+    
+    res.json({ 
+      success: true, 
+      project: {
+        name: encodedName,
+        path: trimmedPath,
+        displayName: path.basename(trimmedPath),
+        fullPath: trimmedPath
+      },
+      autoStartSession: {
+        sessionId,
+        projectPath: trimmedPath
+      }
+    });
+    
+  } catch (error) {
+    logger.error('Failed to create project', { error, projectPath });
+    
+    if (error.code === 'ENOENT') {
+      res.status(404).json({ 
+        error: 'Directory does not exist',
+        path: projectPath.trim()
+      });
+    } else if (error.code === 'EACCES') {
+      res.status(403).json({ 
+        error: 'Permission denied accessing directory',
+        path: projectPath.trim()
+      });
+    } else {
+      res.status(500).json({ 
+        error: 'Failed to create project',
+        details: error.message 
+      });
+    }
+  }
+});
+
+// Delete project endpoint (only for projects with 0 sessions)
+app.delete('/api/projects/:projectName', async (req, res) => {
+  const { projectName } = req.params;
+  
+  try {
+    const claudeProjectsDir = path.join(os.homedir(), '.claude', 'projects');
+    const projectDir = path.join(claudeProjectsDir, projectName);
+    
+    // Check if project directory exists
+    try {
+      await fs.access(projectDir);
+    } catch (error) {
+      return res.status(404).json({ 
+        error: 'Project not found',
+        projectName 
+      });
+    }
+    
+    // Check if project has any sessions
+    const entries = await fs.readdir(projectDir, { withFileTypes: true });
+    const sessionFiles = entries.filter(entry => entry.isFile() && entry.name.endsWith('.jsonl'));
+    
+    if (sessionFiles.length > 0) {
+      return res.status(400).json({ 
+        error: 'Cannot delete project with existing sessions. Delete all sessions first.',
+        sessionCount: sessionFiles.length
+      });
+    }
+    
+    // Remove the project directory
+    await fs.rmdir(projectDir, { recursive: true });
+    
+    logger.info('Project deleted', { 
+      projectName,
+      projectDir
+    });
+    
+    res.json({ 
+      success: true,
+      message: 'Project deleted successfully'
+    });
+    
+  } catch (error) {
+    logger.error('Failed to delete project', { error, projectName });
+    res.status(500).json({ 
+      error: 'Failed to delete project',
+      details: error.message 
+    });
+  }
+});
+
 // Get sessions for a specific project
 app.get('/api/projects/:projectName/sessions', async (req, res) => {
   const { projectName } = req.params;
@@ -233,6 +362,171 @@ app.get('/api/dependencies', (req, res) => {
       version: '1.0.0'
     }
   });
+});
+
+// Directory browsing routes
+app.get('/api/directories', async (req, res) => {
+  const { path: requestPath } = req.query;
+  const targetPath = requestPath ? String(requestPath) : os.homedir();
+  
+  try {
+    // Security check - prevent directory traversal attacks
+    const resolvedPath = path.resolve(targetPath);
+    
+    // Only allow browsing within user's home directory or common project locations
+    const allowedPaths = [
+      os.homedir(),
+      '/Users',
+      '/home',
+      '/opt',
+      '/var',
+      '/tmp'
+    ];
+    
+    const isAllowed = allowedPaths.some(allowedPath => 
+      resolvedPath.startsWith(path.resolve(allowedPath))
+    );
+    
+    if (!isAllowed) {
+      return res.status(403).json({ 
+        error: 'Access denied to this directory',
+        path: resolvedPath 
+      });
+    }
+    
+    // Check if path exists and is a directory
+    const stats = await fs.stat(resolvedPath);
+    if (!stats.isDirectory()) {
+      return res.status(400).json({ 
+        error: 'Path is not a directory',
+        path: resolvedPath 
+      });
+    }
+    
+    // Read directory contents
+    const entries = await fs.readdir(resolvedPath, { withFileTypes: true });
+    
+    const directories = [];
+    const files = [];
+    
+    for (const entry of entries) {
+      const itemPath = path.join(resolvedPath, entry.name);
+      const itemStats = await fs.stat(itemPath).catch(() => null);
+      
+      if (!itemStats) continue;
+      
+      const item = {
+        name: entry.name,
+        path: itemPath,
+        isDirectory: entry.isDirectory(),
+        size: itemStats.size,
+        modified: itemStats.mtime.toISOString(),
+        hidden: entry.name.startsWith('.')
+      };
+      
+      if (entry.isDirectory()) {
+        directories.push(item);
+      } else {
+        files.push(item);
+      }
+    }
+    
+    // Sort directories first, then files, both alphabetically
+    directories.sort((a, b) => a.name.localeCompare(b.name));
+    files.sort((a, b) => a.name.localeCompare(b.name));
+    
+    const parentPath = path.dirname(resolvedPath);
+    const canGoUp = parentPath !== resolvedPath && isAllowed;
+    
+    res.json({
+      currentPath: resolvedPath,
+      parentPath: canGoUp ? parentPath : null,
+      directories,
+      files: files.slice(0, 10), // Limit files shown to reduce clutter
+      totalFiles: files.length
+    });
+    
+  } catch (error: any) {
+    logger.error('Failed to browse directory', { error, requestPath });
+    res.status(500).json({ 
+      error: 'Failed to browse directory',
+      details: error.message 
+    });
+  }
+});
+
+app.post('/api/directories', async (req, res) => {
+  const { path: targetPath, name } = req.body;
+  
+  if (!targetPath || !name) {
+    return res.status(400).json({ 
+      error: 'Path and name are required' 
+    });
+  }
+  
+  try {
+    const parentPath = path.resolve(targetPath);
+    const newDirPath = path.join(parentPath, name);
+    
+    // Security check - prevent directory traversal attacks
+    const allowedPaths = [
+      os.homedir(),
+      '/Users',
+      '/home',
+      '/opt',
+      '/var',
+      '/tmp'
+    ];
+    
+    const isAllowed = allowedPaths.some(allowedPath => 
+      newDirPath.startsWith(path.resolve(allowedPath))
+    );
+    
+    if (!isAllowed) {
+      return res.status(403).json({ 
+        error: 'Access denied to this location',
+        path: newDirPath 
+      });
+    }
+    
+    // Check if parent directory exists
+    const parentStats = await fs.stat(parentPath);
+    if (!parentStats.isDirectory()) {
+      return res.status(400).json({ 
+        error: 'Parent path is not a directory',
+        path: parentPath 
+      });
+    }
+    
+    // Check if directory already exists
+    try {
+      await fs.stat(newDirPath);
+      return res.status(409).json({ 
+        error: 'Directory already exists',
+        path: newDirPath 
+      });
+    } catch {
+      // Directory doesn't exist, which is what we want
+    }
+    
+    // Create the directory
+    await fs.mkdir(newDirPath, { recursive: false });
+    
+    logger.info('Directory created', { path: newDirPath });
+    
+    res.json({
+      success: true,
+      path: newDirPath,
+      name
+    });
+    
+  } catch (error: any) {
+    logger.error('Failed to create directory', { error, targetPath, name });
+    res.status(500).json({ 
+      error: 'Failed to create directory',
+      details: error.message 
+    });
+  }
 });
 
 // Session messages route

@@ -233,15 +233,23 @@ export const useApp = () => {
     navigate(`/session/${session.id}`);
   }, [navigate, isMobile, activeTab]);
 
-  const handleNewSession = useCallback((project) => {
+  const handleNewSession = useCallback((project, sessionId) => {
     setSelectedProject(project);
     setSelectedSession(null);
     setActiveTab('chat');
-    navigate('/');
+    navigate(sessionId ? `/session/${sessionId}` : '/');
     if (isMobile) {
       setSidebarOpen(false);
     }
-  }, [navigate, isMobile]);
+    
+    // If a sessionId was provided, refresh projects after a short delay
+    // to ensure the session file is created before we refresh
+    if (sessionId) {
+      setTimeout(() => {
+        fetchProjects();
+      }, 500);
+    }
+  }, [navigate, isMobile, fetchProjects]);
 
   const handleSessionDelete = useCallback((sessionId) => {
     if (selectedSession?.id === sessionId) {

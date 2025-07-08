@@ -18,6 +18,7 @@ import { CodeEditor } from '@/shared-components/CodeEditor';
 import { Shell } from '@/features/terminal';
 import { GitPanel } from '@/features/git';
 import { LivePreviewPanel } from '@/features/preview';
+import { ErrorBoundary } from '@/shared-components/ErrorBoundary';
 
 import { ProjectHeader } from '@/layouts/root/MainContent/ProjectHeader';
 import { NoProjectSelected } from '@/layouts/root/MainContent/EmptyStates';
@@ -82,7 +83,8 @@ export const MainContent = ({
   }
 
   return (
-    <MainContentContainer>
+    <ErrorBoundary level="component" showDetails={process.env.NODE_ENV === 'development'}>
+      <MainContentContainer>
       <ProjectHeader
         selectedProject={selectedProject}
         selectedSession={selectedSession}
@@ -162,6 +164,7 @@ export const MainContent = ({
           projectPath={selectedProject?.path}
         />
       )}
-    </MainContentContainer>
+      </MainContentContainer>
+    </ErrorBoundary>
   );
 };

@@ -5,6 +5,7 @@ import { ShellHeader } from '@/features/terminal/ShellHeader';
 import { Terminal } from '@/features/terminal/Terminal';
 import { ConnectOverlay } from '@/features/terminal/ConnectOverlay';
 import { EmptyState } from '@/features/terminal/EmptyState';
+import { MinimalErrorBoundary } from '@/shared-components/ErrorBoundary';
 // Removed Button import - using inline button instead
 
 export const Shell = ({ selectedProject, selectedSession, isActive }) => {
@@ -43,7 +44,8 @@ export const Shell = ({ selectedProject, selectedSession, isActive }) => {
   const showFallbackConnect = isInitialized && !isConnected && !isConnecting;
 
   return (
-    <ShellContainer>
+    <MinimalErrorBoundary name="Shell">
+      <ShellContainer>
       <ShellHeader
         isConnected={isConnected}
         selectedSession={selectedSession}
@@ -86,6 +88,7 @@ export const Shell = ({ selectedProject, selectedSession, isActive }) => {
           </button>
         </div>
       )}
-    </ShellContainer>
+      </ShellContainer>
+    </MinimalErrorBoundary>
   );
 };

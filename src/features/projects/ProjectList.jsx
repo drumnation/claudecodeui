@@ -6,6 +6,7 @@ import { Button } from '@/shared-components/Button/Button';
 import { ClaudeLogo } from '@/shared-components/ClaudeLogo/ClaudeLogo';
 import { NewProjectModal } from './components/NewProjectModal';
 import { ProjectItem } from './components/ProjectItem';
+import { ConfirmationModal } from '@/shared-components/ConfirmationModal';
 import { 
   Folder, 
   RefreshCw, 
@@ -44,6 +45,7 @@ export const ProjectList = ({
     editingSessionName,
     generatingSummary,
     regeneratingTitle,
+    confirmationState,
     setEditingName,
     setNewProjectPath,
     setShowNewProject,
@@ -64,7 +66,9 @@ export const ProjectList = ({
     loadMoreSessions,
     getAllSessions,
     hasActiveSessions,
-    handleRefresh
+    handleRefresh,
+    handleConfirm,
+    handleCancel
   } = useProjectList({
     projects,
     selectedProject,
@@ -246,6 +250,19 @@ export const ProjectList = ({
           <span className="text-xs">Tools Settings</span>
         </Button>
       </S.SettingsSection>
+      
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationState.isOpen}
+        title={confirmationState.title}
+        message={confirmationState.message}
+        confirmText={confirmationState.confirmText}
+        cancelText={confirmationState.cancelText}
+        confirmVariant={confirmationState.confirmVariant}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+        isLoading={confirmationState.isLoading}
+      />
     </S.Container>
   );
 };

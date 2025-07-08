@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useConfirmation } from '@/hooks/useConfirmation';
 
 export const useProjectList = ({
   projects,
@@ -28,6 +29,14 @@ export const useProjectList = ({
   const [editingSessionName, setEditingSessionName] = useState('');
   const [generatingSummary, setGeneratingSummary] = useState({});
   const [regeneratingTitle, setRegeneratingTitle] = useState({});
+  
+  // Confirmation modal state
+  const {
+    confirmationState,
+    showConfirmation,
+    handleConfirm,
+    handleCancel
+  } = useConfirmation();
 
   // Touch handler to prevent double-tap issues on iPad
   const handleTouchClick = (callback) => {
@@ -121,9 +130,14 @@ export const useProjectList = ({
   };
 
   const deleteSession = async (projectName, sessionId) => {
-    if (!confirm('Are you sure you want to delete this session? This action cannot be undone.')) {
-      return;
-    }
+    const confirmed = await showConfirmation({
+      title: 'Delete Session',
+      message: 'Are you sure you want to delete this session? This action cannot be undone.',
+      confirmText: 'Delete Session',
+      confirmVariant: 'destructive'
+    });
+
+    if (!confirmed) return;
 
     try {
       const response = await fetch(`/api/projects/${projectName}/sessions/${sessionId}`, {
@@ -136,6 +150,7 @@ export const useProjectList = ({
         }
       } else {
         console.error('Failed to delete session');
+        // Could add error modal here too
         alert('Failed to delete session. Please try again.');
       }
     } catch (error) {
@@ -234,9 +249,14 @@ export const useProjectList = ({
   };
 
   const deleteProject = async (projectName) => {
-    if (!confirm('Are you sure you want to delete this empty project? This action cannot be undone.')) {
-      return;
-    }
+    const confirmed = await showConfirmation({
+      title: 'Delete Empty Project',
+      message: 'Are you sure you want to delete this empty project? This action cannot be undone.',
+      confirmText: 'Delete Project',
+      confirmVariant: 'destructive'
+    });
+
+    if (!confirmed) return;
 
     try {
       const response = await fetch(`/api/projects/${projectName}`, {
@@ -282,10 +302,29 @@ export const useProjectList = ({
         setShowNewProject(false);
         setNewProjectPath('');
         
+        // Refresh projects first
         if (window.refreshProjects) {
-          window.refreshProjects();
+          await window.refreshProjects();
         } else {
           window.location.reload();
+          return; // Exit early if we're doing a full reload
+        }
+        
+        // Auto-start a new session in the created project
+        if (result.autoStartSession && onNewSession) {
+          const project = {
+            name: result.project.name,
+            displayName: result.project.displayName,
+            fullPath: result.project.fullPath
+          };
+          
+          // Select the project and start a new session
+          if (onProjectSelect) {
+            onProjectSelect(project);
+          }
+          
+          // Start a new session with the provided session ID
+          onNewSession(project, result.autoStartSession.sessionId);
         }
       } else {
         const error = await response.json();
@@ -383,6 +422,9 @@ export const useProjectList = ({
     generatingSummary,
     regeneratingTitle,
     
+    // Confirmation modal state
+    confirmationState,
+    
     // State setters
     setEditingName,
     setNewProjectPath,
@@ -406,6 +448,10 @@ export const useProjectList = ({
     loadMoreSessions,
     getAllSessions,
     hasActiveSessions,
-    handleRefresh
+    handleRefresh,
+    
+    // Confirmation modal handlers
+    handleConfirm,
+    handleCancel
   };
 };

@@ -4,6 +4,7 @@ import { CodeEditor } from '@/shared-components/CodeEditor';
 import { ImageViewer } from '@/features/files/components/ImageViewer';
 import { useFileTree } from '@/features/files/FileTree.hook';
 import { isImageFile, getFileType, calculatePadding } from '@/features/files/FileTree.logic';
+import { MinimalErrorBoundary } from '@/shared-components/ErrorBoundary';
 import * as S from '@/features/files/FileTree.styles';
 
 export const FileTree = ({ selectedProject, gitStatus }) => {
@@ -159,7 +160,8 @@ export const FileTree = ({ selectedProject, gitStatus }) => {
   }
 
   return (
-    <S.Container>
+    <MinimalErrorBoundary name="FileTree">
+      <S.Container>
       <S.ScrollContainer className="overflow-auto">
         {error ? (
           <S.ErrorStateContainer>
@@ -259,6 +261,7 @@ export const FileTree = ({ selectedProject, gitStatus }) => {
           onClose={closeImage}
         />
       )}
-    </S.Container>
+      </S.Container>
+    </MinimalErrorBoundary>
   );
 };

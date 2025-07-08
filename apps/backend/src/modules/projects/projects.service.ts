@@ -247,8 +247,21 @@ export class ProjectsService {
             }
           }
           
-          // Get the canonical project root
-          const canonicalRoot = await getCanonicalProjectRoot(actualProjectPath);
+          // Verify the actual path exists before proceeding
+          let canonicalRoot: string;
+          try {
+            await fs.access(actualProjectPath);
+            canonicalRoot = await getCanonicalProjectRoot(actualProjectPath);
+          } catch (error) {
+            logger.warn('Project path does not exist', { 
+              actualProjectPath, 
+              encoded: entry.name,
+              error: error.message 
+            });
+            // Skip this project if the path doesn't exist
+            continue;
+          }
+          
           logger.info('Resolved project to canonical root', {
             encoded: entry.name,
             decoded: decodedPath,
