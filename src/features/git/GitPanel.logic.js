@@ -1,5 +1,3 @@
-import { encodeProjectPath } from '@/lib/projectUtils';
-
 // Git API logic functions
 export const gitApi = {
   async fetchStatus(projectName) {

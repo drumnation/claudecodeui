@@ -188,12 +188,46 @@ app.get('/api/config', (req, res) => {
   const host = `${serverIP}:${PORT}`;
   const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'wss' : 'ws';
   
-  console.log('Config API called - Returning host:', host, 'Protocol:', protocol);
+  console.log('[Server] Config API called');
+  console.log('[Server] Request from:', req.ip);
+  console.log('[Server] Server IP:', serverIP);
+  console.log('[Server] Host:', host);
+  console.log('[Server] Protocol:', protocol);
+  console.log('[Server] Full WebSocket URL:', `${protocol}://${host}`);
   
   res.json({
     serverPort: PORT,
     wsUrl: `${protocol}://${host}`
   });
+});
+
+// Health check endpoint for shell
+app.get('/api/shell/health', async (req, res) => {
+  console.log('[Server] Shell health check requested');
+  
+  try {
+    // Check if claude command is available
+    const { execSync } = require('child_process');
+    const claudeVersion = execSync('claude --version', { encoding: 'utf8' }).trim();
+    
+    console.log('[Server] Claude CLI found:', claudeVersion);
+    
+    res.json({
+      status: 'healthy',
+      claudeAvailable: true,
+      claudeVersion,
+      message: 'Claude CLI is available and ready'
+    });
+  } catch (error) {
+    console.error('[Server] Claude CLI not found:', error.message);
+    
+    res.status(503).json({
+      status: 'unhealthy',
+      claudeAvailable: false,
+      error: 'Claude CLI not found. Please install Claude CLI to use the shell feature.',
+      installUrl: 'https://docs.anthropic.com/claude/docs/claude-cli'
+    });
+  }
 });
 
 app.get('/api/projects', async (req, res) => {
@@ -842,15 +876,11 @@ function handleChatConnection(ws) {
 
 // Handle shell WebSocket connections
 function handleShellConnection(ws) {
-  console.log('🐚 Shell client connected - PTY disabled');
-  ws.send(JSON.stringify({
-    type: 'output',
-    data: '\r\n\x1b[31mShell functionality is temporarily disabled due to node-pty build issues.\x1b[0m\r\n'
-  }));
-  ws.close();
-  return;
+  console.log('[Shell] Client connected');
   
+  // Since PTY is disabled, we'll use regular spawn instead
   let shellProcess = null;
+  let isClaudeRunning = false;
   
   ws.on('message', async (message) => {
     try {
@@ -863,10 +893,23 @@ function handleShellConnection(ws) {
         const sessionId = data.sessionId;
         const hasSession = data.hasSession;
         
-        console.log('🚀 Starting shell in:', projectPath);
-        console.log('📋 Session info:', hasSession ? `Resume session ${sessionId}` : 'New session');
+        console.log('[Shell] Starting shell in:', projectPath);
+        console.log('[Shell] Session info:', hasSession ? `Resume session ${sessionId}` : 'New session');
         
-        // First send a welcome message
+        // First check if claude is available
+        try {
+          const { execSync } = require('child_process');
+          execSync('which claude', { encoding: 'utf8' });
+        } catch (checkError) {
+          console.error('[Shell] Claude CLI not found');
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: 'Claude CLI not found. Please install it first: https://docs.anthropic.com/claude/docs/claude-cli'
+          }));
+          return;
+        }
+        
+        // Send a welcome message
         const welcomeMsg = hasSession ? 
           `\x1b[36mResuming Claude session ${sessionId} in: ${projectPath}\x1b[0m\r\n` :
           `\x1b[36mStarting new Claude session in: ${projectPath}\x1b[0m\r\n`;
@@ -877,25 +920,21 @@ function handleShellConnection(ws) {
         }));
         
         try {
-          // Build shell command that changes to project directory first, then runs claude
-          let claudeCommand = 'claude';
+          // Since PTY is disabled, use regular spawn with pseudo-TTY settings
+          const { spawn } = require('child_process');
           
+          // Build claude command arguments
+          const claudeArgs = [];
           if (hasSession && sessionId) {
-            // Try to resume session, but with fallback to new session if it fails
-            claudeCommand = `claude --resume ${sessionId} || claude`;
+            claudeArgs.push('--resume', sessionId);
           }
           
-          // Create shell command that cds to the project directory first
-          const shellCommand = `cd "${projectPath}" && ${claudeCommand}`;
+          console.log('[Shell] Spawning claude with args:', claudeArgs);
+          console.log('[Shell] Working directory:', projectPath);
           
-          console.log('🔧 Executing shell command:', shellCommand);
-          
-          // Start shell using PTY for proper terminal emulation
-          shellProcess = pty.spawn('bash', ['-c', shellCommand], {
-            name: 'xterm-256color',
-            cols: 80,
-            rows: 24,
-            cwd: process.env.HOME || '/', // Start from home directory
+          // Spawn claude process
+          shellProcess = spawn('claude', claudeArgs, {
+            cwd: projectPath,
             env: { 
               ...process.env,
               TERM: 'xterm-256color',
@@ -903,116 +942,130 @@ function handleShellConnection(ws) {
               FORCE_COLOR: '3',
               // Override browser opening commands to echo URL for detection
               BROWSER: 'echo "OPEN_URL:"'
+            },
+            // Try to allocate a pseudo-TTY even without node-pty
+            stdio: ['pipe', 'pipe', 'pipe']
+          });
+          
+          isClaudeRunning = true;
+          
+          console.log('[Shell] Claude process started, PID:', shellProcess.pid);
+          
+          // Handle stdout
+          shellProcess.stdout.on('data', (data) => {
+            const outputStr = data.toString();
+            console.log('[Shell] stdout:', outputStr.slice(0, 100), outputStr.length > 100 ? '...' : '');
+            
+            if (ws.readyState === ws.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'output',
+                data: outputStr
+              }));
             }
           });
           
-          console.log('🟢 Shell process started with PTY, PID:', shellProcess.pid);
-          
-          // Handle data output
-          shellProcess.onData((data) => {
+          // Handle stderr
+          shellProcess.stderr.on('data', (data) => {
+            const errorStr = data.toString();
+            console.error('[Shell] stderr:', errorStr);
+            
             if (ws.readyState === ws.OPEN) {
-              let outputData = data;
-              
-              // Check for various URL opening patterns
-              const patterns = [
-                // Direct browser opening commands
-                /(?:xdg-open|open|start)\s+(https?:\/\/[^\s\x1b\x07]+)/g,
-                // BROWSER environment variable override
-                /OPEN_URL:\s*(https?:\/\/[^\s\x1b\x07]+)/g,
-                // Git and other tools opening URLs
-                /Opening\s+(https?:\/\/[^\s\x1b\x07]+)/gi,
-                // General URL patterns that might be opened
-                /Visit:\s*(https?:\/\/[^\s\x1b\x07]+)/gi,
-                /View at:\s*(https?:\/\/[^\s\x1b\x07]+)/gi,
-                /Browse to:\s*(https?:\/\/[^\s\x1b\x07]+)/gi
-              ];
-              
-              patterns.forEach(pattern => {
-                let match;
-                while ((match = pattern.exec(data)) !== null) {
-                  const url = match[1];
-                  console.log('🔗 Detected URL for opening:', url);
-                  
-                  // Send URL opening message to client
-                  ws.send(JSON.stringify({
-                    type: 'url_open',
-                    url: url
-                  }));
-                  
-                  // Replace the OPEN_URL pattern with a user-friendly message
-                  if (pattern.source.includes('OPEN_URL')) {
-                    outputData = outputData.replace(match[0], `🌐 Opening in browser: ${url}`);
-                  }
-                }
-              });
-              
-              // Send regular output
               ws.send(JSON.stringify({
                 type: 'output',
-                data: outputData
+                data: `\x1b[31m${errorStr}\x1b[0m`
               }));
             }
           });
           
           // Handle process exit
-          shellProcess.onExit((exitCode) => {
-            console.log('🔚 Shell process exited with code:', exitCode.exitCode, 'signal:', exitCode.signal);
+          shellProcess.on('exit', (code, signal) => {
+            console.log('[Shell] Process exited with code:', code, 'signal:', signal);
+            isClaudeRunning = false;
+            
             if (ws.readyState === ws.OPEN) {
               ws.send(JSON.stringify({
                 type: 'output',
-                data: `\r\n\x1b[33mProcess exited with code ${exitCode.exitCode}${exitCode.signal ? ` (${exitCode.signal})` : ''}\x1b[0m\r\n`
+                data: `\r\n\x1b[33mClaude exited with code ${code}${signal ? ` (${signal})` : ''}\x1b[0m\r\n`
               }));
             }
             shellProcess = null;
           });
           
+          // Handle process errors
+          shellProcess.on('error', (error) => {
+            console.error('[Shell] Process error:', error);
+            isClaudeRunning = false;
+            
+            if (ws.readyState === ws.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: `Failed to start Claude: ${error.message}`
+              }));
+            }
+          });
+          
         } catch (spawnError) {
-          console.error('❌ Error spawning process:', spawnError);
+          console.error('[Shell] Error spawning claude:', spawnError);
           ws.send(JSON.stringify({
-            type: 'output',
-            data: `\r\n\x1b[31mError: ${spawnError.message}\x1b[0m\r\n`
+            type: 'error',
+            message: `Failed to start Claude: ${spawnError.message}`
           }));
         }
         
       } else if (data.type === 'input') {
         // Send input to shell process
-        if (shellProcess && shellProcess.write) {
+        if (shellProcess && shellProcess.stdin && isClaudeRunning) {
           try {
-            shellProcess.write(data.data);
+            console.log('[Shell] Writing input:', data.data.length, 'bytes');
+            shellProcess.stdin.write(data.data);
           } catch (error) {
-            console.error('Error writing to shell:', error);
+            console.error('[Shell] Error writing to stdin:', error);
           }
         } else {
-          console.warn('No active shell process to send input to');
+          console.warn('[Shell] No active shell process to send input to');
+          if (!isClaudeRunning) {
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Claude is not running. Please reconnect to start a new session.'
+            }));
+          }
         }
       } else if (data.type === 'resize') {
-        // Handle terminal resize
-        if (shellProcess && shellProcess.resize) {
-          console.log('Terminal resize requested:', data.cols, 'x', data.rows);
-          shellProcess.resize(data.cols, data.rows);
-        }
+        // Terminal resize not supported without PTY
+        console.log('[Shell] Terminal resize requested but not supported without PTY');
       }
     } catch (error) {
-      console.error('❌ Shell WebSocket error:', error.message);
+      console.error('[Shell] WebSocket message error:', error.message);
       if (ws.readyState === ws.OPEN) {
         ws.send(JSON.stringify({
-          type: 'output',
-          data: `\r\n\x1b[31mError: ${error.message}\x1b[0m\r\n`
+          type: 'error',
+          message: error.message
         }));
       }
     }
   });
   
   ws.on('close', () => {
-    console.log('🔌 Shell client disconnected');
-    if (shellProcess && shellProcess.kill) {
-      console.log('🔴 Killing shell process:', shellProcess.pid);
-      shellProcess.kill();
+    console.log('[Shell] Client disconnected');
+    if (shellProcess) {
+      console.log('[Shell] Killing claude process:', shellProcess.pid);
+      try {
+        shellProcess.kill('SIGTERM');
+        // Give it a moment to terminate gracefully
+        setTimeout(() => {
+          if (shellProcess && !shellProcess.killed) {
+            console.log('[Shell] Force killing process');
+            shellProcess.kill('SIGKILL');
+          }
+        }, 1000);
+      } catch (error) {
+        console.error('[Shell] Error killing process:', error);
+      }
     }
   });
   
   ws.on('error', (error) => {
-    console.error('❌ Shell WebSocket error:', error);
+    console.error('[Shell] WebSocket error:', error);
   });
 }
 

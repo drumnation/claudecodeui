@@ -18,6 +18,7 @@ export const useMainContent = (selectedProject, ws, sendMessage, messages) => {
   const [currentScript, setCurrentScript] = useState('');
   const [availableScripts, setAvailableScripts] = useState([]);
   const [serverLogs, setServerLogs] = useState([]);
+  const [gitStatus, setGitStatus] = useState(null);
 
   // Track if we've already requested scripts for this project
   const requestedScriptsRef = useRef(null);
@@ -33,6 +34,14 @@ export const useMainContent = (selectedProject, ws, sendMessage, messages) => {
       sendMessage(createServerStatusMessage(projectPath));
     }
   }, [selectedProject?.fullPath, ws, sendMessage]);
+
+  // Clear git status when project changes
+  // The GitPanel will handle its own fetching
+  useEffect(() => {
+    if (!selectedProject) {
+      setGitStatus(null);
+    }
+  }, [selectedProject]);
 
   // Handle server-related WebSocket messages
   useEffect(() => {
@@ -61,6 +70,8 @@ export const useMainContent = (selectedProject, ws, sendMessage, messages) => {
     setCurrentScript,
     availableScripts,
     serverLogs,
-    setServerLogs
+    setServerLogs,
+    gitStatus,
+    setGitStatus
   };
 };

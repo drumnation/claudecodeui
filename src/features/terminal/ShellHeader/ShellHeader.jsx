@@ -18,8 +18,11 @@ export const ShellHeader = ({
   selectedSession,
   isInitialized,
   isRestarting,
+  isConnecting,
   onDisconnect,
-  onRestart
+  onRestart,
+  onConnect,
+  onStartFresh
 }) => {
   return (
     <Header>
@@ -42,16 +45,41 @@ export const ShellHeader = ({
           )}
         </StatusGroup>
         <ControlGroup>
-          {isConnected && (
+          {/* Manual connect button when not connected */}
+          {isInitialized && !isConnected && !isConnecting && (
             <DisconnectButton
-              onClick={onDisconnect}
-              title="Disconnect from shell"
+              onClick={onConnect}
+              title="Connect to Claude shell"
+              style={{ backgroundColor: '#10b981', borderColor: '#10b981' }}
             >
               <IconSvg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </IconSvg>
-              <span>Disconnect</span>
+              <span>Connect</span>
             </DisconnectButton>
+          )}
+          {isConnected && (
+            <>
+              <DisconnectButton
+                onClick={onStartFresh}
+                title="Start a fresh Claude session (useful if resume is stuck)"
+                style={{ backgroundColor: '#3b82f6', borderColor: '#3b82f6', marginRight: '8px' }}
+              >
+                <IconSvg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </IconSvg>
+                <span>Start Fresh</span>
+              </DisconnectButton>
+              <DisconnectButton
+                onClick={onDisconnect}
+                title="Disconnect from shell"
+              >
+                <IconSvg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </IconSvg>
+                <span>Disconnect</span>
+              </DisconnectButton>
+            </>
           )}
           
           <RestartButton

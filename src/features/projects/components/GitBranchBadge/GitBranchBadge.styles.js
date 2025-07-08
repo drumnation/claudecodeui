@@ -25,5 +25,5 @@ export const Icon = styled.span`
 `;
 
 export const Text = styled.span`
-  ${tw`truncate max-w-20`}
+  ${tw`truncate max-w-40`}
 `;

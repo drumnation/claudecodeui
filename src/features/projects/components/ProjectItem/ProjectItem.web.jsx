@@ -106,18 +106,18 @@ export const ProjectItemWeb = ({
                 </div>
               ) : (
                 <div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-semibold truncate text-foreground" title={project.displayName}>
-                      {project.displayName}
-                    </div>
+                  <div className="text-sm font-semibold truncate text-foreground" title={project.displayName}>
+                    {project.displayName}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{displayCount} session{displayCount === 1 ? '' : 's'}</span>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       {project.isWorktree && <WorktreeBadge />}
                       <ProjectLanguageBadge language={project.language} />
                       <ProjectMonorepoBadge isMonorepo={project.isMonorepo} />
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>{displayCount} session{displayCount === 1 ? '' : 's'}</span>
+                  <div className="text-xs text-muted-foreground">
                     <GitBranchBadge branch={project.gitBranch} gitStatus={project.gitStatus} />
                   </div>
                 </div>

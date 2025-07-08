@@ -8,6 +8,9 @@ export PORT=${PORT:-8765}
 export NODE_ENV=development
 export LOG_LEVEL=${LOG_LEVEL:-debug}
 
+# Add npm global bin to PATH
+export PATH="$HOME/.npm-global/bin:$PATH"
+
 # Check if tsx is available
 if ! command -v tsx &> /dev/null; then
     echo "Installing tsx..."

@@ -6,7 +6,7 @@ import { useFileTree } from '@/features/files/FileTree.hook';
 import { isImageFile, getFileType, calculatePadding } from '@/features/files/FileTree.logic';
 import * as S from '@/features/files/FileTree.styles';
 
-export const FileTree = ({ selectedProject }) => {
+export const FileTree = ({ selectedProject, gitStatus }) => {
   const {
     files,
     loading,
@@ -22,45 +22,79 @@ export const FileTree = ({ selectedProject }) => {
     fetchFiles
   } = useFileTree(selectedProject);
 
+  // Get all changed file paths from git status
+  const getChangedFiles = () => {
+    if (!gitStatus) return new Set();
+    
+    const changedFiles = new Set();
+    ['modified', 'added', 'deleted', 'untracked'].forEach(status => {
+      if (gitStatus[status]) {
+        gitStatus[status].forEach(file => changedFiles.add(file));
+      }
+    });
+    return changedFiles;
+  };
+
+  // Check if a directory contains any changed files
+  const directoryContainsChanges = (dirPath, changedFiles) => {
+    if (!changedFiles.size) return false;
+    
+    // Remove leading slash and add trailing slash for comparison
+    const normalizedDirPath = dirPath.replace(/^\//, '').replace(/\/$/, '') + '/';
+    
+    for (const file of changedFiles) {
+      if (file.startsWith(normalizedDirPath)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const changedFiles = getChangedFiles();
+
   const renderIcon = (item) => {
     if (item.type === 'directory') {
+      const hasChanges = directoryContainsChanges(item.path, changedFiles);
       if (expandedDirs.has(item.path)) {
         return (
-          <S.FolderIconOpen>
+          <S.FolderIconOpen hasChanges={hasChanges}>
             <FolderOpen className="w-full h-full" />
           </S.FolderIconOpen>
         );
       }
       return (
-        <S.FolderIconClosed>
+        <S.FolderIconClosed hasChanges={hasChanges}>
           <Folder className="w-full h-full" />
         </S.FolderIconClosed>
       );
     }
 
     const fileType = getFileType(item.name);
+    // Check if this specific file has changes
+    const fileHasChanges = changedFiles.has(item.path.replace(/^\//, ''));
+    
     switch (fileType) {
       case 'code':
         return (
-          <S.CodeFileIcon>
+          <S.CodeFileIcon hasChanges={fileHasChanges}>
             <FileCode className="w-full h-full" />
           </S.CodeFileIcon>
         );
       case 'document':
         return (
-          <S.DocumentFileIcon>
+          <S.DocumentFileIcon hasChanges={fileHasChanges}>
             <FileText className="w-full h-full" />
           </S.DocumentFileIcon>
         );
       case 'image':
         return (
-          <S.ImageFileIcon>
+          <S.ImageFileIcon hasChanges={fileHasChanges}>
             <File className="w-full h-full" />
           </S.ImageFileIcon>
         );
       default:
         return (
-          <S.DefaultFileIcon>
+          <S.DefaultFileIcon hasChanges={fileHasChanges}>
             <File className="w-full h-full" />
           </S.DefaultFileIcon>
         );
@@ -90,7 +124,7 @@ export const FileTree = ({ selectedProject }) => {
         >
           <S.FileButtonContent>
             {renderIcon(item)}
-            <S.FileName>{item.name}</S.FileName>
+            <S.FileName hasChanges={item.type === 'file' && changedFiles.has(item.path.replace(/^\//, ''))}>{item.name}</S.FileName>
           </S.FileButtonContent>
         </S.FileButton>
         

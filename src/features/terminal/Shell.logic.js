@@ -136,6 +136,34 @@ export const clearTerminal = (terminal) => {
   }
 };
 
+// Validate WebSocket URL is reachable
+export const validateWebSocketUrl = async (wsUrl) => {
+  try {
+    // Try to create a test WebSocket connection
+    return new Promise((resolve, reject) => {
+      const testWs = new WebSocket(wsUrl);
+      const timeout = setTimeout(() => {
+        testWs.close();
+        reject(new Error('WebSocket connection timeout'));
+      }, 5000);
+      
+      testWs.onopen = () => {
+        clearTimeout(timeout);
+        testWs.close();
+        resolve(true);
+      };
+      
+      testWs.onerror = (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      };
+    });
+  } catch (error) {
+    console.error('[Shell Logic] WebSocket validation failed:', error);
+    return false;
+  }
+};
+
 // Store session for reuse
 export const storeSession = (sessionKey, terminal, fitAddon, ws, isConnected) => {
   try {
@@ -162,9 +190,21 @@ export const clearProjectSessions = (projectName) => {
 export const getWebSocketUrl = async () => {
   let wsBaseUrl;
   try {
+    console.log('[Shell Logic] Fetching WebSocket config from /api/config');
     const configResponse = await fetch('/api/config');
+    
+    if (!configResponse.ok) {
+      throw new Error(`Config fetch failed: ${configResponse.status} ${configResponse.statusText}`);
+    }
+    
     const config = await configResponse.json();
+    console.log('[Shell Logic] Config response:', config);
+    
     wsBaseUrl = config.wsUrl;
+    
+    if (!wsBaseUrl) {
+      throw new Error('No wsUrl in config response');
+    }
     
     // If the config returns localhost but we're not on localhost, use current host but with API server port
     if (wsBaseUrl.includes('localhost') && !window.location.hostname.includes('localhost')) {
@@ -174,18 +214,35 @@ export const getWebSocketUrl = async () => {
       wsBaseUrl = `${protocol}//${window.location.hostname}:${apiPort}`;
     }
   } catch (error) {
+    console.error('[Shell Logic] Failed to fetch config:', error);
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     // For development, API server is typically on port 3002 when Vite is on 3001
     const apiPort = window.location.port === '3001' ? '3002' : window.location.port;
     wsBaseUrl = `${protocol}//${window.location.hostname}:${apiPort}`;
+    console.log('[Shell Logic] Using fallback WebSocket URL:', wsBaseUrl);
   }
   
-  return `${wsBaseUrl}/shell`;
+  const finalUrl = `${wsBaseUrl}/shell`;
+  console.log('[Shell Logic] Final WebSocket URL:', finalUrl);
+  return finalUrl;
 };
 
 // Process terminal output (e.g., handle URLs)
 export const processTerminalOutput = (data, terminal) => {
+  // Check if terminal is available
+  if (!terminal) {
+    console.error('[Shell Logic] Terminal not available for output');
+    return;
+  }
+  
   if (data.type === 'output') {
+    console.log('[Shell Logic] Processing output:', data.data?.length || 0, 'bytes');
+    
+    // Check if data.data exists
+    if (!data.data) {
+      console.warn('[Shell Logic] No data in output message');
+      return;
+    }
     // Check for URLs in the output and make them clickable
     const urlRegex = /(https?:\/\/[^\s\x1b\x07]+)/g;
     let output = data.data;
@@ -206,5 +263,14 @@ export const processTerminalOutput = (data, terminal) => {
   } else if (data.type === 'url_open') {
     // Handle explicit URL opening requests from server
     window.open(data.url, '_blank');
+  } else if (data.type === 'error') {
+    // Display error messages in the terminal
+    const errorMessage = data.message || data.error || 'Unknown error';
+    console.error('[Shell Logic] Error from server:', errorMessage, data);
+    if (terminal) {
+      terminal.write(`\r\n\x1b[31mError: ${errorMessage}\x1b[0m\r\n`);
+    }
+  } else {
+    console.log('[Shell Logic] Unknown message type:', data.type);
   }
 };

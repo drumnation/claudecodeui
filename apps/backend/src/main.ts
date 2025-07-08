@@ -6,6 +6,7 @@ import { createLogger } from '@kit/logger/node';
 import { handleGetProjects } from './projects.controller';
 import { handleClaudeWebSocketConnection } from './modules/claude-cli';
 import { handleGetProjectFiles } from './modules/files';
+import { handleShellWebSocketConnection } from './modules/shell';
 import { 
   handleGitStatus, 
   handleGitBranches, 
@@ -62,10 +63,47 @@ app.get('/health', (req, res) => {
 app.get('/api/config', (req, res) => {
   const protocol = req.protocol === 'https' ? 'wss' : 'ws';
   const host = req.get('host') || `localhost:${PORT}`;
+  
+  logger.info('[Server] Config API called', {
+    requestFrom: req.ip,
+    host,
+    protocol,
+    wsUrl: `${protocol}://${host}`
+  });
+  
   res.json({
     wsUrl: `${protocol}://${host}`,
     apiUrl: `${req.protocol}://${host}`
   });
+});
+
+// Health check endpoint for shell
+app.get('/api/shell/health', async (req, res) => {
+  logger.info('[Server] Shell health check requested');
+  
+  try {
+    // Check if claude command is available
+    const { execSync } = require('child_process');
+    const claudeVersion = execSync('claude --version', { encoding: 'utf8' }).trim();
+    
+    logger.info('[Server] Claude CLI found', { claudeVersion });
+    
+    res.json({
+      status: 'healthy',
+      claudeAvailable: true,
+      claudeVersion,
+      message: 'Claude CLI is available and ready'
+    });
+  } catch (error) {
+    logger.error('[Server] Claude CLI not found', { error });
+    
+    res.status(503).json({
+      status: 'unhealthy',
+      claudeAvailable: false,
+      error: 'Claude CLI not found. Please install Claude CLI to use the shell feature.',
+      installUrl: 'https://docs.anthropic.com/claude/docs/claude-cli'
+    });
+  }
 });
 
 // Project routes
@@ -303,17 +341,46 @@ app.post('/api/projects/:projectName/sessions/:sessionId/update-title', async (r
 // Create HTTP server
 const server = createServer(app);
 
-// Setup WebSocket server
-const wss = new WebSocketServer({ server });
-
-wss.on('connection', (ws) => {
-  // Use the modular Claude CLI handler
-  handleClaudeWebSocketConnection(ws);
+// Setup WebSocket server with URL-based routing
+const wss = new WebSocketServer({ 
+  server,
+  verifyClient: (info) => {
+    logger.info('[WebSocket] Connection attempt', { url: info.req.url });
+    return true; // Accept all connections for now
+  }
 });
 
-// Start server
+wss.on('connection', (ws, request) => {
+  const url = request.url;
+  logger.info('[WebSocket] Client connected', { url });
+  
+  // Route based on URL path
+  if (url === '/shell') {
+    handleShellWebSocketConnection(ws);
+  } else if (url === '/ws' || url === '/') {
+    // Default to Claude CLI handler for chat connections
+    handleClaudeWebSocketConnection(ws);
+  } else {
+    logger.warn('[WebSocket] Unknown path', { url });
+    ws.close();
+  }
+});
+
+// Start server with error handling
 server.listen(PORT, () => {
   logger.info('Server started', { port: PORT });
+}).on('error', (err: any) => {
+  if (err.code === 'EADDRINUSE') {
+    logger.error(`Port ${PORT} is already in use`, { 
+      suggestion: 'Please kill the existing process or use a different port' 
+    });
+    logger.info('To kill the process using this port, run:');
+    logger.info(`lsof -ti:${PORT} | xargs kill -9`);
+    process.exit(1);
+  } else {
+    logger.error('Server error', { error: err });
+    throw err;
+  }
 });
 
 // Graceful shutdown

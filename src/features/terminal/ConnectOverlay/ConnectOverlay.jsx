@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   OverlayContainer,
   ConnectContainer,
@@ -20,11 +20,33 @@ export const ConnectOverlay = ({
   selectedSession,
   projectName 
 }) => {
-  if (!isInitialized || isConnected) return null;
+  // Debug logging
+  useEffect(() => {
+    console.log('[ConnectOverlay] Component rendered', {
+      isInitialized,
+      isConnected,
+      isConnecting,
+      shouldShow: isInitialized && !isConnected,
+      projectName
+    });
+  }, [isInitialized, isConnected, isConnecting, projectName]);
+  
+  // Component mount/unmount logging
+  useEffect(() => {
+    console.log('[ConnectOverlay] Component mounted');
+    return () => {
+      console.log('[ConnectOverlay] Component unmounted');
+    };
+  }, []);
+  
+  if (!isInitialized || isConnected) {
+    console.log('[ConnectOverlay] Hiding overlay:', { isInitialized, isConnected });
+    return null;
+  }
 
   if (isConnecting) {
     return (
-      <OverlayContainer withPadding>
+      <OverlayContainer withPadding data-testid="connect-overlay-connecting" className="connect-overlay-visible">
         <ConnectingContainer>
           <ConnectingContent>
             <Spinner />
@@ -39,9 +61,16 @@ export const ConnectOverlay = ({
   }
 
   return (
-    <OverlayContainer withPadding>
+    <OverlayContainer withPadding data-testid="connect-overlay" className="connect-overlay-visible">
       <ConnectContainer>
-        <ConnectButton onClick={onConnect} title="Connect to shell">
+        <ConnectButton 
+          onClick={() => {
+            console.log('[ConnectOverlay] Connect button clicked');
+            onConnect();
+          }} 
+          title="Connect to shell"
+          data-testid="connect-button"
+        >
           <ConnectIcon fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </ConnectIcon>

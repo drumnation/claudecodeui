@@ -29,9 +29,7 @@ import {
   EmptyStateText
 } from '@/features/git/GitPanel.styles';
 
-export const GitPanel = ({ selectedProject, isMobile }) => {
-  console.log('🎯 GitPanel rendered with selectedProject:', selectedProject);
-  
+export const GitPanel = ({ selectedProject, isMobile, gitStatus: externalGitStatus, onGitStatusChange }) => {
   const {
     // State
     gitStatus,
@@ -80,7 +78,7 @@ export const GitPanel = ({ selectedProject, isMobile }) => {
     selectAllFiles,
     deselectAllFiles,
     refresh
-  } = useGitPanel(selectedProject);
+  } = useGitPanel(selectedProject, externalGitStatus, onGitStatusChange);
 
   if (!selectedProject) {
     return (

@@ -4,6 +4,13 @@ import tw from 'twin.macro';
 export const OverlayContainer = styled.div`
   ${tw`absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-90`}
   ${({ withPadding }) => withPadding && tw`p-4`}
+  z-index: 9999;
+  /* Debug styling - add visible border and shadow */
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+  border: 2px solid rgba(0, 255, 0, 0.1);
+  /* Ensure minimum dimensions */
+  min-width: 100%;
+  min-height: 100%;
 `;
 
 export const ConnectContainer = styled.div`
@@ -12,6 +19,12 @@ export const ConnectContainer = styled.div`
 
 export const ConnectButton = styled.button`
   ${tw`px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 text-base font-medium w-full sm:w-auto mx-auto`}
+  /* Ensure button is clickable with high z-index */
+  position: relative;
+  z-index: 10000;
+  cursor: pointer;
+  /* Add shadow for better visibility */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
 `;
 
 export const ConnectIcon = styled.svg`

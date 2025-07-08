@@ -15,7 +15,7 @@ export const MobileProjectWrapper = styled.div`
 `;
 
 export const MobileProjectItem = styled.div`
-  ${tw`p-3 mx-3 my-3 rounded-lg bg-card border border-border/50 active:scale-[0.98] transition-all duration-150 cursor-pointer hover:border-border/70`}
+  ${tw`px-3 pt-6 pb-3 mx-3 my-3 rounded-lg bg-card border border-border/50 active:scale-[0.98] transition-all duration-150 cursor-pointer hover:border-border/70`}
   ${props => props.isSelected && tw`bg-primary/5 border-primary/20`}
 `;
 

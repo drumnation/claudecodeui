@@ -92,32 +92,53 @@ export const FileButtonContent = styled.div`
 `;
 
 export const FileName = styled.span`
-  ${tw`text-sm truncate text-foreground`}
+  ${tw`text-sm truncate`}
+  ${props => props.hasChanges 
+    ? tw`text-yellow-600 dark:text-yellow-500 font-medium` 
+    : tw`text-foreground`}
 `;
 
 // Icon components with proper styling
 export const FolderIconOpen = styled.div`
-  ${tw`w-4 h-4 text-blue-500 flex-shrink-0`}
+  ${tw`w-4 h-4 flex-shrink-0`}
+  ${props => props.hasChanges 
+    ? tw`text-yellow-600 dark:text-yellow-500` 
+    : tw`text-blue-500`}
 `;
 
 export const FolderIconClosed = styled.div`
-  ${tw`w-4 h-4 text-muted-foreground flex-shrink-0`}
+  ${tw`w-4 h-4 flex-shrink-0`}
+  ${props => props.hasChanges 
+    ? tw`text-yellow-600 dark:text-yellow-500` 
+    : tw`text-muted-foreground`}
 `;
 
 export const CodeFileIcon = styled.div`
-  ${tw`w-4 h-4 text-green-500 flex-shrink-0`}
+  ${tw`w-4 h-4 flex-shrink-0`}
+  ${props => props.hasChanges 
+    ? tw`text-yellow-600 dark:text-yellow-500` 
+    : tw`text-green-500`}
 `;
 
 export const DocumentFileIcon = styled.div`
-  ${tw`w-4 h-4 text-blue-500 flex-shrink-0`}
+  ${tw`w-4 h-4 flex-shrink-0`}
+  ${props => props.hasChanges 
+    ? tw`text-yellow-600 dark:text-yellow-500` 
+    : tw`text-blue-500`}
 `;
 
 export const ImageFileIcon = styled.div`
-  ${tw`w-4 h-4 text-purple-500 flex-shrink-0`}
+  ${tw`w-4 h-4 flex-shrink-0`}
+  ${props => props.hasChanges 
+    ? tw`text-yellow-600 dark:text-yellow-500` 
+    : tw`text-purple-500`}
 `;
 
 export const DefaultFileIcon = styled.div`
-  ${tw`w-4 h-4 text-muted-foreground flex-shrink-0`}
+  ${tw`w-4 h-4 flex-shrink-0`}
+  ${props => props.hasChanges 
+    ? tw`text-yellow-600 dark:text-yellow-500` 
+    : tw`text-muted-foreground`}
 `;
 
 export const RefreshButton = styled.button`

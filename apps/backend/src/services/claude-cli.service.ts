@@ -10,6 +10,11 @@ export interface ClaudeStatusData {
   tokens: number;
   can_interrupt: boolean;
   raw?: string;
+  toolStatus?: {
+    count: number;
+    tool: string;
+  } | null;
+  contextRemaining?: number | null;
 }
 
 export interface ClaudeMessage {
@@ -298,6 +303,17 @@ export class ClaudeCliService extends EventEmitter {
     const tokensMatch = text.match(/⚒\s*(\d+)\s*tokens/);
     const tokens = tokensMatch ? parseInt(tokensMatch[1]) : 0;
     
+    // Parse bash/tool status (e.g., "1 bash running")
+    const toolMatch = text.match(/(\d+)\s+(\w+)\s+running/);
+    const toolStatus = toolMatch ? {
+      count: parseInt(toolMatch[1]),
+      tool: toolMatch[2]
+    } : null;
+    
+    // Parse context remaining (e.g., "Context left until auto-compact: 13%")
+    const contextMatch = text.match(/Context left until auto-compact:\s*(\d+)%/);
+    const contextRemaining = contextMatch ? parseInt(contextMatch[1]) : null;
+    
     const actionMatch = text.match(/[✻✹✸✶]\s*(\w+)/);
     const action = actionMatch ? actionMatch[1] : 'Working';
     
@@ -305,7 +321,9 @@ export class ClaudeCliService extends EventEmitter {
       message: action + '...',
       tokens: tokens,
       can_interrupt: text.includes('esc to interrupt'),
-      raw: text
+      raw: text,
+      toolStatus: toolStatus,
+      contextRemaining: contextRemaining
     };
 
     this.emit('status', { type: 'status', data: status });

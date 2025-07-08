@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Standalone package.json for testing without workspace",
   "scripts": {
-    "dev": "tsx watch src/main.ts",
+    "dev": "sh ./start-dev.sh",
     "dev:minimal": "tsx watch src/main-minimal.ts",
     "start": "node dist/src/main.js",
     "build": "tsc",

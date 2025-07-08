@@ -70,7 +70,7 @@ export function ClaudeStatus({ status, onAbort, isLoading, dependencyError }) {
   if (!isLoading) return null;
   
   const currentSpinner = getCurrentSpinner(animationPhase);
-  const { statusText, tokens, canInterrupt } = parseStatusData(status, elapsedTime, fakeTokens);
+  const { statusText, tokens, canInterrupt, toolStatus, contextRemaining } = parseStatusData(status, elapsedTime, fakeTokens);
   
   return (
     <StatusContainer>
@@ -92,6 +92,18 @@ export function ClaudeStatus({ status, onAbort, isLoading, dependencyError }) {
                     <Separator>·</Separator>
                     <TokenText $desktop>⚒ {tokens.toLocaleString()} tokens</TokenText>
                     <TokenText>⚒ {tokens.toLocaleString()}</TokenText>
+                  </>
+                )}
+                {toolStatus && (
+                  <>
+                    <Separator>·</Separator>
+                    <StatusText>{toolStatus.count} {toolStatus.tool} running</StatusText>
+                  </>
+                )}
+                {contextRemaining !== null && (
+                  <>
+                    <Separator>·</Separator>
+                    <StatusText>Context: {contextRemaining}%</StatusText>
                   </>
                 )}
                 <Separator $hiddenOnMobile>·</Separator>

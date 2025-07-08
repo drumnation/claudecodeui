@@ -105,7 +105,11 @@ export const ProjectItemMobile = ({
                           {project.isMonorepo && <ProjectMonorepoBadge isMonorepo={project.isMonorepo} />}
                         </div>
                       </div>
-                      {project.gitBranch && <GitBranchBadge branch={project.gitBranch} gitStatus={project.gitStatus} />}
+                      {project.gitBranch && (
+                        <div style={{ marginTop: '4px' }}>
+                          <GitBranchBadge branch={project.gitBranch} gitStatus={project.gitStatus} />
+                        </div>
+                      )}
                     </S.ProjectMeta>
                   </>
                 )}

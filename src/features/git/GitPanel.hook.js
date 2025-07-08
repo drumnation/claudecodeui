@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { gitApi } from '@/features/git/GitPanel.logic';
-import { encodeProjectPath } from '@/lib/projectUtils';
+// Use project.name directly - backend expects the project name from projects list
 
-export const useGitPanel = (selectedProject) => {
-  // State management
-  const [gitStatus, setGitStatus] = useState(null);
+export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChange) => {
+  // State management - use external git status if provided
+  const [gitStatus, setGitStatus] = useState(externalGitStatus || null);
   const [gitDiff, setGitDiff] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [commitMessage, setCommitMessage] = useState('');
@@ -30,45 +30,49 @@ export const useGitPanel = (selectedProject) => {
   const textareaRef = useRef(null);
   const dropdownRef = useRef(null);
 
-  // Effects
-  useEffect(() => {
-    if (selectedProject) {
-      fetchGitStatus();
-      fetchBranches();
-      if (activeView === 'history') {
-        fetchRecentCommits();
-      }
+  // Define fetchFileDiff first since it's used by fetchGitStatus
+  const fetchFileDiff = useCallback(async (filePath) => {
+    if (!selectedProject || !filePath) {
+      console.log('🚫 Skipping fetchFileDiff - no project or filepath');
+      return;
     }
-  }, [selectedProject, activeView]);
-
-  // Handle click outside dropdown
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowBranchDropdown(false);
-      }
-    };
     
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    try {
+      // Use the project name directly
+      console.log('🔍 Fetching diff for file:', filePath);
+      console.log('🔍 Project name:', selectedProject?.name);
+      const diff = await gitApi.fetchFileDiff(selectedProject.name, filePath);
+      console.log('📦 Diff response:', diff ? 'received' : 'empty');
+      
+      if (diff) {
+        setGitDiff(prev => {
+          const newDiffs = {
+            ...prev,
+            [filePath]: diff
+          };
+          console.log('📋 Updated gitDiff state:', newDiffs);
+          return newDiffs;
+        });
+      } else {
+        console.warn('⚠️ No diff returned for file:', filePath);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching file diff:', error);
+    }
+  }, [selectedProject?.name]);
 
-  // API Functions
-  const fetchGitStatus = async () => {
+  // API Functions - Define all callbacks before effects
+  const fetchGitStatus = useCallback(async () => {
     if (!selectedProject) return;
     
     setIsLoading(true);
     setError(null);
     try {
-      // Convert project path to the format expected by the server
-      // The backend expects project names with a leading dash
-      const encodedPath = encodeProjectPath(selectedProject.fullPath);
-      const projectName = '-' + encodedPath;
-      console.log('🔍 Fetching git status for project:', projectName);
+      // Use the project name directly
+      console.log('🔍 Fetching git status for project:', selectedProject.name);
       console.log('🔍 Original path:', selectedProject.fullPath);
-      console.log('🔍 Encoded path:', encodedPath);
       
-      const data = await gitApi.fetchStatus(projectName);
+      const data = await gitApi.fetchStatus(selectedProject.name);
       console.log('📦 Git status response:', data);
       
       if (data) {
@@ -122,6 +126,11 @@ export const useGitPanel = (selectedProject) => {
           setGitStatus(normalizedData);
           setCurrentBranch(normalizedData.branch || 'main');
           
+          // Notify parent component if callback provided
+          if (onGitStatusChange) {
+            onGitStatusChange(normalizedData);
+          }
+          
           // Auto-select all changed files
           const allFiles = new Set([
             ...(normalizedData.modified || []),
@@ -132,8 +141,11 @@ export const useGitPanel = (selectedProject) => {
           setSelectedFiles(allFiles);
           
           // Fetch diffs for changed files
-          for (const file of [...(data.modified || []), ...(data.added || [])]) {
-            fetchFileDiff(file);
+          const filesToFetch = [...(data.modified || []), ...(data.added || [])];
+          for (const file of filesToFetch) {
+            if (file && selectedProject) {
+              fetchFileDiff(file);
+            }
           }
         }
       } else {
@@ -145,23 +157,36 @@ export const useGitPanel = (selectedProject) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedProject?.name, onGitStatusChange, fetchFileDiff]);
 
-  const fetchBranches = async () => {
+  const fetchBranches = useCallback(async () => {
+    if (!selectedProject) return;
     try {
-      const projectName = encodeProjectPath(selectedProject.fullPath);
-      const branches = await gitApi.fetchBranches(projectName);
+      // Use the project name directly, not the encoded path
+      const branches = await gitApi.fetchBranches(selectedProject.name);
       setBranches(branches);
     } catch (error) {
       console.error('Error fetching branches:', error);
       setError('Failed to fetch branches');
     }
-  };
+  }, [selectedProject?.name]);
 
-  const switchBranch = async (branchName) => {
+  const fetchRecentCommits = useCallback(async () => {
+    if (!selectedProject) return;
     try {
-      const projectName = encodeProjectPath(selectedProject.fullPath);
-      const data = await gitApi.switchBranch(projectName, branchName);
+      const commits = await gitApi.fetchRecentCommits(selectedProject.name);
+      setRecentCommits(commits);
+    } catch (error) {
+      console.error('Error fetching commits:', error);
+      setError('Failed to fetch commit history');
+    }
+  }, [selectedProject?.name]);
+
+  // Non-callback functions
+  const switchBranch = useCallback(async (branchName) => {
+    if (!selectedProject) return;
+    try {
+      const data = await gitApi.switchBranch(selectedProject.name, branchName);
       
       if (data.success) {
         setCurrentBranch(branchName);
@@ -175,15 +200,14 @@ export const useGitPanel = (selectedProject) => {
       console.error('Error switching branch:', error);
       setError('Failed to switch branch');
     }
-  };
+  }, [selectedProject?.name, fetchGitStatus]);
 
-  const createBranch = async () => {
-    if (!newBranchName.trim()) return;
+  const createBranch = useCallback(async () => {
+    if (!newBranchName.trim() || !selectedProject) return;
     
     setIsCreatingBranch(true);
     try {
-      const projectName = encodeProjectPath(selectedProject.fullPath);
-      const data = await gitApi.createBranch(projectName, newBranchName);
+      const data = await gitApi.createBranch(selectedProject.name, newBranchName);
       
       if (data.success) {
         setCurrentBranch(newBranchName.trim());
@@ -202,24 +226,11 @@ export const useGitPanel = (selectedProject) => {
     } finally {
       setIsCreatingBranch(false);
     }
-  };
-
-
-  const fetchRecentCommits = async () => {
-    try {
-      const projectName = encodeProjectPath(selectedProject.fullPath);
-      const commits = await gitApi.fetchRecentCommits(projectName);
-      setRecentCommits(commits);
-    } catch (error) {
-      console.error('Error fetching commits:', error);
-      setError('Failed to fetch commit history');
-    }
-  };
+  }, [selectedProject?.name, newBranchName, fetchBranches, fetchGitStatus]);
 
   const fetchCommitDiff = async (commitHash) => {
     try {
-      const projectName = encodeProjectPath(selectedProject.fullPath);
-      const diff = await gitApi.fetchCommitDiff(projectName, commitHash);
+      const diff = await gitApi.fetchCommitDiff(selectedProject.name, commitHash);
       
       if (diff) {
         setCommitDiffs(prev => ({
@@ -235,8 +246,7 @@ export const useGitPanel = (selectedProject) => {
   const generateCommitMessage = async () => {
     setIsGeneratingMessage(true);
     try {
-      const projectName = encodeProjectPath(selectedProject.fullPath);
-      const data = await gitApi.generateCommitMessage(projectName, Array.from(selectedFiles));
+      const data = await gitApi.generateCommitMessage(selectedProject.name, Array.from(selectedFiles));
       
       if (data.message) {
         setCommitMessage(data.message);
@@ -258,8 +268,7 @@ export const useGitPanel = (selectedProject) => {
     setIsCommitting(true);
     setError(null);
     try {
-      const projectName = encodeProjectPath(selectedProject.fullPath);
-      const data = await gitApi.commit(projectName, commitMessage, Array.from(selectedFiles));
+      const data = await gitApi.commit(selectedProject.name, commitMessage, Array.from(selectedFiles));
       
       if (data.success) {
         // Reset state after successful commit
@@ -295,35 +304,38 @@ export const useGitPanel = (selectedProject) => {
     });
   };
   
-  const fetchFileDiff = async (filePath) => {
-    if (!selectedProject) return;
-    
-    try {
-      // The backend expects project names with a leading dash
-      const encodedPath = encodeProjectPath(selectedProject.fullPath);
-      const projectName = '-' + encodedPath;
-      
-      console.log('🔍 Fetching diff for file:', filePath);
-      console.log('🔍 Project name:', projectName);
-      const diff = await gitApi.fetchFileDiff(projectName, filePath);
-      console.log('📦 Diff response:', diff);
-      
-      if (diff) {
-        setGitDiff(prev => {
-          const newDiffs = {
-            ...prev,
-            [filePath]: diff
-          };
-          console.log('📋 Updated gitDiff state:', newDiffs);
-          return newDiffs;
-        });
-      } else {
-        console.warn('⚠️ No diff returned for file:', filePath);
+  // Effects - Now all callbacks are defined above
+  useEffect(() => {
+    if (selectedProject) {
+      // Only fetch if we don't have external git status
+      if (!externalGitStatus) {
+        fetchGitStatus();
       }
-    } catch (error) {
-      console.error('❌ Error fetching file diff:', error);
+      fetchBranches();
+      if (activeView === 'history') {
+        fetchRecentCommits();
+      }
     }
-  };
+  }, [selectedProject?.name, activeView, externalGitStatus]); // Only depend on project name, not the whole object
+
+  // Update internal state when external git status changes
+  useEffect(() => {
+    if (externalGitStatus) {
+      setGitStatus(externalGitStatus);
+    }
+  }, [externalGitStatus]);
+
+  // Handle click outside dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowBranchDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const toggleCommitExpanded = (commitHash) => {
     setExpandedCommits(prev => {
@@ -367,13 +379,13 @@ export const useGitPanel = (selectedProject) => {
     setSelectedFiles(new Set());
   };
 
-  const refresh = () => {
+  const refresh = useCallback(() => {
     fetchGitStatus();
     fetchBranches();
     if (activeView === 'history') {
       fetchRecentCommits();
     }
-  };
+  }, [fetchGitStatus, fetchBranches, fetchRecentCommits, activeView]);
 
   return {
     // State

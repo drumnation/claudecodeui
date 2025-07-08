@@ -41,13 +41,17 @@ export const calculateFakeTokens = (elapsedTime) => {
  * @returns {Object} Parsed status data
  */
 export const parseStatusData = (status, elapsedTime, fakeTokens) => {
-  const statusText = status?.text || getActionWord(elapsedTime);
+  const statusText = status?.text || status?.message || getActionWord(elapsedTime);
   const tokens = status?.tokens || fakeTokens;
   const canInterrupt = status?.can_interrupt !== false;
+  const toolStatus = status?.toolStatus || null;
+  const contextRemaining = status?.contextRemaining || null;
   
   return {
     statusText,
     tokens,
-    canInterrupt
+    canInterrupt,
+    toolStatus,
+    contextRemaining
   };
 };

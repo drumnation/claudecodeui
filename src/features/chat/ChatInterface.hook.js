@@ -471,7 +471,9 @@ export const useChatInterface = ({
             let statusInfo = {
               text: 'Working...',
               tokens: 0,
-              can_interrupt: true
+              can_interrupt: true,
+              toolStatus: null,
+              contextRemaining: null
             };
             
             if (statusData.message) {
@@ -490,6 +492,14 @@ export const useChatInterface = ({
             
             if (statusData.can_interrupt !== undefined) {
               statusInfo.can_interrupt = statusData.can_interrupt;
+            }
+            
+            if (statusData.toolStatus) {
+              statusInfo.toolStatus = statusData.toolStatus;
+            }
+            
+            if (statusData.contextRemaining !== null && statusData.contextRemaining !== undefined) {
+              statusInfo.contextRemaining = statusData.contextRemaining;
             }
             
             console.log('📊 Setting claude status:', statusInfo);

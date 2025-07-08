@@ -59,7 +59,9 @@ export const MainContent = ({
     setCurrentScript,
     availableScripts,
     serverLogs,
-    setServerLogs
+    setServerLogs,
+    gitStatus,
+    setGitStatus
   } = useMainContent(selectedProject, ws, sendMessage, messages);
 
   const handleFileOpen = (filePath, diffInfo = null) => {
@@ -112,7 +114,7 @@ export const MainContent = ({
         </TabContent>
         
         <TabContent hidden={activeTab !== 'files'} $overflow>
-          <FileTree selectedProject={selectedProject} />
+          <FileTree selectedProject={selectedProject} gitStatus={gitStatus} />
         </TabContent>
         
         <TabContent hidden={activeTab !== 'shell'} $overflow>
@@ -124,7 +126,12 @@ export const MainContent = ({
         </TabContent>
         
         <TabContent hidden={activeTab !== 'git'} $overflow>
-          <GitPanel selectedProject={selectedProject} isMobile={isMobile} />
+          <GitPanel 
+            selectedProject={selectedProject} 
+            isMobile={isMobile} 
+            gitStatus={gitStatus}
+            onGitStatusChange={setGitStatus}
+          />
         </TabContent>
         
         <TabContent hidden={activeTab !== 'preview'} $overflow>

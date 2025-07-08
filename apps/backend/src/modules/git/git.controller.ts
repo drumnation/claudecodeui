@@ -33,13 +33,10 @@ async function getActualProjectPath(projectName: string): Promise<string> {
     return normalizedProject.fullPath;
   }
   
-  logger.warn('Project not found in list, using fallback', { projectName, availableProjects: projects.map(p => p.name) });
+  logger.error('Project not found in list', { projectName, availableProjects: projects.map(p => p.name) });
   
-  // Fallback: This should not happen in normal operation
-  // but we keep it for backward compatibility
-  const cleanedName = projectName.replace(/^-/, '');
-  const simplePath = '/' + cleanedName.replace(/-/g, '/');
-  return simplePath;
+  // Don't try to decode the path - if project is not found, throw an error
+  throw new Error(`Project not found: ${projectName}`);
 }
 
 export async function handleGitStatus(req: Request, res: Response) {
@@ -133,7 +130,7 @@ export async function handleGitStatus(req: Request, res: Response) {
     });
   } catch (error) {
     logger.error('Git status error', { error });
-    res.json({ error: (error as Error).message });
+    res.status(500).json({ error: (error as Error).message });
   }
 }
 
@@ -172,7 +169,7 @@ export async function handleGitBranches(req: Request, res: Response) {
     res.json({ branches });
   } catch (error) {
     logger.error('Git branches error', { error });
-    res.json({ error: (error as Error).message });
+    res.status(500).json({ error: (error as Error).message });
   }
 }
 
@@ -218,7 +215,7 @@ export async function handleGitDiff(req: Request, res: Response) {
     res.json({ diff });
   } catch (error) {
     logger.error('Git diff error', { error });
-    res.json({ error: (error as Error).message });
+    res.status(500).json({ error: (error as Error).message });
   }
 }
 

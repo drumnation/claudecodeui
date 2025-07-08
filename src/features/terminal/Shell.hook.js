@@ -22,12 +22,24 @@ export const useShell = ({ selectedProject, selectedSession, isActive }) => {
   const [isRestarting, setIsRestarting] = useState(false);
   const [lastSessionId, setLastSessionId] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState(null);
+  const autoConnectTimer = useRef(null);
 
   // Connect to shell function
   const connectToShell = () => {
-    if (!isInitialized || isConnected || isConnecting) return;
+    console.log('[Shell Hook] connectToShell called', {
+      isInitialized,
+      isConnected,
+      isConnecting
+    });
+    
+    if (!isInitialized || isConnected || isConnecting) {
+      console.log('[Shell Hook] Skipping connection - conditions not met');
+      return;
+    }
     
     setIsConnecting(true);
+    setConnectionError(null);
     
     // Start the WebSocket connection
     connectWebSocket();
@@ -47,6 +59,88 @@ export const useShell = ({ selectedProject, selectedSession, isActive }) => {
     
     setIsConnected(false);
     setIsConnecting(false);
+  };
+  
+  // Start fresh session (without resume)
+  const startFreshSession = () => {
+    console.log('[Shell Hook] Starting fresh session');
+    
+    // First disconnect
+    if (ws.current) {
+      ws.current.close();
+      ws.current = null;
+    }
+    
+    setIsConnected(false);
+    setIsConnecting(true);
+    
+    // Connect with fresh session flag
+    setTimeout(async () => {
+      try {
+        const wsUrl = await getWebSocketUrl();
+        console.log('[Shell Hook] Connecting fresh session to:', wsUrl);
+        
+        ws.current = new WebSocket(wsUrl);
+
+        ws.current.onopen = () => {
+          console.log('[Shell Hook] Fresh session connected');
+          setIsConnected(true);
+          setIsConnecting(false);
+          setConnectionError(null);
+          
+          // Send init without session ID for fresh start
+          const initPayload = {
+            type: 'init',
+            projectPath: selectedProject.fullPath || selectedProject.path,
+            sessionId: null,
+            hasSession: false
+          };
+          
+          console.log('Sending fresh init payload:', initPayload);
+          ws.current.send(JSON.stringify(initPayload));
+        };
+
+        ws.current.onmessage = (event) => {
+          try {
+            console.log('[Shell Hook] Received WebSocket message:', event.data.substring(0, 100));
+            const data = JSON.parse(event.data);
+            console.log('[Shell Hook] Parsed message type:', data.type);
+            
+            if (!terminal.current) {
+              console.error('[Shell Hook] Terminal not initialized, cannot process output');
+              return;
+            }
+            
+            processTerminalOutput(data, terminal.current);
+          } catch (error) {
+            console.error('[Shell Hook] Error processing message:', error, event.data);
+          }
+        };
+
+        ws.current.onclose = (event) => {
+          console.log('[Shell Hook] WebSocket closed:', event.code, event.reason);
+          setIsConnected(false);
+          setIsConnecting(false);
+          clearTerminal(terminal.current);
+          
+          if (event.code !== 1000) {
+            setConnectionError(`Connection closed: ${event.reason || 'Unknown error'}`);
+          }
+        };
+
+        ws.current.onerror = (error) => {
+          console.error('[Shell Hook] WebSocket error:', error);
+          setIsConnected(false);
+          setIsConnecting(false);
+          setConnectionError('Failed to connect to Claude Code shell');
+        };
+      } catch (error) {
+        console.error('[Shell Hook] Failed to start fresh session:', error);
+        setIsConnected(false);
+        setIsConnecting(false);
+        setConnectionError(error.message || 'Failed to start fresh session');
+      }
+    }, 100);
   };
 
   // Restart shell function
@@ -89,18 +183,27 @@ export const useShell = ({ selectedProject, selectedSession, isActive }) => {
 
   // WebSocket connection function (called manually)
   const connectWebSocket = async () => {
-    if (isConnecting || isConnected) return;
+    if (isConnecting || isConnected) {
+      console.log('[Shell Hook] Already connecting or connected');
+      return;
+    }
     
     try {
+      console.log('[Shell Hook] Getting WebSocket URL...');
       const wsUrl = await getWebSocketUrl();
-      console.log('Connecting to WebSocket:', wsUrl);
+      console.log('[Shell Hook] WebSocket URL:', wsUrl);
+      
+      if (!wsUrl) {
+        throw new Error('Failed to get WebSocket URL');
+      }
       
       ws.current = new WebSocket(wsUrl);
 
       ws.current.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('[Shell Hook] WebSocket connected successfully');
         setIsConnected(true);
         setIsConnecting(false);
+        setConnectionError(null);
         
         // Send initial setup with project path and session info
         const initPayload = {
@@ -116,33 +219,46 @@ export const useShell = ({ selectedProject, selectedSession, isActive }) => {
 
       ws.current.onmessage = (event) => {
         try {
+          console.log('[Shell Hook] Received WebSocket message:', event.data.substring(0, 100));
           const data = JSON.parse(event.data);
+          console.log('[Shell Hook] Parsed message type:', data.type);
+          
+          if (!terminal.current) {
+            console.error('[Shell Hook] Terminal not initialized, cannot process output');
+            return;
+          }
+          
           processTerminalOutput(data, terminal.current);
         } catch (error) {
-          console.error('Error processing message:', error);
+          console.error('[Shell Hook] Error processing message:', error, event.data);
         }
       };
 
       ws.current.onclose = (event) => {
-        console.log('WebSocket closed:', event);
+        console.log('[Shell Hook] WebSocket closed:', event.code, event.reason);
         setIsConnected(false);
         setIsConnecting(false);
         
         // Clear terminal content when connection closes
         clearTerminal(terminal.current);
         
-        // Don't auto-reconnect anymore - user must manually connect
+        // Set error message for abnormal closures
+        if (event.code !== 1000) {
+          setConnectionError(`Connection closed: ${event.reason || 'Unknown error'}`);
+        }
       };
 
       ws.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        console.error('[Shell Hook] WebSocket error:', error);
         setIsConnected(false);
         setIsConnecting(false);
+        setConnectionError('Failed to connect to Claude Code shell');
       };
     } catch (error) {
-      console.error('Failed to connect WebSocket:', error);
+      console.error('[Shell Hook] Failed to connect WebSocket:', error);
       setIsConnected(false);
       setIsConnecting(false);
+      setConnectionError(error.message || 'Failed to connect to shell');
     }
   };
 
@@ -209,6 +325,7 @@ export const useShell = ({ selectedProject, selectedSession, isActive }) => {
         }, 100);
         
         setIsInitialized(true);
+        console.log('[Shell Hook] Terminal initialized successfully');
         return;
       } catch (error) {
         console.error('Failed to reuse session:', error);
@@ -237,6 +354,9 @@ export const useShell = ({ selectedProject, selectedSession, isActive }) => {
     setupKeyboardShortcuts(terminal.current, ws);
     setupDataHandler(terminal.current, ws);
     
+    // Write initial message to show terminal is ready
+    terminal.current.write('\x1b[90mTerminal initialized. Click "Connect" to start Claude...\x1b[0m\r\n');
+    
     // Ensure terminal takes full space
     setTimeout(() => {
       if (fitAddon.current) {
@@ -245,6 +365,7 @@ export const useShell = ({ selectedProject, selectedSession, isActive }) => {
     }, 100);
     
     setIsInitialized(true);
+    console.log('[Shell Hook] New terminal created and initialized');
 
     // Add resize observer to handle container size changes
     const resizeObserver = new ResizeObserver(() => {
@@ -272,6 +393,34 @@ export const useShell = ({ selectedProject, selectedSession, isActive }) => {
     };
   }, [terminalRef.current, selectedProject, selectedSession, isRestarting]);
 
+  // Auto-connect after initialization with retry logic
+  useEffect(() => {
+    if (!isInitialized || isConnected || isConnecting) {
+      return;
+    }
+
+    // Clear any existing timer
+    if (autoConnectTimer.current) {
+      clearTimeout(autoConnectTimer.current);
+    }
+
+    console.log('[Shell Hook] Setting up auto-connect timer');
+    
+    // Try to auto-connect after 2 seconds if not connected
+    autoConnectTimer.current = setTimeout(() => {
+      if (isInitialized && !isConnected && !isConnecting) {
+        console.log('[Shell Hook] Auto-connecting to shell after delay');
+        connectToShell();
+      }
+    }, 2000);
+
+    return () => {
+      if (autoConnectTimer.current) {
+        clearTimeout(autoConnectTimer.current);
+      }
+    };
+  }, [isInitialized, isConnected, isConnecting]);
+
   // Fit terminal when tab becomes active
   useEffect(() => {
     if (!isActive || !isInitialized) return;
@@ -290,8 +439,10 @@ export const useShell = ({ selectedProject, selectedSession, isActive }) => {
     isInitialized,
     isRestarting,
     isConnecting,
+    connectionError,
     connectToShell,
     disconnectFromShell,
-    restartShell
+    restartShell,
+    startFreshSession
   };
 };
