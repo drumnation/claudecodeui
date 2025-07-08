@@ -15,6 +15,15 @@ import {
   handleGitCheckout, 
   handleGitCreateBranch 
 } from './modules/git/git.controller';
+import {
+  handleGetBacklog,
+  handleCreateTask,
+  handleUpdateTask,
+  handleDeleteTask,
+  handleGetBoard,
+  handleGenerateTasks,
+  handleReviewTasks
+} from './backlog.controller';
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
@@ -334,6 +343,15 @@ app.get('/api/git/diff', handleGitDiff);
 app.post('/api/git/commit', handleGitCommit);
 app.post('/api/git/checkout', handleGitCheckout);
 app.post('/api/git/create-branch', handleGitCreateBranch);
+
+// Backlog routes
+app.get('/api/projects/:projectName/backlog', handleGetBacklog);
+app.post('/api/projects/:projectName/backlog/tasks', handleCreateTask);
+app.put('/api/projects/:projectName/backlog/tasks/:taskId', handleUpdateTask);
+app.delete('/api/projects/:projectName/backlog/tasks/:taskId', handleDeleteTask);
+app.get('/api/projects/:projectName/backlog/board', handleGetBoard);
+app.post('/api/projects/:projectName/backlog/plan', handleGenerateTasks);
+app.post('/api/projects/:projectName/backlog/review', handleReviewTasks);
 
 // File routes
 app.get('/api/files', (req, res) => {

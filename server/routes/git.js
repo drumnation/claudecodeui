@@ -468,4 +468,206 @@ function generateSimpleCommitMessage(files, diff) {
   }
 }
 
+// Create new git worktree
+router.post('/worktree/create', async (req, res) => {
+  const { project, featureName, customPath } = req.body;
+  
+  if (!project || !featureName) {
+    return res.status(400).json({ error: 'Project name and feature name are required' });
+  }
+
+  try {
+    const projectPath = await getActualProjectPath(project);
+    
+    // Validate project is a git repository
+    try {
+      await execAsync('git rev-parse --git-dir', { cwd: projectPath });
+    } catch (err) {
+      return res.status(400).json({ error: `Not a git repository: ${projectPath}` });
+    }
+
+    // Generate worktree path
+    const projectDir = path.dirname(projectPath);
+    const projectName = path.basename(projectPath);
+    const worktreePath = customPath || path.join(projectDir, `${projectName}-${featureName}`);
+    
+    console.log('Creating worktree:', {
+      project,
+      featureName,
+      projectPath,
+      worktreePath
+    });
+
+    // Check if worktree path already exists
+    try {
+      await fs.access(worktreePath);
+      return res.status(400).json({ error: `Directory already exists: ${worktreePath}` });
+    } catch {
+      // Path doesn't exist, which is good
+    }
+
+    // Create worktree with new branch
+    const { stdout } = await execAsync(
+      `git worktree add -b "${featureName}" "${worktreePath}"`,
+      { cwd: projectPath }
+    );
+    
+    console.log('Worktree created successfully:', stdout);
+    
+    res.json({
+      success: true,
+      fullPath: worktreePath,
+      branch: featureName,
+      output: stdout
+    });
+  } catch (error) {
+    console.error('Create worktree error:', error);
+    
+    // Handle specific git errors
+    if (error.message.includes('already exists')) {
+      return res.status(400).json({ error: `Branch '${featureName}' already exists` });
+    }
+    
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Remove git worktree
+router.delete('/worktree/remove', async (req, res) => {
+  const { project, worktreePath } = req.body;
+  
+  if (!project || !worktreePath) {
+    return res.status(400).json({ error: 'Project name and worktree path are required' });
+  }
+
+  try {
+    const projectPath = await getActualProjectPath(project);
+    
+    console.log('Removing worktree:', {
+      project,
+      projectPath,
+      worktreePath
+    });
+
+    // Remove worktree
+    const { stdout } = await execAsync(
+      `git worktree remove "${worktreePath}"`,
+      { cwd: projectPath }
+    );
+    
+    console.log('Worktree removed successfully:', stdout);
+    
+    res.json({
+      success: true,
+      output: stdout
+    });
+  } catch (error) {
+    console.error('Remove worktree error:', error);
+    
+    // Handle specific git errors
+    if (error.message.includes('is dirty')) {
+      return res.status(400).json({ 
+        error: 'Worktree has uncommitted changes. Please commit or stash changes before removing.' 
+      });
+    }
+    
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create pull request
+router.post('/pr/create', async (req, res) => {
+  const { project, targetBranch = 'main' } = req.body;
+  
+  if (!project) {
+    return res.status(400).json({ error: 'Project name is required' });
+  }
+
+  try {
+    const projectPath = await getActualProjectPath(project);
+    
+    // Get current branch
+    const { stdout: currentBranch } = await execAsync(
+      'git rev-parse --abbrev-ref HEAD',
+      { cwd: projectPath }
+    );
+    
+    const branch = currentBranch.trim();
+    
+    if (branch === targetBranch) {
+      return res.status(400).json({ 
+        error: `Cannot create PR from ${targetBranch} to ${targetBranch}` 
+      });
+    }
+
+    console.log('Creating PR:', {
+      project,
+      currentBranch: branch,
+      targetBranch,
+      projectPath
+    });
+
+    // Push the branch to origin
+    try {
+      const { stdout: pushOutput } = await execAsync(
+        `git push -u origin "${branch}"`,
+        { cwd: projectPath }
+      );
+      console.log('Branch pushed successfully:', pushOutput);
+    } catch (pushError) {
+      console.error('Push error:', pushError);
+      return res.status(500).json({ 
+        error: `Failed to push branch: ${pushError.message}` 
+      });
+    }
+
+    // Get remote URL to construct PR URL
+    try {
+      const { stdout: remoteUrl } = await execAsync(
+        'git remote get-url origin',
+        { cwd: projectPath }
+      );
+      
+      const url = remoteUrl.trim();
+      let prUrl = '';
+      
+      // Parse GitHub URL
+      if (url.includes('github.com')) {
+        const match = url.match(/github\.com[:/]([^/]+)\/([^/.]+)/);
+        if (match) {
+          const [, owner, repo] = match;
+          prUrl = `https://github.com/${owner}/${repo}/compare/${targetBranch}...${branch}`;
+        }
+      }
+      // Parse GitLab URL
+      else if (url.includes('gitlab.com')) {
+        const match = url.match(/gitlab\.com[:/]([^/]+)\/([^/.]+)/);
+        if (match) {
+          const [, owner, repo] = match;
+          prUrl = `https://gitlab.com/${owner}/${repo}/-/merge_requests/new?merge_request[source_branch]=${branch}&merge_request[target_branch]=${targetBranch}`;
+        }
+      }
+      
+      res.json({
+        success: true,
+        prUrl,
+        pushedBranch: branch,
+        targetBranch,
+        remoteUrl: url
+      });
+    } catch (remoteError) {
+      console.error('Remote URL error:', remoteError);
+      res.json({
+        success: true,
+        pushedBranch: branch,
+        targetBranch,
+        message: 'Branch pushed successfully, but could not determine remote URL for PR creation'
+      });
+    }
+  } catch (error) {
+    console.error('Create PR error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

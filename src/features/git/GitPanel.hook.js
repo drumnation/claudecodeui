@@ -25,6 +25,11 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
   const [commitDiffs, setCommitDiffs] = useState({});
   const [isGeneratingMessage, setIsGeneratingMessage] = useState(false);
   const [error, setError] = useState(null);
+  
+  // PR creation state
+  const [isCreatingPR, setIsCreatingPR] = useState(false);
+  const [prUrl, setPrUrl] = useState('');
+  const [prError, setPrError] = useState('');
 
   // Refs
   const textareaRef = useRef(null);
@@ -379,6 +384,43 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
     setSelectedFiles(new Set());
   };
 
+  const createPullRequest = async (targetBranch = 'main') => {
+    if (!selectedProject) {
+      console.log('🚫 No project selected for PR creation');
+      return;
+    }
+
+    setIsCreatingPR(true);
+    setPrError('');
+    
+    try {
+      const result = await gitApi.createPullRequest(selectedProject.name, targetBranch);
+      
+      if (result.error) {
+        console.error('PR creation error:', result.error);
+        setPrError(result.error);
+        return;
+      }
+
+      // Store PR URL and open in new tab
+      if (result.prUrl) {
+        setPrUrl(result.prUrl);
+        window.open(result.prUrl, '_blank');
+      } else if (result.message) {
+        // Handle case where branch was pushed but no PR URL was generated
+        console.log('Branch pushed successfully:', result.message);
+      }
+      
+      // Clear other error states on success
+      setError(null);
+    } catch (error) {
+      console.error('Error creating PR:', error);
+      setPrError('Failed to create pull request');
+    } finally {
+      setIsCreatingPR(false);
+    }
+  };
+
   const refresh = useCallback(() => {
     fetchGitStatus();
     fetchBranches();
@@ -410,6 +452,9 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
     commitDiffs,
     isGeneratingMessage,
     error,
+    isCreatingPR,
+    prUrl,
+    prError,
     
     // Refs
     textareaRef,
@@ -434,6 +479,7 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
     toggleFileSelected,
     selectAllFiles,
     deselectAllFiles,
+    createPullRequest,
     refresh
   };
 };

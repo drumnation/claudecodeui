@@ -316,6 +316,11 @@ export class ProjectsService {
     
     return projects;
   }
+
+  async getProjectByName(projectName: string): Promise<Project | null> {
+    const projects = await this.getProjects();
+    return projects.find(p => p.name === projectName) || null;
+  }
 }
 
 export const projectsService = new ProjectsService();

@@ -100,17 +100,30 @@ if (debugInfo.platform.isMobile) {
 }
 
 // Check for mixed content issues (HTTPS page with HTTP requests)
-if (debugInfo.environment.protocol === 'https:' && debugInfo.environment.isNgrok) {
-  mobileDebug.log('NGROK HTTPS detected - checking for mixed content issues');
+// Enable this for all mobile devices or when in ngrok environment
+if ((debugInfo.environment.protocol === 'https:' && debugInfo.environment.isNgrok) || debugInfo.platform.isMobile) {
+  mobileDebug.log('Mixed content protection enabled');
   
-  // Warn about potential mixed content
+  // Wrap fetch to automatically fix HTTP→HTTPS issues and warn about mixed content
   const originalFetch = window.fetch;
   window.fetch = function(...args) {
-    const url = args[0];
-    if (typeof url === 'string' && url.startsWith('http://')) {
-      mobileDebug.log('WARNING: HTTP request from HTTPS page detected', { url });
-      console.warn('Mixed content warning: HTTP request from HTTPS page:', url);
+    let url = args[0];
+    
+    if (typeof url === 'string') {
+      // If we're on HTTPS but making HTTP request, try to fix it
+      if (window.location.protocol === 'https:' && url.startsWith('http://')) {
+        // Convert HTTP to HTTPS for same-origin requests
+        if (url.startsWith(`http://${window.location.hostname}`)) {
+          url = url.replace('http://', 'https://');
+          args[0] = url;
+          mobileDebug.log('Auto-fixed HTTP→HTTPS request', { original: arguments[0], fixed: url });
+        } else {
+          mobileDebug.log('WARNING: HTTP request from HTTPS page detected', { url });
+          console.warn('Mixed content warning: HTTP request from HTTPS page:', url);
+        }
+      }
     }
+    
     return originalFetch.apply(this, args);
   };
 }

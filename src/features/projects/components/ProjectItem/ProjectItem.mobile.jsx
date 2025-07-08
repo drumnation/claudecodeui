@@ -6,7 +6,8 @@ import {
   Trash2, 
   Check, 
   X,
-  MoreVertical
+  MoreVertical,
+  GitBranch
 } from 'lucide-react';
 import { SessionList } from '../SessionList';
 import * as S from './ProjectItem.styles';
@@ -20,7 +21,9 @@ const ProjectActionMenu = ({
   project,
   sessionCount,
   onStartEditing,
-  onDeleteProject
+  onDeleteProject,
+  onCreateWorktree,
+  onRemoveWorktree
 }) => {
   if (!isOpen) return null;
 
@@ -45,7 +48,32 @@ const ProjectActionMenu = ({
             <span>Edit Project Name</span>
           </S.MobileActionButton>
           
-          {sessionCount === 0 && (
+          {!project.isWorktree && (
+            <S.MobileActionButton
+              onClick={() => {
+                onCreateWorktree(project);
+                onClose();
+              }}
+            >
+              <GitBranch className="w-5 h-5" />
+              <span>Create Worktree</span>
+            </S.MobileActionButton>
+          )}
+
+          {project.isWorktree && (
+            <S.MobileActionButton
+              onClick={() => {
+                onRemoveWorktree(project);
+                onClose();
+              }}
+              className="text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="w-5 h-5" />
+              <span>Remove Worktree</span>
+            </S.MobileActionButton>
+          )}
+          
+          {sessionCount === 0 && !project.isWorktree && (
             <S.MobileActionButton
               onClick={() => {
                 onDeleteProject(project.name);
@@ -94,6 +122,8 @@ export const ProjectItemMobile = ({
   onUpdateSessionSummary,
   onRegenerateSessionTitle,
   onLoadMoreSessions,
+  onCreateWorktree,
+  onRemoveWorktree,
   setEditingName,
   setEditingSession,
   setEditingSessionName,
@@ -255,6 +285,8 @@ export const ProjectItemMobile = ({
         sessionCount={sessionCount}
         onStartEditing={onStartEditing}
         onDeleteProject={onDeleteProject}
+        onCreateWorktree={onCreateWorktree}
+        onRemoveWorktree={onRemoveWorktree}
       />
     </S.ProjectContainer>
   );

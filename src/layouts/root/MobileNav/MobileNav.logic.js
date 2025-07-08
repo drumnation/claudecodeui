@@ -1,4 +1,4 @@
-import { MessageSquare, Folder, Terminal, GitBranch, Globe } from 'lucide-react';
+import { MessageSquare, Folder, Terminal, GitBranch, Globe, ClipboardList } from 'lucide-react';
 
 export const getNavItems = (setActiveTab) => [
   {
@@ -18,6 +18,12 @@ export const getNavItems = (setActiveTab) => [
     icon: Folder,
     label: 'Files',
     onClick: () => setActiveTab('files')
+  },
+  {
+    id: 'backlog',
+    icon: ClipboardList,
+    label: 'Backlog',
+    onClick: () => setActiveTab('backlog')
   },
   {
     id: 'git',

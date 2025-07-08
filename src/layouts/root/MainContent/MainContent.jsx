@@ -18,6 +18,7 @@ import { CodeEditor } from '@/shared-components/CodeEditor';
 import { Shell } from '@/features/terminal';
 import { GitPanel } from '@/features/git';
 import { LivePreviewPanel } from '@/features/preview';
+import { BacklogBoard } from '@/features/backlog';
 import { ErrorBoundary } from '@/shared-components/ErrorBoundary';
 
 import { ProjectHeader } from '@/layouts/root/MainContent/ProjectHeader';
@@ -133,6 +134,13 @@ export const MainContent = ({
             isMobile={isMobile} 
             gitStatus={gitStatus}
             onGitStatusChange={setGitStatus}
+          />
+        </TabContent>
+        
+        <TabContent hidden={activeTab !== 'backlog'} $overflow>
+          <BacklogBoard
+            selectedProject={selectedProject}
+            selectedSession={selectedSession}
           />
         </TabContent>
         

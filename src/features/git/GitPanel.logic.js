@@ -163,6 +163,82 @@ export const gitApi = {
       console.error('Git commit error:', error);
       return { error: 'Failed to commit changes' };
     }
+  },
+
+  async createWorktree(projectName, featureName, customPath) {
+    try {
+      const response = await fetch('/api/git/worktree/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project: projectName,
+          featureName: featureName,
+          customPath: customPath
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        console.error('Create worktree error:', data.error);
+        return { error: data.error };
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Create worktree fetch error:', error);
+      return { error: 'Failed to create worktree' };
+    }
+  },
+
+  async removeWorktree(projectName, worktreePath) {
+    try {
+      const response = await fetch('/api/git/worktree/remove', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project: projectName,
+          worktreePath: worktreePath
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        console.error('Remove worktree error:', data.error);
+        return { error: data.error };
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Remove worktree fetch error:', error);
+      return { error: 'Failed to remove worktree' };
+    }
+  },
+
+  async createPullRequest(projectName, targetBranch = 'main') {
+    try {
+      const response = await fetch('/api/git/pr/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project: projectName,
+          targetBranch: targetBranch
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        console.error('Create PR error:', data.error);
+        return { error: data.error };
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Create PR fetch error:', error);
+      return { error: 'Failed to create pull request' };
+    }
   }
 };
 

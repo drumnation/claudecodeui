@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, FileText, History, Info, ChevronDown, ChevronRight } from 'lucide-react';
+import { RefreshCw, FileText, History, Info, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
 import { useGitPanel } from '@/features/git/GitPanel.hook';
 import { BranchSelector } from '@/features/git/BranchSelector';
 import { CommitMessage } from '@/features/git/CommitMessage';
@@ -54,6 +54,9 @@ export const GitPanel = ({ selectedProject, isMobile, gitStatus: externalGitStat
     commitDiffs,
     isGeneratingMessage,
     error,
+    isCreatingPR,
+    prUrl,
+    prError,
     
     // Refs
     textareaRef,
@@ -78,6 +81,7 @@ export const GitPanel = ({ selectedProject, isMobile, gitStatus: externalGitStat
     toggleFileSelected,
     selectAllFiles,
     deselectAllFiles,
+    createPullRequest,
     refresh
   } = useGitPanel(selectedProject, externalGitStatus, onGitStatusChange);
 
@@ -140,6 +144,23 @@ export const GitPanel = ({ selectedProject, isMobile, gitStatus: externalGitStat
           }}
           dropdownRef={dropdownRef}
         />
+        
+        {selectedProject?.isWorktree && (
+          <RefreshButton
+            onClick={() => createPullRequest('main')}
+            disabled={isCreatingPR}
+            title="Create Pull Request"
+          >
+            {isCreatingPR ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <ExternalLink className="w-4 h-4" />
+            )}
+            <span style={{ marginLeft: '8px' }}>
+              {isCreatingPR ? 'Creating...' : 'Create PR'}
+            </span>
+          </RefreshButton>
+        )}
         
         <RefreshButton
           onClick={refresh}

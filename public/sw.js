@@ -19,6 +19,11 @@ self.addEventListener('install', event => {
 
 // Fetch event
 self.addEventListener('fetch', event => {
+  // Skip cross-origin requests and extension requests
+  if (!event.request.url.startsWith(self.location.origin)) {
+    return;
+  }
+  
   event.respondWith(
     caches.match(event.request)
       .then(response => {
@@ -26,8 +31,18 @@ self.addEventListener('fetch', event => {
         if (response) {
           return response;
         }
-        // Otherwise fetch from network
-        return fetch(event.request);
+        // Otherwise fetch from network with error handling
+        return fetch(event.request).catch(error => {
+          console.warn('SW fetch failed:', event.request.url, error);
+          // For development/ngrok, just return a basic response for failed fetches
+          if (event.request.url.includes('ngrok') || event.request.url.includes('localhost')) {
+            return new Response('Service Worker: Resource unavailable in development mode', {
+              status: 503,
+              statusText: 'Service Unavailable'
+            });
+          }
+          throw error;
+        });
       }
     )
   );

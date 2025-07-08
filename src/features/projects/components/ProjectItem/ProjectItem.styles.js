@@ -128,6 +128,40 @@ export const DesktopEditAction = styled(DesktopHoverActions)`
   ${tw`hover:bg-gray-50 dark:hover:bg-gray-900/20`}
 `;
 
+export const DesktopContextTrigger = styled(DesktopHoverActions)`
+  ${tw`hover:bg-gray-50 dark:hover:bg-gray-900/20`}
+`;
+
+// Desktop Context Menu styles
+export const DesktopContextMenu = styled.div`
+  ${tw`fixed z-50 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[160px]`}
+  animation: fade-in 0.15s ease-out;
+  
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+`;
+
+export const DesktopContextItem = styled.button`
+  ${tw`w-full flex items-center gap-3 px-3 py-2 text-left text-sm hover:bg-accent text-foreground transition-colors`}
+  ${tw`first:rounded-t-lg last:rounded-b-lg`}
+  
+  &:hover {
+    ${tw`bg-accent`}
+  }
+  
+  &.text-red-600 {
+    ${tw`text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20`}
+  }
+`;
+
 // Sessions container
 export const SessionsContainer = styled.div`
   ${tw`ml-3 space-y-2 border-l border-border pl-3 pt-3 pb-3`}

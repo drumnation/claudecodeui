@@ -33,6 +33,7 @@ export const ProjectHeader = ({
     }
     if (activeTab === 'files') return 'Project Files';
     if (activeTab === 'git') return 'Source Control';
+    if (activeTab === 'backlog') return 'Project Backlog';
     return 'Project';
   };
 

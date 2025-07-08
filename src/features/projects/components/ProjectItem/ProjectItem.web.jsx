@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Folder, 
   FolderOpen, 
@@ -6,7 +6,9 @@ import {
   Edit3, 
   Trash2, 
   Check, 
-  X
+  X,
+  MoreVertical,
+  GitBranch
 } from 'lucide-react';
 import { Button } from '@/shared-components/Button/Button';
 import { SessionList } from '../SessionList';
@@ -14,6 +16,88 @@ import { cn } from '@/lib/utils';
 import * as S from './ProjectItem.styles';
 import { WorktreeBadge, ProjectLanguageBadge, ProjectMonorepoBadge } from '@/components/WorktreeBadge/WorktreeBadge';
 import { GitBranchBadge } from '@/features/projects/components/GitBranchBadge';
+
+// Desktop context menu component
+const ProjectContextMenu = ({ 
+  isOpen, 
+  onClose, 
+  project, 
+  sessionCount, 
+  onStartEditing, 
+  onDeleteProject, 
+  onCreateWorktree, 
+  onRemoveWorktree,
+  position 
+}) => {
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <S.DesktopContextMenu ref={menuRef} style={{ top: position.y, left: position.x }}>
+      <S.DesktopContextItem
+        onClick={() => {
+          onStartEditing(project);
+          onClose();
+        }}
+      >
+        <Edit3 className="w-4 h-4" />
+        <span>Edit Project Name</span>
+      </S.DesktopContextItem>
+      
+      {!project.isWorktree && (
+        <S.DesktopContextItem
+          onClick={() => {
+            onCreateWorktree(project);
+            onClose();
+          }}
+        >
+          <GitBranch className="w-4 h-4" />
+          <span>Create Worktree</span>
+        </S.DesktopContextItem>
+      )}
+
+      {project.isWorktree && (
+        <S.DesktopContextItem
+          onClick={() => {
+            onRemoveWorktree(project);
+            onClose();
+          }}
+          className="text-red-600 hover:text-red-700"
+        >
+          <Trash2 className="w-4 h-4" />
+          <span>Remove Worktree</span>
+        </S.DesktopContextItem>
+      )}
+      
+      {sessionCount === 0 && !project.isWorktree && (
+        <S.DesktopContextItem
+          onClick={() => {
+            onDeleteProject(project.name);
+            onClose();
+          }}
+          className="text-red-600 hover:text-red-700"
+        >
+          <Trash2 className="w-4 h-4" />
+          <span>Delete Empty Project</span>
+        </S.DesktopContextItem>
+      )}
+    </S.DesktopContextMenu>
+  );
+};
 
 export const ProjectItemWeb = ({
   project,
@@ -46,11 +130,15 @@ export const ProjectItemWeb = ({
   onUpdateSessionSummary,
   onRegenerateSessionTitle,
   onLoadMoreSessions,
+  onCreateWorktree,
+  onRemoveWorktree,
   setEditingName,
   setEditingSession,
   setEditingSessionName,
   handleTouchClick
 }) => {
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const sessions = getAllSessions(project);
   const sessionCount = project.sessionMeta?.total || sessions.length;
   const hasMore = sessionCount > sessions.length;
@@ -158,7 +246,7 @@ export const ProjectItemWeb = ({
                 >
                   <Edit3 className="w-3 h-3 text-muted-foreground group-hover:text-foreground transition-colors" />
                 </S.DesktopEditAction>
-                {sessionCount === 0 && (
+                {sessionCount === 0 && !project.isWorktree && (
                   <S.DesktopDeleteAction
                     onClick={(e) => {
                       e.stopPropagation();
@@ -168,6 +256,19 @@ export const ProjectItemWeb = ({
                     <Trash2 className="w-3 h-3 text-muted-foreground hover:text-red-600" />
                   </S.DesktopDeleteAction>
                 )}
+                <S.DesktopContextTrigger
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setContextMenuPosition({
+                      x: rect.left - 150, // Position menu to the left of the button
+                      y: rect.bottom + 5
+                    });
+                    setShowContextMenu(true);
+                  }}
+                >
+                  <MoreVertical className="w-3 h-3 text-muted-foreground group-hover:text-foreground transition-colors" />
+                </S.DesktopContextTrigger>
                 <ChevronRight className={cn(
                   "w-3 h-3 transition-transform text-muted-foreground",
                   isExpanded && "rotate-90"
@@ -209,6 +310,19 @@ export const ProjectItemWeb = ({
           />
         </S.SessionsContainer>
       )}
+
+      {/* Desktop Context Menu */}
+      <ProjectContextMenu
+        isOpen={showContextMenu}
+        onClose={() => setShowContextMenu(false)}
+        project={project}
+        sessionCount={sessionCount}
+        onStartEditing={onStartEditing}
+        onDeleteProject={onDeleteProject}
+        onCreateWorktree={onCreateWorktree}
+        onRemoveWorktree={onRemoveWorktree}
+        position={contextMenuPosition}
+      />
     </S.ProjectContainer>
   );
 };

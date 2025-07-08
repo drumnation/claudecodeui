@@ -5,6 +5,7 @@ import { ScrollArea } from '@/shared-components/ScrollArea/ScrollArea';
 import { Button } from '@/shared-components/Button/Button';
 import { ClaudeLogo } from '@/shared-components/ClaudeLogo/ClaudeLogo';
 import { NewProjectModal } from './components/NewProjectModal';
+import { WorktreeModal } from './components/WorktreeModal';
 import { ProjectItem } from './components/ProjectItem';
 import { ConfirmationModal } from '@/shared-components/ConfirmationModal';
 import { 
@@ -45,12 +46,18 @@ export const ProjectList = ({
     editingSessionName,
     generatingSummary,
     regeneratingTitle,
+    showWorktreeModal,
+    worktreeFeatureName,
+    creatingWorktree,
+    selectedProjectForWorktree,
+    removingWorktree,
     confirmationState,
     setEditingName,
     setNewProjectPath,
     setShowNewProject,
     setEditingSession,
     setEditingSessionName,
+    setWorktreeFeatureName,
     handleTouchClick,
     toggleProject,
     startEditing,
@@ -67,6 +74,10 @@ export const ProjectList = ({
     getAllSessions,
     hasActiveSessions,
     handleRefresh,
+    createWorktree,
+    cancelWorktree,
+    onCreateWorktree,
+    onRemoveWorktree,
     handleConfirm,
     handleCancel
   } = useProjectList({
@@ -153,6 +164,17 @@ export const ProjectList = ({
         />
       )}
       
+      {showWorktreeModal && (
+        <WorktreeModal
+          featureName={worktreeFeatureName}
+          setFeatureName={setWorktreeFeatureName}
+          creatingWorktree={creatingWorktree}
+          onCreateWorktree={createWorktree}
+          onCancel={cancelWorktree}
+          project={selectedProjectForWorktree}
+        />
+      )}
+      
       <ScrollArea className="flex-1 md:px-2 md:py-3">
         <S.ProjectsList>
           {isLoading ? (
@@ -221,6 +243,8 @@ export const ProjectList = ({
                 onUpdateSessionSummary={updateSessionSummary}
                 onRegenerateSessionTitle={regenerateSessionTitle}
                 onLoadMoreSessions={loadMoreSessions}
+                onCreateWorktree={onCreateWorktree}
+                onRemoveWorktree={onRemoveWorktree}
                 setEditingName={setEditingName}
                 setEditingSession={setEditingSession}
                 setEditingSessionName={setEditingSessionName}

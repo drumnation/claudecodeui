@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useConfirmation } from '@/hooks/useConfirmation';
+import { gitApi } from '@/features/git/GitPanel.logic';
 
 export const useProjectList = ({
   projects,
@@ -29,6 +30,13 @@ export const useProjectList = ({
   const [editingSessionName, setEditingSessionName] = useState('');
   const [generatingSummary, setGeneratingSummary] = useState({});
   const [regeneratingTitle, setRegeneratingTitle] = useState({});
+  
+  // Worktree state
+  const [showWorktreeModal, setShowWorktreeModal] = useState(false);
+  const [worktreeFeatureName, setWorktreeFeatureName] = useState('');
+  const [creatingWorktree, setCreatingWorktree] = useState(false);
+  const [selectedProjectForWorktree, setSelectedProjectForWorktree] = useState(null);
+  const [removingWorktree, setRemovingWorktree] = useState(false);
   
   // Confirmation modal state
   const {
@@ -343,6 +351,117 @@ export const useProjectList = ({
     setNewProjectPath('');
   };
 
+  // Worktree handlers
+  const createWorktree = async () => {
+    if (!worktreeFeatureName.trim() || !selectedProjectForWorktree) {
+      alert('Please enter a feature name');
+      return;
+    }
+
+    setCreatingWorktree(true);
+    
+    try {
+      const result = await gitApi.createWorktree(
+        selectedProjectForWorktree.name, 
+        worktreeFeatureName.trim()
+      );
+
+      if (result.error) {
+        alert(result.error);
+        return;
+      }
+
+      // Close modal and clear state
+      setShowWorktreeModal(false);
+      setWorktreeFeatureName('');
+      setSelectedProjectForWorktree(null);
+      
+      // Refresh projects to show the new worktree
+      if (window.refreshProjects) {
+        await window.refreshProjects();
+      } else {
+        window.location.reload();
+        return;
+      }
+      
+      // Auto-select the new worktree project if it was created successfully
+      if (result.fullPath && onProjectSelect) {
+        // Find the new worktree project in the refreshed list
+        setTimeout(() => {
+          const worktreeProject = projects.find(p => p.fullPath === result.fullPath);
+          if (worktreeProject) {
+            onProjectSelect(worktreeProject);
+            
+            // Auto-start a new session in the worktree
+            if (onNewSession) {
+              onNewSession(worktreeProject);
+            }
+          }
+        }, 100);
+      }
+    } catch (error) {
+      console.error('Error creating worktree:', error);
+      alert('Error creating worktree. Please try again.');
+    } finally {
+      setCreatingWorktree(false);
+    }
+  };
+
+  const removeWorktree = async (project) => {
+    const confirmed = await showConfirmation({
+      title: 'Remove Worktree',
+      message: `Are you sure you want to remove the worktree "${project.displayName}"? Any uncommitted changes will be lost.`,
+      confirmText: 'Remove Worktree',
+      confirmVariant: 'destructive'
+    });
+
+    if (!confirmed) return;
+
+    setRemovingWorktree(true);
+    
+    try {
+      const result = await gitApi.removeWorktree(project.name, project.fullPath);
+
+      if (result.error) {
+        alert(result.error);
+        return;
+      }
+
+      // Refresh projects to remove the worktree from the list
+      if (window.refreshProjects) {
+        await window.refreshProjects();
+      } else {
+        window.location.reload();
+      }
+      
+      // If this was the selected project, deselect it
+      if (selectedProject && selectedProject.name === project.name && onProjectSelect) {
+        onProjectSelect(null);
+      }
+    } catch (error) {
+      console.error('Error removing worktree:', error);
+      alert('Error removing worktree. Please try again.');
+    } finally {
+      setRemovingWorktree(false);
+    }
+  };
+
+  const cancelWorktree = () => {
+    setShowWorktreeModal(false);
+    setWorktreeFeatureName('');
+    setSelectedProjectForWorktree(null);
+  };
+
+  const onCreateWorktree = (project) => {
+    setSelectedProjectForWorktree(project);
+    setShowWorktreeModal(true);
+    setWorktreeFeatureName('');
+  };
+
+  const onRemoveWorktree = (project) => {
+    removeWorktree(project);
+  };
+
   const loadMoreSessions = async (project) => {
     const canLoadMore = project.sessionMeta?.hasMore !== false;
     
@@ -422,6 +541,13 @@ export const useProjectList = ({
     generatingSummary,
     regeneratingTitle,
     
+    // Worktree state
+    showWorktreeModal,
+    worktreeFeatureName,
+    creatingWorktree,
+    selectedProjectForWorktree,
+    removingWorktree,
+    
     // Confirmation modal state
     confirmationState,
     
@@ -431,6 +557,7 @@ export const useProjectList = ({
     setShowNewProject,
     setEditingSession,
     setEditingSessionName,
+    setWorktreeFeatureName,
     
     // Event handlers and functions
     handleTouchClick,
@@ -449,6 +576,12 @@ export const useProjectList = ({
     getAllSessions,
     hasActiveSessions,
     handleRefresh,
+    
+    // Worktree handlers
+    createWorktree,
+    cancelWorktree,
+    onCreateWorktree,
+    onRemoveWorktree,
     
     // Confirmation modal handlers
     handleConfirm,
