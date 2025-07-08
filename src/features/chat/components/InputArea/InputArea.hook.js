@@ -11,6 +11,7 @@ import {
   handleDropdownNavigation,
   resetTextarea
 } from './InputArea.logic';
+import { useLogger, isLevelEnabled } from '../../../../logger';
 
 export const useInputArea = ({
   input,
@@ -45,6 +46,8 @@ export const useInputArea = ({
   selectCommand: parentSelectCommand,
   selectFile: parentSelectFile
 }) => {
+  const logger = useLogger({ hook: 'useInputArea' });
+  
   // Handle form submission
   const handleSubmit = useCallback((e) => {
     e.preventDefault();
@@ -69,17 +72,24 @@ export const useInputArea = ({
     
     // Check for file reference (@)
     const fileRef = extractFileReference(newValue, newCursorPosition);
-    console.log('📎 File reference check:', {
-      fileRef,
-      fileListLength: fileList.length,
-      cursorPosition: newCursorPosition,
-      value: newValue
-    });
+    if (isLevelEnabled(logger, 'trace')) {
+      logger.trace('File reference check', {
+        hasQuery: !!fileRef.query,
+        isActive: fileRef.position !== -1,
+        fileListLength: fileList.length
+      });
+    }
     
     if (fileRef.position !== -1) {
       setAtSymbolPosition(fileRef.position);
       const filtered = filterFiles(fileList, fileRef.query);
-      console.log('📎 Filtered files:', filtered.length, 'from', fileList.length, 'total files');
+      if (isLevelEnabled(logger, 'debug')) {
+        logger.debug('File reference filtering', {
+          query: fileRef.query,
+          filteredCount: filtered.length,
+          totalFiles: fileList.length
+        });
+      }
       setFilteredFiles(filtered);
       setShowFileDropdown(filtered.length > 0);
       setSelectedFileIndex(filtered.length > 0 ? 0 : -1);

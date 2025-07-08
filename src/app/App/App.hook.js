@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useWebSocket } from '@/utils/websocket';
 import { isUpdateAdditive } from '@/app/App/App.logic';
+import { createLogger } from '@kit/logger/browser';
+
+const logger = createLogger({ scope: 'app-hook' });
 
 /**
  * Main App hook containing all state management and effects
@@ -97,7 +100,12 @@ export const useApp = () => {
         return hasChanges ? data : prevProjects;
       });
     } catch (error) {
-      console.error('Error fetching projects:', error);
+      logger.error('Error fetching projects', {
+        error,
+        message: error.message,
+        stack: error.stack,
+        statusText: error.statusText
+      });
       setProjectsError(error.message || 'Failed to load projects');
       setProjects([]);
     } finally {
@@ -150,7 +158,11 @@ export const useApp = () => {
       }
       
       if (latestMessage.type === 'session-summary-updated') {
-        console.log('📝 Session summary updated:', latestMessage.sessionId, latestMessage.summary);
+        logger.info('Session summary updated', {
+          sessionId: latestMessage.sessionId,
+          summary: latestMessage.summary,
+          projectCount: projects.length
+        });
         
         setProjects(prevProjects => {
           return prevProjects.map(project => {
@@ -307,7 +319,12 @@ export const useApp = () => {
         }
       }
     } catch (error) {
-      console.error('Error refreshing sidebar:', error);
+      logger.error('Error refreshing sidebar', {
+        error,
+        projectName: selectedProject?.name,
+        sessionId: selectedSession?.id,
+        stack: error.stack
+      });
     }
   }, [selectedProject, selectedSession]);
 

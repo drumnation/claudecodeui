@@ -29,8 +29,22 @@ const SessionActionMenu = ({
   if (!isOpen) return null;
 
   return (
-    <S.MobileActionOverlay onClick={onClose}>
-      <S.MobileActionModal onClick={e => e.stopPropagation()}>
+    <S.MobileActionOverlay 
+      onClick={(e) => {
+        // Only close if clicking the overlay itself, not during scroll
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      onTouchMove={(e) => {
+        // Prevent scrolling from triggering overlay close
+        e.stopPropagation();
+      }}
+    >
+      <S.MobileActionModal 
+        onClick={e => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+      >
         <S.MobileActionHeader>
           <S.MobileActionTitle>Session Actions</S.MobileActionTitle>
           <S.MobileActionCloseButton onClick={onClose}>

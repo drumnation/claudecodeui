@@ -1,1 +1,0 @@
-If you're interacting with an external API or system, ensure you're handling potential errors or exceptions gracefully. Is there any error being returned that the current code is not picking up? 

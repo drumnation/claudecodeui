@@ -10,13 +10,13 @@
     "clean:dist": "rm -rf dist && rm -rf node_modules/.vite",
     "client:dev": "vite serve --host --port 8766 --force --clearScreen false",
     "client": "vite --host --port 8766",
-    "dev": "concurrently --kill-others \"npm run backend:dev\" \"npm run client:dev\"",
+    "dev": "concurrently --kill-others --names \"API,WEB\" --name-color \"bgBlue.bold,bgGreen.bold\" --prefix \"{name}\" --prefix-color \"auto\" \"npm run backend:dev\" \"npm run client:dev\"",
     "fix:imports": "node scripts/fixImports.js",
     "list:imports": "node scripts/listBrokenImports.js",
     "ngrok": "node scripts/start-ngrok.js",
     "ngrok:start": "node scripts/start-ngrok.js",
     "dev:ngrok": "npm run ngrok:start && npm run client:dev",
-    "ngrok:dev": "concurrently --kill-others \"npm run backend:dev\" \"npm run ngrok:start\" \"npm run client:dev\"",
+    "ngrok:dev": "concurrently --kill-others --names \"API,NGROK,WEB\" --name-color \"bgBlue.bold,bgMagenta.bold,bgGreen.bold\" --prefix \"{name}\" --prefix-color \"auto\" \"npm run backend:dev\" \"npm run ngrok:start\" \"npm run client:dev\"",
     "preview": "vite preview",
     "prod": "node scripts/start-prod.js",
     "server:dev": "NODE_ENV=development node server/index.js",
@@ -50,6 +50,7 @@
   "dependencies": {
     "@anthropic-ai/claude-code": "^1.0.24",
     "@codemirror/lang-css": "^6.3.1",
+    "@kit/logger": "workspace:*",
     "@codemirror/lang-html": "^6.4.9",
     "@codemirror/lang-javascript": "^6.2.4",
     "@codemirror/lang-json": "^6.0.1",
@@ -124,5 +125,36 @@
     "twin": {
       "preset": "emotion"
     }
+  },
+  "eslintConfig": {
+    "root": true,
+    "env": {
+      "browser": true,
+      "es2020": true
+    },
+    "extends": [
+      "eslint:recommended"
+    ],
+    "parserOptions": {
+      "ecmaVersion": "latest",
+      "sourceType": "module"
+    },
+    "rules": {
+      "no-console": "error"
+    },
+    "overrides": [
+      {
+        "files": ["**/*.stories.jsx", "**/*.stories.js"],
+        "rules": {
+          "no-console": "off"
+        }
+      },
+      {
+        "files": ["**/*.test.js", "**/*.spec.js"],
+        "rules": {
+          "no-console": "off"
+        }
+      }
+    ]
   }
 }

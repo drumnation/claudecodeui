@@ -163,7 +163,7 @@ export const ProjectItemWeb = ({
         <Button
           variant="ghost"
           className={cn(
-            "w-full justify-between font-normal hover:bg-accent/50 min-h-fit h-auto",
+            "w-full justify-between font-normal hover:bg-accent/20 dark:hover:bg-accent/30 min-h-fit h-auto",
             isSelected && "bg-accent text-accent-foreground"
           )}
           onClick={() => {

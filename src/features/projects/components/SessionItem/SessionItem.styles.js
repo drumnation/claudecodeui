@@ -214,7 +214,9 @@ export const DesktopMenuButton = styled.button`
 `;
 
 export const DesktopMenuDropdown = styled.div`
-  ${tw`absolute right-0 top-full mt-1 w-48 bg-background border border-border rounded-lg shadow-lg py-1 z-50`}
+  ${tw`absolute right-0 top-full mt-1 w-48 bg-background border border-border rounded-lg shadow-lg py-1`}
+  z-index: 9999;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 `;
 
 export const DesktopMenuItem = styled.button`
@@ -233,7 +235,9 @@ export const DesktopMenuDivider = styled.div`
 
 // Mobile Action Modal Styles
 export const MobileActionOverlay = styled.div`
-  ${tw`md:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm`}
+  ${tw`md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm`}
+  z-index: 9999;
+  touch-action: none;
 `;
 
 export const MobileActionModal = styled.div`

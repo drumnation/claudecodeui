@@ -196,7 +196,12 @@ export class ClaudeCliService extends EventEmitter {
 
   private handleStdout(chunk: string): void {
     const rawOutput = chunk.toString();
-    logger.debug('Claude CLI stdout', { rawOutput });
+    if (logger.isLevelEnabled('trace')) {
+      logger.trace('Claude CLI stdout', { 
+        outputLength: rawOutput.length,
+        messageType: rawOutput.includes('"type":"') ? 'json' : 'text'
+      });
+    }
     
     // Add to buffer
     this.stdoutBuffer += rawOutput;
@@ -218,7 +223,12 @@ export class ClaudeCliService extends EventEmitter {
       
       try {
         const response: ClaudeStreamResponse = JSON.parse(line);
-        logger.debug('Parsed JSON response', { response });
+        if (logger.isLevelEnabled('trace')) {
+          logger.trace('Parsed JSON response', { 
+            messageType: response.type,
+            messageId: response.message?.id || 'none'
+          });
+        }
         
         // Capture session ID if it's in the response
         if (response.session_id && !this.sessionId) {

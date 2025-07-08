@@ -43,10 +43,17 @@ import {
   MetricValue
 } from './BacklogBoard.styles';
 import { Button } from '../../shared-components/Button';
+import { useLogger } from '../../logger';
 
 export default function BacklogBoard({ selectedProject, selectedSession }) {
-  console.log('🚀 BacklogBoard component mounted/rendered');
-  console.log('BacklogBoard rendering with:', { selectedProject, selectedSession });
+  const logger = useLogger({ component: 'BacklogBoard' });
+  
+  if (logger.isLevelEnabled('trace')) {
+    logger.trace('BacklogBoard component mounted/rendered', {
+      projectName: selectedProject?.displayName,
+      sessionId: selectedSession?.id
+    });
+  }
   
   const {
     // State

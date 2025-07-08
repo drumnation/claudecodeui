@@ -4,16 +4,10 @@ import { NavButton, ActiveIndicator, IconWrapper } from '@/layouts/root/MobileNa
 export const NavItem = ({ item, isActive, onClick }) => {
   const Icon = item.icon;
 
-  const handleTouchStart = (e) => {
-    e.preventDefault();
-    onClick();
-  };
-
   return (
     <NavButton
       isActive={isActive}
       onClick={onClick}
-      onTouchStart={handleTouchStart}
       aria-label={item.label}
       aria-pressed={isActive}
     >

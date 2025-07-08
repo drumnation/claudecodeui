@@ -52,3 +52,6 @@ temp/
 
 *storybook.log
 storybook-static
+
+# AI/Brain files
+.brain/

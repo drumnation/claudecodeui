@@ -22,7 +22,7 @@ const IS_WINDOWS = process.platform === 'win32';
 /**
  * Get common npm global bin directories based on platform
  */
-function getNpmGlobalBinPaths(): string[] {
+async function getNpmGlobalBinPaths(): Promise<string[]> {
   const paths: string[] = [];
   const homeDir = os.homedir();
 
@@ -37,28 +37,59 @@ function getNpmGlobalBinPaths(): string[] {
     paths.push('/usr/local/bin');
     paths.push('/opt/homebrew/bin'); // macOS with Homebrew on ARM
     paths.push('/usr/local/lib/node_modules/.bin');
+    
+    // Additional common locations
+    paths.push(path.join(homeDir, '.local', 'bin'));
+    paths.push(path.join(homeDir, 'bin'));
   }
 
   // Try to get npm prefix dynamically
   try {
-    const npmPrefix = execFileAsync('npm', ['config', 'get', 'prefix'], {
+    const { stdout } = await execFileAsync('npm', ['config', 'get', 'prefix'], {
       timeout: 5000
-    }).then(({ stdout }) => {
-      const prefix = stdout.trim();
-      if (prefix) {
-        return IS_WINDOWS ? prefix : path.join(prefix, 'bin');
-      }
-      return null;
-    }).catch(() => null);
-
-    // Add npm prefix path if available (non-blocking)
-    npmPrefix.then(prefixPath => {
-      if (prefixPath && !paths.includes(prefixPath)) {
-        paths.push(prefixPath);
-      }
     });
-  } catch (error) {
-    // Ignore errors getting npm prefix
+    const prefix = stdout.trim();
+    if (prefix) {
+      const npmBinPath = IS_WINDOWS ? prefix : path.join(prefix, 'bin');
+      if (!paths.includes(npmBinPath)) {
+        paths.push(npmBinPath);
+      }
+    }
+  } catch (error: any) {
+    logger.debug('Failed to get npm prefix', { error: error.message });
+  }
+
+  // Try to get pnpm global bin directory
+  try {
+    const { stdout } = await execFileAsync('pnpm', ['config', 'get', 'global-bin-dir'], {
+      timeout: 5000
+    });
+    const pnpmBin = stdout.trim();
+    if (pnpmBin && !paths.includes(pnpmBin)) {
+      paths.push(pnpmBin);
+    }
+  } catch {
+    // Try alternative method for pnpm
+    try {
+      const { stdout } = await execFileAsync('pnpm', ['store', 'path'], {
+        timeout: 5000
+      });
+      const storePath = stdout.trim();
+      if (storePath) {
+        const pnpmBin = storePath.replace(/\/store.*/, '/bin');
+        if (!paths.includes(pnpmBin)) {
+          paths.push(pnpmBin);
+        }
+      }
+    } catch {
+      // Common pnpm locations as fallback
+      const pnpmPaths = [
+        path.join(homeDir, '.local', 'share', 'pnpm'),
+        path.join(homeDir, '.pnpm', 'bin'),
+        path.join(homeDir, 'Library', 'pnpm') // macOS
+      ];
+      paths.push(...pnpmPaths);
+    }
   }
 
   return paths;
@@ -67,10 +98,10 @@ function getNpmGlobalBinPaths(): string[] {
 /**
  * Enhance PATH environment variable with common CLI locations
  */
-export function enhancePath(currentPath?: string): string {
+export async function enhancePath(currentPath?: string): Promise<string> {
   const existingPath = currentPath || process.env.PATH || '';
   const existingPaths = new Set(existingPath.split(PATH_SEPARATOR).filter(Boolean));
-  const additionalPaths = getNpmGlobalBinPaths();
+  const additionalPaths = await getNpmGlobalBinPaths();
 
   // Add additional paths that aren't already in PATH
   for (const additionalPath of additionalPaths) {
@@ -85,10 +116,10 @@ export function enhancePath(currentPath?: string): string {
 /**
  * Get enhanced environment with updated PATH
  */
-export function getEnhancedEnv(): NodeJS.ProcessEnv {
+export async function getEnhancedEnv(): Promise<NodeJS.ProcessEnv> {
   return {
     ...process.env,
-    PATH: enhancePath(process.env.PATH)
+    PATH: await enhancePath(process.env.PATH)
   };
 }
 
@@ -140,6 +171,7 @@ export async function resolveCli(
 ): Promise<string | null> {
   const { useCache = true, enhancePath: shouldEnhancePath = true } = options;
   const cacheKey = `${cliName}:${envVarName || ''}`;
+  const startTime = Date.now();
 
   // Check cache first
   if (useCache && cliPathCache.has(cacheKey)) {
@@ -165,14 +197,21 @@ export async function resolveCli(
   }
 
   // Get PATH directories to search
-  const pathEnv = shouldEnhancePath ? enhancePath() : (process.env.PATH || '');
+  const pathEnv = shouldEnhancePath ? await enhancePath() : (process.env.PATH || '');
   const pathDirs = pathEnv.split(PATH_SEPARATOR).filter(Boolean);
+  
+  logger.debug('Searching for CLI in PATH', { 
+    cliName, 
+    pathDirsCount: pathDirs.length,
+    enhancedPath: shouldEnhancePath
+  });
 
   // Search in PATH
   const foundPath = await searchInPath(cliName, pathDirs);
   
   if (foundPath) {
-    logger.info('Found CLI in PATH', { cliName, foundPath });
+    const duration = Date.now() - startTime;
+    logger.info('Found CLI in PATH', { cliName, foundPath, duration });
     cliPathCache.set(cacheKey, foundPath);
     return foundPath;
   }
@@ -180,8 +219,9 @@ export async function resolveCli(
   // Try 'which' command as fallback (Unix-like systems)
   if (!IS_WINDOWS) {
     try {
+      const enhancedEnv = await getEnhancedEnv();
       const { stdout } = await execFileAsync('which', [cliName], {
-        env: getEnhancedEnv(),
+        env: enhancedEnv,
         timeout: 5000
       });
       const whichPath = stdout.trim();
@@ -190,16 +230,17 @@ export async function resolveCli(
         cliPathCache.set(cacheKey, whichPath);
         return whichPath;
       }
-    } catch (error) {
-      // which command failed, CLI not found
+    } catch (error: any) {
+      logger.debug('which command failed', { cliName, error: error.message });
     }
   }
 
   // Try 'where' command as fallback (Windows)
   if (IS_WINDOWS) {
     try {
+      const enhancedEnv = await getEnhancedEnv();
       const { stdout } = await execFileAsync('where', [cliName], {
-        env: getEnhancedEnv(),
+        env: enhancedEnv,
         timeout: 5000
       });
       const wherePaths = stdout.trim().split('\n').filter(Boolean);
@@ -211,14 +252,17 @@ export async function resolveCli(
           return resolvedPath;
         }
       }
-    } catch (error) {
-      // where command failed, CLI not found
+    } catch (error: any) {
+      logger.debug('where command failed', { cliName, error: error.message });
     }
   }
 
+  const duration = Date.now() - startTime;
   logger.warn('CLI not found', { 
     cliName, 
+    duration,
     searchedPaths: pathDirs.slice(0, 10), // Log first 10 paths for debugging
+    totalPathDirs: pathDirs.length,
     enhancedPath: shouldEnhancePath 
   });
   
@@ -246,6 +290,159 @@ export function clearCliCache(cliName?: string): void {
 }
 
 /**
+ * Debug CLI resolution - provides detailed information about the resolution process
+ */
+export async function debugCliResolution(cliName: string, envVarName?: string): Promise<{
+  found: boolean;
+  path: string | null;
+  searchPaths: string[];
+  npmGlobalBin: string | null;
+  pnpmGlobalBin: string | null;
+  environmentVariable: string | null;
+  whichResult: string | null;
+  commonLocations: Record<string, boolean>;
+}> {
+  const result = {
+    found: false,
+    path: null as string | null,
+    searchPaths: [] as string[],
+    npmGlobalBin: null as string | null,
+    pnpmGlobalBin: null as string | null,
+    environmentVariable: envVarName ? process.env[envVarName] || null : null,
+    whichResult: null as string | null,
+    commonLocations: {} as Record<string, boolean>
+  };
+
+  // Get npm and pnpm global bins
+  try {
+    const { stdout: npmPrefix } = await execFileAsync('npm', ['config', 'get', 'prefix'], { timeout: 5000 });
+    result.npmGlobalBin = IS_WINDOWS ? npmPrefix.trim() : `${npmPrefix.trim()}/bin`;
+  } catch {}
+
+  try {
+    const { stdout: pnpmBin } = await execFileAsync('pnpm', ['config', 'get', 'global-bin-dir'], { timeout: 5000 });
+    result.pnpmGlobalBin = pnpmBin.trim();
+  } catch {}
+
+  // Get enhanced PATH
+  const enhancedPath = await enhancePath();
+  result.searchPaths = enhancedPath.split(PATH_SEPARATOR).filter(Boolean);
+
+  // Try to resolve
+  const resolvedPath = await resolveCli(cliName, envVarName, { useCache: false });
+  if (resolvedPath) {
+    result.found = true;
+    result.path = resolvedPath;
+  }
+
+  // Try which command
+  if (!IS_WINDOWS) {
+    try {
+      const { stdout } = await execFileAsync('which', [cliName], { timeout: 5000 });
+      result.whichResult = stdout.trim();
+    } catch {}
+  }
+
+  // Check common locations
+  const commonPaths = [
+    `/usr/local/bin/${cliName}`,
+    `/usr/bin/${cliName}`,
+    `${process.env.HOME}/.npm-global/bin/${cliName}`,
+    `${process.env.HOME}/.pnpm/bin/${cliName}`,
+    `${process.env.HOME}/.local/share/pnpm/${cliName}`,
+    result.npmGlobalBin ? `${result.npmGlobalBin}/${cliName}` : null,
+    result.pnpmGlobalBin ? `${result.pnpmGlobalBin}/${cliName}` : null
+  ].filter(Boolean) as string[];
+
+  for (const path of commonPaths) {
+    try {
+      await accessAsync(path, constants.F_OK);
+      result.commonLocations[path] = true;
+    } catch {
+      result.commonLocations[path] = false;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Detect package manager global bin directories
+ */
+export async function detectPackageManagerGlobalBins(): Promise<{
+  npm: string | null;
+  pnpm: string | null;
+  yarn: string | null;
+}> {
+  const result = {
+    npm: null as string | null,
+    pnpm: null as string | null,
+    yarn: null as string | null
+  };
+
+  // Detect npm
+  try {
+    const { stdout } = await execFileAsync('npm', ['config', 'get', 'prefix'], { timeout: 5000 });
+    const prefix = stdout.trim();
+    result.npm = IS_WINDOWS ? prefix : `${prefix}/bin`;
+  } catch {}
+
+  // Detect pnpm
+  try {
+    const { stdout } = await execFileAsync('pnpm', ['config', 'get', 'global-bin-dir'], { timeout: 5000 });
+    result.pnpm = stdout.trim();
+  } catch {
+    try {
+      const { stdout } = await execFileAsync('pnpm', ['store', 'path'], { timeout: 5000 });
+      const storePath = stdout.trim();
+      result.pnpm = storePath.replace(/\/store.*/, '/bin');
+    } catch {}
+  }
+
+  // Detect yarn
+  try {
+    const { stdout } = await execFileAsync('yarn', ['global', 'bin'], { timeout: 5000 });
+    result.yarn = stdout.trim();
+  } catch {}
+
+  return result;
+}
+
+/**
+ * Validate environment for CLI resolution
+ */
+export async function validateEnvironment(): Promise<{
+  pathContainsNpmBin: boolean;
+  pathContainsPnpmBin: boolean;
+  recommendations: string[];
+}> {
+  const currentPath = process.env.PATH || '';
+  const globalBins = await detectPackageManagerGlobalBins();
+  
+  const result = {
+    pathContainsNpmBin: false,
+    pathContainsPnpmBin: false,
+    recommendations: [] as string[]
+  };
+
+  if (globalBins.npm) {
+    result.pathContainsNpmBin = currentPath.includes(globalBins.npm);
+    if (!result.pathContainsNpmBin) {
+      result.recommendations.push(`Add npm global bin to PATH: export PATH="${globalBins.npm}:$PATH"`);
+    }
+  }
+
+  if (globalBins.pnpm) {
+    result.pathContainsPnpmBin = currentPath.includes(globalBins.pnpm);
+    if (!result.pathContainsPnpmBin) {
+      result.recommendations.push(`Add pnpm global bin to PATH: export PATH="${globalBins.pnpm}:$PATH"`);
+    }
+  }
+
+  return result;
+}
+
+/**
  * Validate CLI by checking version
  */
 export async function validateCli(
@@ -255,7 +452,7 @@ export async function validateCli(
   try {
     const { stdout } = await execFileAsync(cliPath, versionArgs, {
       timeout: 5000,
-      env: getEnhancedEnv()
+      env: await getEnhancedEnv()
     });
     const version = stdout.trim();
     return { valid: true, version };

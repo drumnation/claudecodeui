@@ -11,6 +11,13 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { Button } from '../../../../shared-components/Button';
+import { 
+  getBacklogHealthUrl,
+  getBacklogInstallUrl,
+  getBacklogInstallInstructionsUrl,
+  getBacklogDebugUrl,
+  getBacklogEnvironmentUrl
+} from '../../../../config/api';
 
 const Container = styled.div`
   display: flex;
@@ -165,6 +172,8 @@ export default function BacklogInstaller({ onInstallComplete, onSkip }) {
   const [showManualInstructions, setShowManualInstructions] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [detailedError, setDetailedError] = useState(null);
+  const [debugInfo, setDebugInfo] = useState(null);
+  const [environmentInfo, setEnvironmentInfo] = useState(null);
   
   // Get platform information
   const platform = navigator.platform.toLowerCase();
@@ -179,7 +188,7 @@ export default function BacklogInstaller({ onInstallComplete, onSkip }) {
   const checkBacklogStatus = async () => {
     try {
       console.log('Checking backlog status...');
-      const response = await fetch('/api/backlog/health');
+      const response = await fetch(getBacklogHealthUrl());
       console.log('Response status:', response.status);
       
       if (!response.ok) {
@@ -198,10 +207,20 @@ export default function BacklogInstaller({ onInstallComplete, onSkip }) {
         }
       } else {
         setStatus('not-installed');
-        if (data.error && data.error.includes('PATH')) {
+        
+        // Store debug info if available
+        if (data.debug) {
+          setDebugInfo(data.debug);
+        }
+        
+        // Analyze error type
+        const errorMessage = data.error?.message || data.error || '';
+        if (errorMessage.includes('PATH') || (data.debug && !data.debug.path)) {
           setDetailedError('path-issue');
-        } else if (data.error && data.error.includes('npm')) {
+        } else if (errorMessage.includes('npm')) {
           setDetailedError('npm-issue');
+        } else if (errorMessage.includes('not found')) {
+          setDetailedError('not-installed');
         }
       }
     } catch (error) {
@@ -217,7 +236,7 @@ export default function BacklogInstaller({ onInstallComplete, onSkip }) {
     setInstallProgress({ message: 'Starting installation...', progress: 0 });
 
     try {
-      const response = await fetch('/api/backlog/install', {
+      const response = await fetch(getBacklogInstallUrl(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -267,7 +286,7 @@ export default function BacklogInstaller({ onInstallComplete, onSkip }) {
 
   const loadManualInstructions = async () => {
     try {
-      const response = await fetch('/api/backlog/install-instructions');
+      const response = await fetch(getBacklogInstallInstructionsUrl());
       const data = await response.json();
       
       if (data.success && data.instructions) {
@@ -275,6 +294,26 @@ export default function BacklogInstaller({ onInstallComplete, onSkip }) {
       }
     } catch (error) {
       console.error('Error loading instructions:', error);
+    }
+  };
+  
+  const loadDebugInfo = async () => {
+    try {
+      const debugResponse = await fetch(getBacklogDebugUrl());
+      const debugData = await debugResponse.json();
+      
+      if (debugData.success) {
+        setDebugInfo(debugData.debug);
+      }
+      
+      const envResponse = await fetch(getBacklogEnvironmentUrl());
+      const envData = await envResponse.json();
+      
+      if (envData.success) {
+        setEnvironmentInfo(envData.validation);
+      }
+    } catch (error) {
+      console.error('Error loading debug info:', error);
     }
   };
 
@@ -430,7 +469,12 @@ export default function BacklogInstaller({ onInstallComplete, onSkip }) {
       )}
       
       <Button
-        onClick={() => setShowDiagnostics(!showDiagnostics)}
+        onClick={() => {
+          setShowDiagnostics(!showDiagnostics);
+          if (!showDiagnostics && !debugInfo) {
+            loadDebugInfo();
+          }
+        }}
         variant="ghost"
         size="small"
         style={{ marginTop: '0.5rem' }}
@@ -439,26 +483,108 @@ export default function BacklogInstaller({ onInstallComplete, onSkip }) {
         {showDiagnostics ? 'Hide' : 'Show'} Diagnostics
       </Button>
       
-      {showDiagnostics && process.env.NODE_ENV === 'development' && (
+      {showDiagnostics && (
         <DiagnosticInfo>
           <InstructionTitle style={{ fontSize: '0.75rem', marginBottom: '0.75rem' }}>
             <Info size={14} />
             System Diagnostics
           </InstructionTitle>
+          
+          {/* Basic Info */}
           <DiagnosticItem>
             <DiagnosticLabel>Platform:</DiagnosticLabel>
             <DiagnosticValue>{navigator.platform}</DiagnosticValue>
           </DiagnosticItem>
           <DiagnosticItem>
-            <DiagnosticLabel>User Agent:</DiagnosticLabel>
-            <DiagnosticValue>{navigator.userAgent.split(' ').slice(0, 3).join(' ')}</DiagnosticValue>
-          </DiagnosticItem>
-          <DiagnosticItem>
             <DiagnosticLabel>Error Type:</DiagnosticLabel>
             <DiagnosticValue>{detailedError || 'Unknown'}</DiagnosticValue>
           </DiagnosticItem>
+          
+          {/* Debug Info from Backend */}
+          {debugInfo && (
+            <>
+              <div style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
+                <strong style={{ fontSize: '0.75rem' }}>Environment:</strong>
+              </div>
+              <DiagnosticItem>
+                <DiagnosticLabel>npm Global:</DiagnosticLabel>
+                <DiagnosticValue>{debugInfo.npmGlobalBin || 'Not detected'}</DiagnosticValue>
+              </DiagnosticItem>
+              <DiagnosticItem>
+                <DiagnosticLabel>pnpm Global:</DiagnosticLabel>
+                <DiagnosticValue>{debugInfo.pnpmGlobalBin || 'Not detected'}</DiagnosticValue>
+              </DiagnosticItem>
+              {debugInfo.environment?.backlogCliPath && (
+                <DiagnosticItem>
+                  <DiagnosticLabel>BACKLOG_CLI_PATH:</DiagnosticLabel>
+                  <DiagnosticValue>{debugInfo.environment.backlogCliPath}</DiagnosticValue>
+                </DiagnosticItem>
+              )}
+              
+              {/* Common Locations */}
+              {debugInfo.commonLocations && Object.keys(debugInfo.commonLocations).length > 0 && (
+                <>
+                  <div style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
+                    <strong style={{ fontSize: '0.75rem' }}>Checked Locations:</strong>
+                  </div>
+                  {Object.entries(debugInfo.commonLocations).map(([path, exists]) => (
+                    <DiagnosticItem key={path}>
+                      <DiagnosticLabel style={{ minWidth: '60px' }}>
+                        {exists ? '✓ Found' : '✗ Missing'}
+                      </DiagnosticLabel>
+                      <DiagnosticValue style={{ fontSize: '0.7rem' }}>{path}</DiagnosticValue>
+                    </DiagnosticItem>
+                  ))}
+                </>
+              )}
+            </>
+          )}
+          
+          {/* Environment Validation */}
+          {environmentInfo && (
+            <>
+              <div style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
+                <strong style={{ fontSize: '0.75rem' }}>Package Managers:</strong>
+              </div>
+              {environmentInfo.npm && (
+                <DiagnosticItem>
+                  <DiagnosticLabel>npm:</DiagnosticLabel>
+                  <DiagnosticValue>
+                    {environmentInfo.npm.available 
+                      ? `v${environmentInfo.npm.version} (${environmentInfo.npm.globalBin})`
+                      : 'Not available'}
+                  </DiagnosticValue>
+                </DiagnosticItem>
+              )}
+              {environmentInfo.pnpm && (
+                <DiagnosticItem>
+                  <DiagnosticLabel>pnpm:</DiagnosticLabel>
+                  <DiagnosticValue>
+                    {environmentInfo.pnpm.available 
+                      ? `v${environmentInfo.pnpm.version} (${environmentInfo.pnpm.globalBin})`
+                      : 'Not available'}
+                  </DiagnosticValue>
+                </DiagnosticItem>
+              )}
+            </>
+          )}
+          
+          {/* Recommendations */}
+          {(debugInfo?.recommendations || environmentInfo?.recommendations) && (
+            <>
+              <div style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
+                <strong style={{ fontSize: '0.75rem', color: 'var(--warning)' }}>Recommendations:</strong>
+              </div>
+              {[...(debugInfo?.recommendations || []), ...(environmentInfo?.recommendations || [])].map((rec, i) => (
+                <p key={i} style={{ fontSize: '0.7rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+                  • {rec}
+                </p>
+              ))}
+            </>
+          )}
+          
           <div style={{ marginTop: '1rem' }}>
-            <strong style={{ fontSize: '0.75rem' }}>Commands to verify installation:</strong>
+            <strong style={{ fontSize: '0.75rem' }}>Manual Verification Commands:</strong>
             <CodeBlock>
 {`# Check if backlog is installed
 which backlog
@@ -467,9 +593,29 @@ which backlog
 npm list -g --depth=0 | grep backlog
 
 # Check npm global bin directory
-npm config get prefix`}
+npm config get prefix
+
+# Check pnpm global packages
+pnpm list -g | grep backlog`}
             </CodeBlock>
           </div>
+          
+          {/* Set Environment Variable */}
+          {detailedError === 'path-issue' && (
+            <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(251, 191, 36, 0.1)', borderRadius: '0.375rem' }}>
+              <InstructionTitle style={{ fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                <AlertCircle size={14} />
+                Quick Fix: Set Environment Variable
+              </InstructionTitle>
+              <p style={{ fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                If you know where backlog is installed, you can set the BACKLOG_CLI_PATH environment variable:
+              </p>
+              <CodeBlock>export BACKLOG_CLI_PATH="/path/to/backlog"</CodeBlock>
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                Then restart the backend service for changes to take effect.
+              </p>
+            </div>
+          )}
         </DiagnosticInfo>
       )}
     </Container>

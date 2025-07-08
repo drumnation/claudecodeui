@@ -39,6 +39,7 @@ export interface Project {
     untracked: number;
     staged: number;
   } | null;
+  canInitializeGit?: boolean;
 }
 
 export class ProjectsService {
@@ -142,6 +143,51 @@ export class ProjectsService {
     return lastPart.replace(/-/g, ' ');
   }
 
+  private async canProjectInitializeGit(projectPath: string, monorepoInfo: any): Promise<boolean> {
+    try {
+      // Check if project already has a .git directory
+      const gitDir = path.join(projectPath, '.git');
+      try {
+        await fs.access(gitDir);
+        // .git directory exists, so git is already initialized
+        return false;
+      } catch {
+        // .git directory doesn't exist, continue checking
+      }
+
+      // If it's part of a monorepo, don't allow git init
+      if (monorepoInfo.isMonorepo || monorepoInfo.monorepoRoot) {
+        return false;
+      }
+
+      // Check if parent directories have .git (to avoid initializing in subdirectory of existing repo)
+      let currentPath = projectPath;
+      const rootPath = path.parse(projectPath).root;
+      
+      while (currentPath !== rootPath) {
+        currentPath = path.dirname(currentPath);
+        const parentGitDir = path.join(currentPath, '.git');
+        
+        try {
+          await fs.access(parentGitDir);
+          // Found .git in parent directory, so this is already part of a git repo
+          return false;
+        } catch {
+          // No .git in this parent, continue checking
+        }
+      }
+
+      // Project is not in a git repo and not a monorepo, can initialize git
+      return true;
+    } catch (error) {
+      logger.warn('Error checking git initialization eligibility', {
+        projectPath,
+        error: error instanceof Error ? error.message : error
+      });
+      return false;
+    }
+  }
+
   private async getSessionsForProject(projectPath: string, limit = 5): Promise<Session[]> {
     const sessions: Session[] = [];
     
@@ -243,10 +289,12 @@ export class ProjectsService {
             const sessionWithCwd = sessions.find(s => s.actualProjectPath);
             if (sessionWithCwd && sessionWithCwd.actualProjectPath) {
               actualProjectPath = sessionWithCwd.actualProjectPath;
-              logger.info('Using session cwd for project resolution', {
-                sessionCwd: actualProjectPath,
-                originalPath: decodedPath
-              });
+              if (logger.isLevelEnabled('debug')) {
+                logger.debug('Using session cwd for project resolution', {
+                  sessionCwd: actualProjectPath,
+                  originalPath: decodedPath
+                });
+              }
             }
           }
           
@@ -256,12 +304,14 @@ export class ProjectsService {
             await fs.access(actualProjectPath);
             canonicalRoot = await getCanonicalProjectRoot(actualProjectPath);
           } catch (error: any) {
-            logger.warn('Project path does not exist', { 
-              actualProjectPath, 
-              encoded: entry.name,
-              decodedPath,
-              error: error.message 
-            });
+            if (logger.isLevelEnabled('debug')) {
+              logger.debug('Project path does not exist', { 
+                actualProjectPath, 
+                encoded: entry.name,
+                decodedPath,
+                error: error.message 
+              });
+            }
             
             // If the decoded path doesn't exist, check if it's a cc-ui vs cc/ui issue
             if (actualProjectPath.includes('/cc/ui/')) {
@@ -286,12 +336,14 @@ export class ProjectsService {
             }
           }
           
-          logger.info('Resolved project to canonical root', {
-            encoded: entry.name,
-            decoded: decodedPath,
-            actualPath: actualProjectPath,
-            canonical: canonicalRoot
-          });
+          if (logger.isLevelEnabled('debug')) {
+            logger.debug('Resolved project to canonical root', {
+              encoded: entry.name,
+              decoded: decodedPath,
+              actualPath: actualProjectPath,
+              canonical: canonicalRoot
+            });
+          }
           
           // Detect additional project properties using the canonical root
           const [language, monorepoInfo, isWorktree, mainRepoPath, gitBranch, gitStatus, displayName] = await Promise.all([
@@ -303,6 +355,9 @@ export class ProjectsService {
             projectDetectionService.getGitStatus(canonicalRoot),
             this.getProjectDisplayName(canonicalRoot)
           ]);
+
+          // Check if git can be initialized (depends on monorepoInfo)
+          const canInitializeGit = await this.canProjectInitializeGit(canonicalRoot, monorepoInfo);
           
           projects.push({
             name: entry.name,
@@ -321,7 +376,8 @@ export class ProjectsService {
             isWorktree,
             mainRepoPath: mainRepoPath || undefined,
             gitBranch,
-            gitStatus
+            gitStatus,
+            canInitializeGit
           });
         }
       }

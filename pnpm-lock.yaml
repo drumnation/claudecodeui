@@ -56,6 +56,9 @@ importers:
       '@kit/brain-monitor':
         specifier: workspace:*
         version: link:tooling/brain-monitor
+      '@kit/logger':
+        specifier: workspace:*
+        version: link:tooling/logger
       '@storybook/testing-library':
         specifier: ^0.2.2
         version: 0.2.2

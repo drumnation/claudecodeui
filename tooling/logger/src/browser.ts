@@ -10,7 +10,12 @@ const LOG_LEVELS = {
 };
 
 export function createLogger(options: LoggerOptions = {}): Logger {
-  const level = options.level || process.env.VITE_LOG_LEVEL || process.env.LOG_LEVEL || 'info';
+  // Safely check for process.env in browser environment
+  const envLevel = (typeof process !== 'undefined' && process.env) 
+    ? (process.env.VITE_LOG_LEVEL || process.env.LOG_LEVEL)
+    : undefined;
+  
+  const level = options.level || envLevel || 'info';
   const currentLevel = LOG_LEVELS[level as LogLevel] || LOG_LEVELS.info;
   const scope = options.scope || 'browser';
   

@@ -11,6 +11,7 @@ import {
   ConnectingText,
   ConnectingDescription
 } from '@/features/terminal/ConnectOverlay/ConnectOverlay.styles';
+import { useLogger, isLevelEnabled } from '../../../logger';
 
 export const ConnectOverlay = ({ 
   isInitialized, 
@@ -20,27 +21,32 @@ export const ConnectOverlay = ({
   selectedSession,
   projectName 
 }) => {
+  const logger = useLogger({ component: 'ConnectOverlay' });
+  
   // Debug logging
   useEffect(() => {
-    console.log('[ConnectOverlay] Component rendered', {
-      isInitialized,
-      isConnected,
-      isConnecting,
-      shouldShow: isInitialized && !isConnected,
-      projectName
-    });
+    if (isLevelEnabled(logger, 'trace')) {
+      logger.trace('ConnectOverlay state change', {
+        isInitialized,
+        isConnected,
+        isConnecting,
+        shouldShow: isInitialized && !isConnected,
+        projectName
+      });
+    }
   }, [isInitialized, isConnected, isConnecting, projectName]);
   
   // Component mount/unmount logging
   useEffect(() => {
-    console.log('[ConnectOverlay] Component mounted');
-    return () => {
-      console.log('[ConnectOverlay] Component unmounted');
-    };
+    if (isLevelEnabled(logger, 'debug')) {
+      logger.debug('ConnectOverlay mounted');
+      return () => {
+        logger.debug('ConnectOverlay unmounted');
+      };
+    }
   }, []);
   
   if (!isInitialized || isConnected) {
-    console.log('[ConnectOverlay] Hiding overlay:', { isInitialized, isConnected });
     return null;
   }
 
@@ -65,7 +71,9 @@ export const ConnectOverlay = ({
       <ConnectContainer>
         <ConnectButton 
           onClick={() => {
-            console.log('[ConnectOverlay] Connect button clicked');
+            if (isLevelEnabled(logger, 'debug')) {
+              logger.debug('Connect button clicked');
+            }
             onConnect();
           }} 
           title="Connect to shell"

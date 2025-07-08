@@ -21,13 +21,30 @@ export function createLogger(options: LoggerOptions = {}): Logger {
   const levelStr = options.level || process.env.LOG_LEVEL || 'info';
   const level = isValidLogLevel(levelStr) ? levelStr : 'info';
   
-  const pinoLogger = pino({
+  // Configure pretty printing for development
+  const pinoOptions = {
     level: level,
     formatters: {
       level: (label) => ({ level: label }),
     },
     ...options,
-  });
+  };
+
+  // Add pretty printing in development
+  if (process.env.NODE_ENV !== 'production' && !process.env.CI) {
+    pinoOptions.transport = {
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+        ignore: 'pid,hostname',
+        translateTime: 'HH:MM:ss',
+        messageFormat: '{scope} | {msg}',
+        singleLine: true
+      }
+    };
+  }
+  
+  const pinoLogger = pino(pinoOptions);
 
   return {
     info(message: string, metadata?: any) {

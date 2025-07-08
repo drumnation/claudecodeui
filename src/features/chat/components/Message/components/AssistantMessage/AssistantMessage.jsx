@@ -1,6 +1,8 @@
 import React, { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { ClaudeLogo } from '@/shared-components/ClaudeLogo';
+import { CopyToClipboardButton } from '@/shared-components/CopyToClipboardButton';
+import { getTextToCopy } from '@/shared-components/CopyToClipboardButton/CopyToClipboardButton.logic';
 import * as logic from '@/features/chat/components/Message/components/AssistantMessage/AssistantMessage.logic';
 import * as S from '@/features/chat/components/Message/components/AssistantMessage/AssistantMessage.styles';
 
@@ -498,6 +500,14 @@ const AssistantMessage = memo(({
           {logic.formatTimestamp(message.timestamp)}
         </S.MessageTimestamp>
       </S.ContentContainer>
+      <S.MessageFooter className="group">
+        <CopyToClipboardButton
+          message={message}
+          textToCopy={getTextToCopy(message)}
+          size="xs"
+          ariaLabel="Copy message to clipboard"
+        />
+      </S.MessageFooter>
     </S.AssistantContainer>
   );
 });

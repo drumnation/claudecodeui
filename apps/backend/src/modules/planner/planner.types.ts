@@ -103,3 +103,19 @@ export interface PlannerServiceState {
   startTime: number;
   sessionId: string;
 }
+
+export enum PlannerValidationError {
+  PROMPT_FILE_MISSING = 'PROMPT_FILE_MISSING',
+  PROMPT_FILE_ERROR = 'PROMPT_FILE_ERROR',
+  CLAUDE_BINARY_MISSING = 'CLAUDE_BINARY_MISSING',
+  CLAUDE_BINARY_NOT_EXECUTABLE = 'CLAUDE_BINARY_NOT_EXECUTABLE',
+  PROJECT_PATH_INVALID = 'PROJECT_PATH_INVALID',
+  AGENT_EXECUTION_ERROR = 'AGENT_EXECUTION_ERROR',
+  VALIDATION_ERROR = 'VALIDATION_ERROR'
+}
+
+export interface ValidationResult {
+  success: boolean;
+  errors: string[];
+  errorType?: PlannerValidationError;
+}

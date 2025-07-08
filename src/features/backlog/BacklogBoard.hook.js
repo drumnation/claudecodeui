@@ -8,6 +8,15 @@ import {
   validateTaskData,
   validateTaskMove 
 } from './BacklogBoard.logic';
+import { 
+  getBacklogHealthUrl,
+  getProjectBacklogUrl,
+  getProjectBacklogTasksUrl,
+  getProjectBacklogTaskUrl,
+  getProjectBacklogPlanUrl,
+  getProjectBacklogReviewUrl
+} from '../../config/api';
+import { useLogger, sanitizeError, addTimestamp, isLevelEnabled } from '../../logger';
 
 // Simple debounce implementation
 function debounce(func, wait) {
@@ -23,7 +32,12 @@ function debounce(func, wait) {
 }
 
 export function useBacklogBoard(selectedProject) {
-  console.log('🎣 useBacklogBoard hook called with project:', selectedProject?.name);
+  const logger = useLogger({ hook: 'useBacklogBoard' });
+  
+  logger.debug('useBacklogBoard hook called', {
+    projectName: selectedProject?.name,
+    ...addTimestamp()
+  });
   
   // Core state
   const [tasks, setTasks] = useState([]);
@@ -70,66 +84,169 @@ export function useBacklogBoard(selectedProject) {
   const checkCliAvailabilityInternal = useCallback(async () => {
     // Prevent concurrent checks
     if (isCheckingCli) {
-      console.log('CLI check already in progress, skipping...');
+      if (isLevelEnabled(logger, 'debug')) {
+        logger.debug('CLI check already in progress, skipping', {
+          projectName: selectedProject?.name,
+          cliAvailable,
+          retryCount: cliCheckRetries,
+          ...addTimestamp()
+        });
+      }
       return cliAvailable;
     }
     
     // Prevent rapid repeated checks
     const now = Date.now();
     if (now - lastCliCheck < CLI_CHECK_DELAY) {
-      console.log('Too soon since last CLI check, skipping...');
+      if (isLevelEnabled(logger, 'trace')) {
+        logger.trace('CLI check too soon since last attempt', {
+          timeSinceLastCheck: now - lastCliCheck,
+          requiredDelay: CLI_CHECK_DELAY,
+          projectName: selectedProject?.name,
+          ...addTimestamp()
+        });
+      }
       return cliAvailable;
     }
     
-    console.log('Checking CLI availability...', { 
+    logger.debug('Checking CLI availability', { 
       attempt: cliCheckRetries + 1, 
-      maxRetries: MAX_CLI_RETRIES 
+      maxRetries: MAX_CLI_RETRIES,
+      projectName: selectedProject?.name,
+      ...addTimestamp()
     });
     
     setIsCheckingCli(true);
     setLastCliCheck(now);
     
     try {
-      const response = await fetch('/api/backlog/health');
-      console.log('Health check response:', response.status, response.statusText);
+      const response = await fetch(getBacklogHealthUrl());
+      logger.debug('Health check response received', {
+        status: response.status,
+        statusText: response.statusText,
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
       
-      if (!response.ok) {
-        console.error('Backlog health check failed:', response.status, response.statusText);
-        const text = await response.text();
-        console.error('Response body:', text);
+      // Accept both 200 and 503 as valid responses (not network errors)
+      // 503 was the old response for CLI not found, now we always return 200
+      if (response.status === 200 || response.status === 503) {
+        try {
+          const data = await response.json();
+          logger.debug('Health check data received', {
+            backlogAvailable: data.backlogAvailable,
+            hasDebugInfo: !!data.debug,
+            projectName: selectedProject?.name,
+            ...addTimestamp()
+          });
+          
+          // Check for the backlogAvailable field
+          if (typeof data.backlogAvailable === 'boolean') {
+            setCliAvailable(data.backlogAvailable);
+            setCliCheckRetries(0); // Reset retry counter on success
+            setError(null);
+            
+            // Store debug info if available
+            if (data.debug && isLevelEnabled(logger, 'debug')) {
+              logger.debug('CLI debug info received', {
+                debugInfo: data.debug,
+                projectName: selectedProject?.name,
+                ...addTimestamp()
+              });
+            }
+            
+            return data.backlogAvailable;
+          } else {
+            logger.warn('Unexpected health check response format', {
+              responseData: data,
+              projectName: selectedProject?.name,
+              ...addTimestamp()
+            });
+            setCliAvailable(false);
+            setError('Unexpected response format from health check');
+            return false;
+          }
+        } catch (parseError) {
+          logger.error('Failed to parse health check response', {
+            error: sanitizeError(parseError),
+            status: response.status,
+            projectName: selectedProject?.name,
+            ...addTimestamp()
+          });
+          setCliAvailable(false);
+          setError('Failed to parse health check response');
+          return false;
+        }
+      } else if (response.status >= 500) {
+        // Only retry on server errors (500+)
+        logger.error('Server error during health check', {
+          status: response.status,
+          statusText: response.statusText,
+          retryAttempt: cliCheckRetries + 1,
+          projectName: selectedProject?.name,
+          ...addTimestamp()
+        });
         
         // Retry logic with exponential backoff
         if (cliCheckRetries < MAX_CLI_RETRIES) {
-          console.log(`Retrying CLI check in ${(cliCheckRetries + 1) * CLI_CHECK_DELAY}ms...`);
+          const delay = Math.min((cliCheckRetries + 1) * CLI_CHECK_DELAY, 10000); // Max 10 seconds
+          logger.info('Retrying CLI check after server error', {
+            delay,
+            attempt: cliCheckRetries + 1,
+            maxRetries: MAX_CLI_RETRIES,
+            projectName: selectedProject?.name,
+            ...addTimestamp()
+          });
           setTimeout(() => {
             setCliCheckRetries(prev => prev + 1);
             checkCliAvailabilityInternal();
-          }, (cliCheckRetries + 1) * CLI_CHECK_DELAY);
+          }, delay);
         } else {
-          console.error('Max CLI check retries reached');
+          logger.error('Max CLI check retries reached', {
+            totalAttempts: cliCheckRetries + 1,
+            lastError: 'Server error',
+            projectName: selectedProject?.name,
+            ...addTimestamp()
+          });
           setCliAvailable(false);
-          setError('Failed to check backlog CLI availability after multiple attempts');
+          setError('Server error checking backlog CLI availability');
         }
         
         return false;
+      } else {
+        // Other HTTP errors (4xx, etc) - don't retry
+        logger.error('HTTP error during health check', {
+          status: response.status,
+          statusText: response.statusText,
+          projectName: selectedProject?.name,
+          ...addTimestamp()
+        });
+        setCliAvailable(false);
+        setError(`HTTP ${response.status} error checking backlog CLI`);
+        return false;
       }
-      
-      const data = await response.json();
-      console.log('Health check data:', data);
-      setCliAvailable(data.backlogAvailable);
-      setCliCheckRetries(0); // Reset retry counter on success
-      setError(null);
-      return data.backlogAvailable;
     } catch (err) {
-      console.error('Error checking backlog CLI:', err);
+      logger.error('Network error checking backlog CLI', {
+        error: sanitizeError(err),
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
       
-      // Retry logic for network errors
+      // Retry logic for network errors only
       if (cliCheckRetries < MAX_CLI_RETRIES) {
-        console.log(`Retrying CLI check after error in ${(cliCheckRetries + 1) * CLI_CHECK_DELAY}ms...`);
+        const delay = Math.min((cliCheckRetries + 1) * CLI_CHECK_DELAY, 10000); // Max 10 seconds
+        logger.info('Retrying CLI check after network error', {
+          delay,
+          attempt: cliCheckRetries + 1,
+          maxRetries: MAX_CLI_RETRIES,
+          errorMessage: err.message,
+          projectName: selectedProject?.name,
+          ...addTimestamp()
+        });
         setTimeout(() => {
           setCliCheckRetries(prev => prev + 1);
           checkCliAvailabilityInternal();
-        }, (cliCheckRetries + 1) * CLI_CHECK_DELAY);
+        }, delay);
       } else {
         setCliAvailable(false);
         setError(`Network error checking backlog CLI: ${err.message}`);
@@ -153,12 +270,21 @@ export function useBacklogBoard(selectedProject) {
 
   // Fetch tasks
   const fetchTasks = useCallback(async () => {
-    console.log('fetchTasks called for project:', selectedProject?.name);
+    logger.debug('fetchTasks called', {
+      projectName: selectedProject?.name,
+      loading,
+      ...addTimestamp()
+    });
     if (!selectedProject) return;
     
     // Prevent fetching if already loading
     if (loading) {
-      console.log('Already loading tasks, skipping fetch');
+      if (isLevelEnabled(logger, 'trace')) {
+        logger.trace('Already loading tasks, skipping fetch', {
+          projectName: selectedProject?.name,
+          ...addTimestamp()
+        });
+      }
       return;
     }
     
@@ -173,29 +299,59 @@ export function useBacklogBoard(selectedProject) {
       if (filters.labels.length > 0) params.append('labels', filters.labels.join(','));
       if (filters.search) params.append('search', filters.search);
       
-      const url = `/api/projects/${encodeURIComponent(selectedProject.name)}/backlog?${params}`;
-      console.log('Fetching tasks from:', url);
+      const url = getProjectBacklogUrl(selectedProject.name, params.toString());
+      logger.debug('Fetching tasks from API', {
+        url,
+        projectName: selectedProject.name,
+        filtersApplied: Object.keys(filters).filter(key => 
+          Array.isArray(filters[key]) ? filters[key].length > 0 : !!filters[key]
+        ),
+        ...addTimestamp()
+      });
       
       const response = await fetch(url, { 
         headers: { 'Content-Type': 'application/json' } 
       });
       
-      console.log('Fetch response:', response.status, response.statusText);
+      logger.debug('Tasks fetch response received', {
+        status: response.status,
+        statusText: response.statusText,
+        projectName: selectedProject.name,
+        ...addTimestamp()
+      });
       
       if (!response.ok) {
         const text = await response.text();
-        console.error('Fetch failed, response body:', text);
+        logger.error('Tasks fetch failed', {
+          status: response.status,
+          responseBody: text.substring(0, 200),
+          projectName: selectedProject.name,
+          ...addTimestamp()
+        });
         throw new Error('Failed to fetch tasks');
       }
       
       const data = await response.json();
-      console.log('Tasks data:', data);
+      logger.info('Tasks loaded successfully', {
+        taskCount: data.tasks?.length || 0,
+        projectName: selectedProject.name,
+        ...addTimestamp()
+      });
       setTasks(data.tasks || []);
     } catch (err) {
-      console.error('Error fetching tasks:', err);
+      logger.error('Error fetching tasks', {
+        error: sanitizeError(err),
+        projectName: selectedProject.name,
+        ...addTimestamp()
+      });
       setError(err.message);
     } finally {
-      console.log('Setting loading to false');
+      if (isLevelEnabled(logger, 'trace')) {
+        logger.trace('Setting loading to false', {
+          projectName: selectedProject.name,
+          ...addTimestamp()
+        });
+      }
       setLoading(false);
     }
   }, [selectedProject, filters, loading]);
@@ -211,7 +367,7 @@ export function useBacklogBoard(selectedProject) {
     
     try {
       const response = await fetch(
-        `/api/projects/${encodeURIComponent(selectedProject.name)}/backlog/tasks`,
+        getProjectBacklogTasksUrl(selectedProject.name),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -232,7 +388,12 @@ export function useBacklogBoard(selectedProject) {
       
       return data.task;
     } catch (err) {
-      console.error('Error creating task:', err);
+      logger.error('Error creating task', {
+        error: sanitizeError(err),
+        taskData,
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
       throw err;
     }
   }, [selectedProject]);
@@ -243,7 +404,7 @@ export function useBacklogBoard(selectedProject) {
     
     try {
       const response = await fetch(
-        `/api/projects/${encodeURIComponent(selectedProject.name)}/backlog/tasks/${taskId}`,
+        getProjectBacklogTaskUrl(selectedProject.name, taskId),
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -265,7 +426,13 @@ export function useBacklogBoard(selectedProject) {
       
       return data.task;
     } catch (err) {
-      console.error('Error updating task:', err);
+      logger.error('Error updating task', {
+        error: sanitizeError(err),
+        taskId,
+        updates,
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
       throw err;
     }
   }, [selectedProject]);
@@ -276,7 +443,7 @@ export function useBacklogBoard(selectedProject) {
     
     try {
       const response = await fetch(
-        `/api/projects/${encodeURIComponent(selectedProject.name)}/backlog/tasks/${taskId}`,
+        getProjectBacklogTaskUrl(selectedProject.name, taskId),
         { method: 'DELETE' }
       );
       
@@ -289,7 +456,12 @@ export function useBacklogBoard(selectedProject) {
       setTasks(prev => prev.filter(t => t.id !== taskId));
       setSelectedTask(null);
     } catch (err) {
-      console.error('Error deleting task:', err);
+      logger.error('Error deleting task', {
+        error: sanitizeError(err),
+        taskId,
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
       throw err;
     }
   }, [selectedProject]);
@@ -300,7 +472,13 @@ export function useBacklogBoard(selectedProject) {
     if (!task) return;
     
     if (!validateTaskMove(task, task.status, newStatus)) {
-      console.warn('Invalid task move');
+      logger.warn('Invalid task move', {
+        taskId,
+        fromStatus: task.status,
+        toStatus: newStatus,
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
       return;
     }
     
@@ -328,7 +506,7 @@ export function useBacklogBoard(selectedProject) {
     
     try {
       const response = await fetch(
-        `/api/projects/${encodeURIComponent(selectedProject.name)}/backlog/plan`,
+        getProjectBacklogPlanUrl(selectedProject.name),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -353,7 +531,12 @@ export function useBacklogBoard(selectedProject) {
       
       return data;
     } catch (err) {
-      console.error('Error generating tasks:', err);
+      logger.error('Error generating tasks from plan', {
+        error: sanitizeError(err),
+        planTextLength: planText?.length || 0,
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
       throw err;
     } finally {
       setGeneratingTasks(false);
@@ -366,7 +549,7 @@ export function useBacklogBoard(selectedProject) {
     
     try {
       const response = await fetch(
-        `/api/projects/${encodeURIComponent(selectedProject.name)}/backlog/review`,
+        getProjectBacklogReviewUrl(selectedProject.name),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -389,7 +572,12 @@ export function useBacklogBoard(selectedProject) {
       
       return data;
     } catch (err) {
-      console.error('Error reviewing tasks:', err);
+      logger.error('Error reviewing tasks', {
+        error: sanitizeError(err),
+        changesSummaryLength: changesSummary?.length || 0,
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
       throw err;
     }
   }, [selectedProject, fetchTasks]);
@@ -416,7 +604,14 @@ export function useBacklogBoard(selectedProject) {
       try {
         await moveTask(draggedTask.id, status);
       } catch (err) {
-        console.error('Failed to move task:', err);
+        logger.error('Failed to move task via drag and drop', {
+          error: sanitizeError(err),
+          taskId: draggedTask.id,
+          fromStatus: draggedTask.status,
+          toStatus: status,
+          projectName: selectedProject?.name,
+          ...addTimestamp()
+        });
       }
     }
     
@@ -462,11 +657,14 @@ export function useBacklogBoard(selectedProject) {
 
   // Initialize on mount and when project changes
   useEffect(() => {
-    console.log('Main initialization effect running', {
-      project: selectedProject?.name,
-      cliAvailable,
-      loading
-    });
+    if (isLevelEnabled(logger, 'debug')) {
+      logger.debug('Main initialization effect running', {
+        projectName: selectedProject?.name,
+        cliAvailable,
+        loading,
+        ...addTimestamp()
+      });
+    }
     
     if (!selectedProject) {
       setLoading(false);
@@ -475,17 +673,26 @@ export function useBacklogBoard(selectedProject) {
     
     // Check CLI if not yet checked
     if (cliAvailable === null) {
-      console.log('Starting CLI availability check');
+      logger.info('Starting CLI availability check', {
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
       checkCliAvailabilityInternal();
     } 
     // Fetch tasks if CLI is available and not loading
     else if (cliAvailable === true && !loading) {
-      console.log('CLI available, fetching tasks');
+      logger.info('CLI available, fetching tasks', {
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
       fetchTasks();
     }
     // Set loading false if CLI not available
     else if (cliAvailable === false) {
-      console.log('CLI not available, stopping loading');
+      logger.warn('CLI not available, stopping loading', {
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
       setLoading(false);
     }
   }, [selectedProject?.name, cliAvailable]); // Minimal dependencies

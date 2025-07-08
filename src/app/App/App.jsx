@@ -93,16 +93,10 @@ export const App = () => {
                 e.stopPropagation();
                 setSidebarOpen(false);
               }}
-              onTouchStart={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setSidebarOpen(false);
-              }}
             />
             <S.MobileSidebarContent 
               $isOpen={sidebarOpen}
               onClick={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
             >
               <Sidebar
                 projects={projects}

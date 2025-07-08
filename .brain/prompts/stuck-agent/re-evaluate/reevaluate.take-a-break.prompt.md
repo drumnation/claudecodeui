@@ -1,1 +1,0 @@
-Take a break. Step away from the code for a few minutes (or even longer). When you return, approach the problem with a fresh perspective. 

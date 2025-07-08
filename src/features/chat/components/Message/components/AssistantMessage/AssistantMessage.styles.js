@@ -297,3 +297,12 @@ export const BeforePromptContent = styled.div`
 export const BeforePromptPre = styled.pre`
   ${tw`whitespace-pre-wrap break-words`}
 `;
+
+export const MessageFooter = styled.div`
+  ${tw`flex items-center justify-end opacity-0 transition-opacity duration-200 group-hover:opacity-100 mt-2`}
+  
+  /* Always visible on mobile */
+  @media (max-width: 768px) {
+    ${tw`opacity-60`}
+  }
+`;

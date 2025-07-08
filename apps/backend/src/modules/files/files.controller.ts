@@ -7,16 +7,29 @@ const logger = createLogger({ scope: 'files-controller' });
 
 export async function handleGetProjectFiles(req: Request, res: Response) {
   try {
-    const projectName = decodeURIComponent(req.params.projectName);
-    logger.info('📁 Files requested for project:', projectName);
+    const rawProjectName = req.params.projectName;
+    const projectName = decodeURIComponent(rawProjectName);
+    logger.info('📁 Files requested for project:', {
+      raw: rawProjectName,
+      decoded: projectName,
+      url: req.url
+    });
     
     // Get all projects to find the actual path
     const projects = await projectsService.getProjects();
+    logger.info('🔍 Available projects:', projects.map(p => ({
+      name: p.name,
+      displayName: p.displayName,
+      fullPath: p.fullPath
+    })));
+    
     const project = projects.find(p => p.name === projectName);
     
     if (!project) {
-      logger.error('❌ Project not found:', projectName);
-      logger.info('Available projects:', projects.map(p => p.name));
+      logger.error('❌ Project not found:', {
+        searchedName: projectName,
+        availableNames: projects.map(p => p.name)
+      });
       return res.status(404).json({ error: 'Project not found' });
     }
     

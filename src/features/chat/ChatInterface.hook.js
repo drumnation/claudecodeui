@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { loadSessionMessages, fetchProjectFiles, fetchSlashCommands } from '@/features/chat/ChatInterface.logic';
 import useCreateDiff from '@/features/chat/lib/createDiff';
 import normalizeMessages from '@/features/chat/lib/normalizeMessages';
+import { useLogger, sanitizeError, addTimestamp, addSessionContext, isLevelEnabled } from '../../logger';
 
 export const useChatInterface = ({
   selectedProject,
@@ -15,6 +16,7 @@ export const useChatInterface = ({
   onNavigateToSession,
   autoScrollToBottom
 }) => {
+  const logger = useLogger({ hook: 'useChatInterface' });
   // Core state
   const [input, setInput] = useState(() => {
     if (typeof window !== 'undefined' && selectedProject) {
@@ -212,7 +214,14 @@ export const useChatInterface = ({
         localStorage.setItem(`chat_messages_${selectedProject.name}`, JSON.stringify(messagesToSave));
       } catch (e) {
         if (e.name === 'QuotaExceededError') {
-          console.warn('localStorage quota exceeded, performing aggressive cleanup...');
+          logger.error('localStorage quota exceeded', {
+            error: sanitizeError(e),
+            sessionId: selectedSession?.id,
+            projectName: selectedProject?.name,
+            messageCount: chatMessages.length,
+            attemptedOperation: 'save_chat_messages',
+            ...addTimestamp()
+          });
           
           try {
             // Clear all chat messages from other projects
@@ -229,18 +238,39 @@ export const useChatInterface = ({
             const limitedMessages = chatMessages.slice(-30); // Even more aggressive limit
             localStorage.setItem(`chat_messages_${selectedProject.name}`, JSON.stringify(limitedMessages));
           } catch (e2) {
-            console.error('Still unable to save after aggressive cleanup:', e2);
+            logger.error('Failed to save after aggressive cleanup', {
+              error: sanitizeError(e2),
+              sessionId: selectedSession?.id,
+              projectName: selectedProject?.name,
+              messageCount: chatMessages.length,
+              cleanupAttempted: true,
+              ...addTimestamp()
+            });
             // As last resort, clear current project's old messages and save only recent ones
             try {
               localStorage.removeItem(`chat_messages_${selectedProject.name}`);
               const minimalMessages = chatMessages.slice(-10);
               localStorage.setItem(`chat_messages_${selectedProject.name}`, JSON.stringify(minimalMessages));
             } catch (e3) {
-              console.error('Failed to save even minimal messages:', e3);
+              logger.error('Failed to save even minimal messages', {
+                error: sanitizeError(e3),
+                sessionId: selectedSession?.id,
+                projectName: selectedProject?.name,
+                messageCount: 10,
+                attemptedOperation: 'minimal_messages_save',
+                ...addTimestamp()
+              });
             }
           }
         } else {
-          console.error('Error saving chat messages:', e);
+          logger.error('Error saving chat messages', {
+            error: sanitizeError(e),
+            sessionId: selectedSession?.id,
+            projectName: selectedProject?.name,
+            messageCount: chatMessages.length,
+            attemptedOperation: 'save_chat_messages',
+            ...addTimestamp()
+          });
         }
       }
     }
@@ -281,14 +311,30 @@ export const useChatInterface = ({
               currentSessionId && 
               latestMessage.data.session_id !== currentSessionId) {
             
-            console.log('🔄 Claude CLI session duplication detected:', {
-              originalSession: currentSessionId,
-              newSession: latestMessage.data.session_id
-            });
+            if (logger.isLevelEnabled('debug')) {
+              logger.debug('Claude CLI session duplication detected', {
+                originalSession: currentSessionId,
+                newSession: latestMessage.data.session_id,
+                sessionId: selectedSession?.id,
+                projectName: selectedProject?.name,
+                messageType: 'claude-response',
+                ...addTimestamp()
+              });
+            }
             
             // Check if currently streaming - defer session change if needed
             if (isStreaming) {
-              console.log('🔄 Deferring session change - Claude is currently streaming');
+              if (logger.isLevelEnabled('debug')) {
+                logger.debug('Deferring session change - Claude is currently streaming', {
+                  originalSession: currentSessionId,
+                  newSession: latestMessage.data.session_id,
+                  sessionId: selectedSession?.id,
+                  projectName: selectedProject?.name,
+                  isStreaming: true,
+                  context: 'session_duplication',
+                  ...addTimestamp()
+                });
+              }
               // Could implement a pending session change queue here if needed
               return;
             }
@@ -308,13 +354,28 @@ export const useChatInterface = ({
               latestMessage.data.session_id && 
               !currentSessionId) {
             
-            console.log('🔄 New session init detected:', {
-              newSession: latestMessage.data.session_id
-            });
+            if (logger.isLevelEnabled('debug')) {
+              logger.debug('New session init detected', {
+                newSession: latestMessage.data.session_id,
+                sessionId: selectedSession?.id,
+                projectName: selectedProject?.name,
+                messageType: 'claude-response',
+                ...addTimestamp()
+              });
+            }
             
             // Check if currently streaming - defer session change if needed
             if (isStreaming) {
-              console.log('🔄 Deferring session change - Claude is currently streaming');
+              if (logger.isLevelEnabled('debug')) {
+                logger.debug('Deferring session change - Claude is currently streaming', {
+                  newSession: latestMessage.data.session_id,
+                  sessionId: selectedSession?.id,
+                  projectName: selectedProject?.name,
+                  isStreaming: true,
+                  context: 'new_session_init',
+                  ...addTimestamp()
+                });
+              }
               // Could implement a pending session change queue here if needed
               return;
             }
@@ -334,7 +395,16 @@ export const useChatInterface = ({
               latestMessage.data.session_id && 
               currentSessionId && 
               latestMessage.data.session_id === currentSessionId) {
-            console.log('🔄 System init message for current session, ignoring');
+            if (logger.isLevelEnabled('debug')) {
+              logger.debug('System init message for current session, ignoring', {
+                currentSession: currentSessionId,
+                messageSession: latestMessage.data.session_id,
+                sessionId: selectedSession?.id,
+                projectName: selectedProject?.name,
+                messageType: 'claude-response',
+                ...addTimestamp()
+              });
+            }
             return;
           }
           
@@ -496,7 +566,15 @@ export const useChatInterface = ({
           break;
           
         case 'claude-status':
-          console.log('🔔 Received claude-status message:', latestMessage);
+          if (logger.isLevelEnabled('debug')) {
+            logger.debug('Received claude-status message', {
+              data: latestMessage.data,
+              sessionId: selectedSession?.id,
+              projectName: selectedProject?.name,
+              messageType: 'claude-status',
+              ...addTimestamp()
+            });
+          }
           const statusData = latestMessage.data;
           if (statusData) {
             let statusInfo = {
@@ -533,7 +611,14 @@ export const useChatInterface = ({
               statusInfo.contextRemaining = statusData.contextRemaining;
             }
             
-            console.log('📊 Setting claude status:', statusInfo);
+            if (logger.isLevelEnabled('debug')) {
+              logger.debug('Setting claude status', {
+                statusInfo,
+                sessionId: selectedSession?.id,
+                projectName: selectedProject?.name,
+                ...addTimestamp()
+              });
+            }
             setClaudeStatus(statusInfo);
             setIsLoading(true);
             setCanAbortSession(statusInfo.can_interrupt);
@@ -579,7 +664,13 @@ export const useChatInterface = ({
           
         case 'session-summary-updated':
           // Session title has been updated by the backend
-          console.log('Session summary updated:', latestMessage);
+          logger.info('Session summary updated', {
+            sessionId: latestMessage.sessionId,
+            summary: latestMessage.summary,
+            projectName: selectedProject?.name,
+            messageType: 'session-summary-updated',
+            ...addTimestamp()
+          });
           // The parent component should handle updating the session list
           // No need to update local state as this is handled by the parent
           break;
@@ -590,16 +681,39 @@ export const useChatInterface = ({
   // Effect: Load file list when project changes
   useEffect(() => {
     if (selectedProject) {
-      console.log('📂 Loading files for project:', selectedProject.name);
+      if (logger.isLevelEnabled('debug')) {
+        logger.debug('Loading files for project', {
+          projectName: selectedProject.name,
+          sessionId: selectedSession?.id,
+          ...addTimestamp()
+        });
+      }
       fetchProjectFiles(selectedProject.name).then(files => {
-        console.log('📂 Files loaded:', files.length, 'files');
+        if (logger.isLevelEnabled('debug')) {
+          logger.debug('Files loaded', {
+            fileCount: files.length,
+            projectName: selectedProject.name,
+            sessionId: selectedSession?.id,
+            ...addTimestamp()
+          });
+        }
         setFileList(files);
       }).catch(error => {
-        console.error('📂 Failed to load files:', error);
+        logger.error('Failed to load files', {
+          error: sanitizeError(error),
+          projectName: selectedProject.name,
+          sessionId: selectedSession?.id,
+          ...addTimestamp()
+        });
         setFileList([]);
       });
     } else {
-      console.log('📂 No project selected, clearing file list');
+      if (logger.isLevelEnabled('debug')) {
+        logger.debug('No project selected, clearing file list', {
+          sessionId: selectedSession?.id,
+          ...addTimestamp()
+        });
+      }
       setFileList([]);
     }
   }, [selectedProject]);

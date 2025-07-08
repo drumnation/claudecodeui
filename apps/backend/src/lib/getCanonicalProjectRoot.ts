@@ -61,7 +61,9 @@ export async function getCanonicalProjectRoot(absPath: string): Promise<string> 
       if (gitRoot) {
         try {
           await fs.access(gitRoot);
-          logger.info('Found Git root', { originalPath: resolvedPath, gitRoot });
+          if (logger.isLevelEnabled('debug')) {
+            logger.debug('Found Git root', { originalPath: resolvedPath, gitRoot });
+          }
           return gitRoot;
         } catch {
           // Git root doesn't exist, continue with fallback

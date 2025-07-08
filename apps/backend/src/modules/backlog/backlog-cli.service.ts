@@ -2,7 +2,7 @@ import { execFile, spawn } from 'child_process';
 import { promisify } from 'util';
 import { createLogger } from '@kit/logger/node';
 import * as os from 'os';
-import { resolveCli, getEnhancedEnv, clearCliCache, validateCli } from '../../lib/cliResolver.js';
+import { resolveCli, getEnhancedEnv, clearCliCache, validateCli, debugCliResolution } from '../../lib/cliResolver.js';
 
 const execFileAsync = promisify(execFile);
 const logger = createLogger({ scope: 'backlog-cli-service' });
@@ -12,6 +12,7 @@ export interface BacklogCliStatus {
   version?: string;
   path?: string;
   error?: string;
+  searchPaths?: string[];
 }
 
 export interface InstallProgress {
@@ -30,8 +31,8 @@ export class BacklogCliService {
   /**
    * Get enhanced environment with proper PATH
    */
-  private getEnhancedEnv(): NodeJS.ProcessEnv {
-    return getEnhancedEnv();
+  private async getEnhancedEnv(): Promise<NodeJS.ProcessEnv> {
+    return await getEnhancedEnv();
   }
   
   /**
@@ -62,8 +63,12 @@ export class BacklogCliService {
       const cliPath = await resolveCli('backlog', 'BACKLOG_CLI_PATH');
       
       if (!cliPath) {
+        // Get debug info for better error reporting
+        const debugInfo = await debugCliResolution('backlog', 'BACKLOG_CLI_PATH');
+        
         logger.warn('Backlog CLI not found in PATH', {
           PATH: process.env.PATH,
+          searchPaths: debugInfo.searchPaths.slice(0, 10),
           hint: 'Try installing with: npm install -g backlog.md'
         });
         
@@ -71,7 +76,8 @@ export class BacklogCliService {
           installed: false,
           error: 'Backlog CLI not found. Please install it with: npm install -g backlog.md\n' +
                  'If already installed, ensure npm global bin directory is in your PATH.\n' +
-                 'Alternatively, set BACKLOG_CLI_PATH environment variable to the CLI location.'
+                 'Alternatively, set BACKLOG_CLI_PATH environment variable to the CLI location.',
+          searchPaths: debugInfo.searchPaths
         };
         this.lastCheckTime = Date.now();
         
@@ -159,7 +165,7 @@ export class BacklogCliService {
       });
 
       // Install backlog globally using npm with enhanced PATH
-      const enhancedEnv = getEnhancedEnv();
+      const enhancedEnv = await this.getEnhancedEnv();
       const installProcess = spawn('npm', ['install', '-g', 'backlog.md'], {
         shell: true,
         env: enhancedEnv

@@ -6,6 +6,7 @@ import { CommitMessage } from '@/features/git/CommitMessage';
 import { FileList } from '@/features/git/FileList';
 import { CommitHistory } from '@/features/git/CommitHistory';
 import { NewBranchModal } from '@/features/git/NewBranchModal';
+import { GitInitPanel } from '@/features/git/GitInitPanel';
 import { getStatusLabel } from '@/features/git/GitPanel.logic';
 import { MinimalErrorBoundary } from '@/shared-components/ErrorBoundary';
 import {
@@ -94,15 +95,25 @@ export const GitPanel = ({ selectedProject, isMobile, gitStatus: externalGitStat
   }
 
   if (error) {
+    // Check if this is a "not a git repository" error and project can initialize git
+    if (error.includes('not a git repository') && selectedProject?.canInitializeGit) {
+      return (
+        <GitInitPanel 
+          selectedProject={selectedProject} 
+          onGitInitialized={refresh}
+        />
+      );
+    }
+
     return (
       <EmptyStateContainer>
         <EmptyStateText style={{ color: '#ef4444' }}>Git Error</EmptyStateText>
         <EmptyStateText style={{ marginTop: '8px', fontSize: '14px' }}>
           {error}
         </EmptyStateText>
-        {error.includes('not a git repository') && (
+        {error.includes('not a git repository') && !selectedProject?.canInitializeGit && (
           <EmptyStateText style={{ marginTop: '16px', fontSize: '13px', color: '#6b7280' }}>
-            Initialize a git repository in this project using 'git init'
+            This project is part of a larger repository or cannot initialize Git
           </EmptyStateText>
         )}
         {error.includes('Project not found') && (
@@ -119,6 +130,16 @@ export const GitPanel = ({ selectedProject, isMobile, gitStatus: externalGitStat
           <span style={{ marginLeft: '8px' }}>Retry</span>
         </RefreshButton>
       </EmptyStateContainer>
+    );
+  }
+
+  // Show GitInitPanel if no git status and project can initialize git
+  if (!gitStatus && !isLoading && selectedProject?.canInitializeGit) {
+    return (
+      <GitInitPanel 
+        selectedProject={selectedProject} 
+        onGitInitialized={refresh}
+      />
     );
   }
 

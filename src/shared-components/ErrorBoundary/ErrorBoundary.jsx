@@ -1,6 +1,9 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw, Home, Bug } from 'lucide-react';
+import { createLogger } from '@kit/logger/browser';
 import * as S from './ErrorBoundary.styles';
+
+const logger = createLogger({ scope: 'error-boundary' });
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -22,8 +25,46 @@ export class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log the error details
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // Create a safe version of props without circular references
+    let safeProps = {};
+    try {
+      // Only include serializable props
+      for (const key in this.props) {
+        const value = this.props[key];
+        if (value !== undefined && value !== null) {
+          const type = typeof value;
+          if (type === 'string' || type === 'number' || type === 'boolean') {
+            safeProps[key] = value;
+          } else if (type === 'function') {
+            safeProps[key] = '[Function]';
+          } else if (React.isValidElement(value)) {
+            safeProps[key] = '[React Element]';
+          } else if (type === 'object') {
+            // Try to stringify, but catch circular reference errors
+            try {
+              JSON.stringify(value);
+              safeProps[key] = value;
+            } catch {
+              safeProps[key] = '[Circular Object]';
+            }
+          }
+        }
+      }
+    } catch (e) {
+      safeProps = { error: 'Failed to serialize props' };
+    }
+
+    // Log the error details with structured data
+    logger.error('Component error caught', {
+      errorId: this.state.errorId,
+      errorMessage: error?.toString(),
+      stack: error?.stack,
+      componentStack: errorInfo?.componentStack,
+      props: safeProps,
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      timestamp: new Date().toISOString()
+    });
     
     this.setState({
       error,
@@ -37,6 +78,10 @@ export class ErrorBoundary extends React.Component {
   }
 
   handleRetry = () => {
+    logger.info('Error boundary retry attempt', {
+      errorId: this.state.errorId,
+      component: this.props.level || 'component'
+    });
     this.setState({ 
       hasError: false, 
       error: null, 
@@ -61,10 +106,14 @@ Timestamp: ${new Date().toISOString()}
     `.trim();
 
     navigator.clipboard.writeText(errorDetails).then(() => {
-      // You could show a toast notification here
-      console.log('Error details copied to clipboard');
+      logger.info('Error details copied to clipboard', {
+        errorId: this.state.errorId
+      });
     }).catch(err => {
-      console.error('Failed to copy error details:', err);
+      logger.error('Failed to copy error details', {
+        error: err,
+        errorId: this.state.errorId
+      });
     });
   };
 

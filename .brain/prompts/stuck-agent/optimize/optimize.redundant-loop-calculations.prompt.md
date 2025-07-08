@@ -1,1 +1,0 @@
-Are you performing any redundant calculations within the loop that could be moved outside? Analyze the loop body for computations that don't change with each iteration. 

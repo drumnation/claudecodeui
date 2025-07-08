@@ -8,7 +8,9 @@ const logger = createLogger({ scope: 'claude-cli-handlers' });
 const wsHandlers = new Map<WebSocket, ClaudeWebSocketHandler>();
 
 export function handleClaudeWebSocketConnection(ws: WebSocket): void {
-  logger.info('New Claude CLI WebSocket connection');
+  if (logger.isLevelEnabled('debug')) {
+    logger.debug('New Claude CLI WebSocket connection');
+  }
   
   // Create handler for this connection
   const handler = new ClaudeWebSocketHandler(ws);

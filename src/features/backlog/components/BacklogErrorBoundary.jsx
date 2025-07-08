@@ -1,6 +1,7 @@
 import React from 'react';
 import styled from '@emotion/styled';
 import { AlertCircle } from 'lucide-react';
+import { createLogger } from '@kit/logger/browser';
 
 const ErrorContainer = styled.div`
   display: flex;
@@ -51,6 +52,8 @@ const ErrorDetails = styled.pre`
   }
 `;
 
+const logger = createLogger({ scope: 'backlog-error-boundary' });
+
 export class BacklogErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -62,11 +65,32 @@ export class BacklogErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('Backlog Error:', error, errorInfo);
+    logger.error('Backlog error boundary caught error', {
+      error: {
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      },
+      errorInfo: {
+        componentStack: errorInfo.componentStack
+      },
+      timestamp: Date.now(),
+      backlogContext: this.getBacklogContext()
+    });
+    
     this.setState({
       error,
       errorInfo
     });
+  }
+  
+  getBacklogContext() {
+    return {
+      hasError: this.state.hasError,
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      timestamp: new Date().toISOString()
+    };
   }
 
   render() {

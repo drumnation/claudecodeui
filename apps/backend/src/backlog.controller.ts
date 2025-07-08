@@ -308,6 +308,7 @@ export async function handleBacklogHealth(req: Request, res: Response) {
   try {
     const status = await backlogCliService.checkInstallation();
     
+    // Always return HTTP 200 with consistent response format
     if (status.installed) {
       res.json({
         status: 'healthy',
@@ -317,19 +318,46 @@ export async function handleBacklogHealth(req: Request, res: Response) {
         message: 'Backlog CLI is available and ready'
       });
     } else {
-      res.status(503).json({
+      // Return 200 with backlogAvailable: false instead of 503
+      const debugInfo = process.env.NODE_ENV === 'development' ? {
+        debug: {
+          path: process.env.PATH,
+          npmPrefix: process.env.npm_config_prefix,
+          backlogCliPath: process.env.BACKLOG_CLI_PATH,
+          searchPaths: status.searchPaths || []
+        }
+      } : {};
+      
+      res.json({
         status: 'unhealthy',
         backlogAvailable: false,
-        error: status.error || 'Backlog CLI not found',
-        installInstructions: 'Use the install endpoint or run: npm install -g backlog.md'
+        error: {
+          message: status.error || 'Backlog CLI not found',
+          details: 'The Backlog CLI is not installed or not found in PATH'
+        },
+        installInstructions: {
+          npm: 'npm install -g backlog.md',
+          pnpm: 'pnpm add -g backlog.md',
+          manual: 'Set BACKLOG_CLI_PATH environment variable to the CLI location'
+        },
+        ...debugInfo
       });
     }
   } catch (error: any) {
     logger.error('Error checking backlog health', { error });
-    res.status(500).json({
+    
+    // Even for errors, return 200 with backlogAvailable: false
+    res.json({
       status: 'error',
       backlogAvailable: false,
-      error: error.message || 'Failed to check backlog status'
+      error: {
+        message: error.message || 'Failed to check backlog status',
+        type: 'internal_error'
+      },
+      installInstructions: {
+        npm: 'npm install -g backlog.md',
+        pnpm: 'pnpm add -g backlog.md'
+      }
     });
   }
 }
@@ -404,4 +432,271 @@ export async function handleBacklogInstallInstructions(req: Request, res: Respon
       error: error.message || 'Failed to get install instructions'
     });
   }
+}
+
+// GET /api/backlog/debug
+export async function handleBacklogDebug(req: Request, res: Response) {
+  try {
+    const { execSync } = await import('child_process');
+    const { resolveCli, debugCliResolution } = await import('./lib/cliResolver.js');
+    
+    // Get current environment info
+    const debugInfo = {
+      environment: {
+        path: process.env.PATH,
+        npmConfigPrefix: process.env.npm_config_prefix,
+        backlogCliPath: process.env.BACKLOG_CLI_PATH,
+        nodeVersion: process.version,
+        platform: process.platform,
+        arch: process.arch
+      },
+      npmGlobalBin: null as string | null,
+      pnpmGlobalBin: null as string | null,
+      cliResolution: {} as any,
+      commonLocations: {} as any
+    };
+    
+    // Try to get npm global bin directory
+    try {
+      const npmPrefix = execSync('npm config get prefix', { encoding: 'utf8' }).trim();
+      debugInfo.npmGlobalBin = process.platform === 'win32' 
+        ? npmPrefix 
+        : `${npmPrefix}/bin`;
+    } catch (error: any) {
+      debugInfo.npmGlobalBin = `Error: ${error.message}`;
+    }
+    
+    // Try to get pnpm global bin directory
+    try {
+      const pnpmPrefix = execSync('pnpm config get global-bin-dir', { encoding: 'utf8' }).trim();
+      debugInfo.pnpmGlobalBin = pnpmPrefix;
+    } catch (error) {
+      // Fallback to default pnpm location
+      try {
+        const pnpmStore = execSync('pnpm store path', { encoding: 'utf8' }).trim();
+        debugInfo.pnpmGlobalBin = pnpmStore.replace(/\/store.*/, '/bin');
+      } catch {
+        debugInfo.pnpmGlobalBin = 'Error: pnpm not found or not configured';
+      }
+    }
+    
+    // Get detailed CLI resolution info
+    debugInfo.cliResolution = await debugCliResolution('backlog', 'BACKLOG_CLI_PATH');
+    
+    // Check common CLI locations
+    const fs = await import('fs/promises');
+    const commonPaths = [
+      '/usr/local/bin/backlog',
+      '/usr/bin/backlog',
+      `${process.env.HOME}/.npm-global/bin/backlog`,
+      `${process.env.HOME}/.pnpm/bin/backlog`,
+      `${process.env.HOME}/.local/share/pnpm/backlog`,
+      ...(debugInfo.npmGlobalBin && typeof debugInfo.npmGlobalBin === 'string' 
+        ? [`${debugInfo.npmGlobalBin}/backlog`] 
+        : []),
+      ...(debugInfo.pnpmGlobalBin && typeof debugInfo.pnpmGlobalBin === 'string' 
+        ? [`${debugInfo.pnpmGlobalBin}/backlog`] 
+        : [])
+    ];
+    
+    for (const path of commonPaths) {
+      if (path) {
+        try {
+          await fs.access(path);
+          debugInfo.commonLocations[path] = 'exists';
+        } catch {
+          debugInfo.commonLocations[path] = 'not found';
+        }
+      }
+    }
+    
+    res.json({
+      success: true,
+      debug: debugInfo,
+      recommendations: generateRecommendations(debugInfo)
+    });
+  } catch (error: any) {
+    logger.error('Error generating debug info', { error });
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to generate debug information'
+    });
+  }
+}
+
+// GET /api/backlog/environment
+export async function handleBacklogEnvironment(req: Request, res: Response) {
+  try {
+    const { execSync } = await import('child_process');
+    const validation = {
+      npm: {
+        available: false,
+        version: null as string | null,
+        globalBin: null as string | null,
+        error: null as string | null
+      },
+      pnpm: {
+        available: false,
+        version: null as string | null,
+        globalBin: null as string | null,
+        error: null as string | null
+      },
+      path: {
+        current: process.env.PATH,
+        containsNpmBin: false,
+        containsPnpmBin: false,
+        recommendations: [] as string[]
+      },
+      backlogCli: {
+        found: false,
+        path: null as string | null,
+        version: null as string | null,
+        installMethod: null as string | null
+      }
+    };
+    
+    // Check npm
+    try {
+      validation.npm.version = execSync('npm --version', { encoding: 'utf8' }).trim();
+      validation.npm.available = true;
+      
+      const npmPrefix = execSync('npm config get prefix', { encoding: 'utf8' }).trim();
+      validation.npm.globalBin = process.platform === 'win32' ? npmPrefix : `${npmPrefix}/bin`;
+      
+      if (validation.path.current?.includes(validation.npm.globalBin)) {
+        validation.path.containsNpmBin = true;
+      }
+    } catch (error: any) {
+      validation.npm.error = error.message;
+    }
+    
+    // Check pnpm
+    try {
+      validation.pnpm.version = execSync('pnpm --version', { encoding: 'utf8' }).trim();
+      validation.pnpm.available = true;
+      
+      try {
+        validation.pnpm.globalBin = execSync('pnpm config get global-bin-dir', { encoding: 'utf8' }).trim();
+      } catch {
+        // Fallback method
+        const pnpmStore = execSync('pnpm store path', { encoding: 'utf8' }).trim();
+        validation.pnpm.globalBin = pnpmStore.replace(/\/store.*/, '/bin');
+      }
+      
+      if (validation.path.current?.includes(validation.pnpm.globalBin)) {
+        validation.path.containsPnpmBin = true;
+      }
+    } catch (error: any) {
+      validation.pnpm.error = error.message;
+    }
+    
+    // Generate PATH recommendations
+    if (!validation.path.containsNpmBin && validation.npm.globalBin) {
+      validation.path.recommendations.push(
+        `Add npm global bin to PATH: export PATH="${validation.npm.globalBin}:$PATH"`
+      );
+    }
+    
+    if (!validation.path.containsPnpmBin && validation.pnpm.globalBin) {
+      validation.path.recommendations.push(
+        `Add pnpm global bin to PATH: export PATH="${validation.pnpm.globalBin}:$PATH"`
+      );
+    }
+    
+    // Check if backlog CLI is installed
+    const status = await backlogCliService.checkInstallation();
+    validation.backlogCli.found = status.installed;
+    validation.backlogCli.path = status.path || null;
+    validation.backlogCli.version = status.version || null;
+    
+    // Determine install method
+    if (status.path) {
+      if (validation.npm.globalBin && status.path.startsWith(validation.npm.globalBin)) {
+        validation.backlogCli.installMethod = 'npm';
+      } else if (validation.pnpm.globalBin && status.path.startsWith(validation.pnpm.globalBin)) {
+        validation.backlogCli.installMethod = 'pnpm';
+      } else {
+        validation.backlogCli.installMethod = 'manual or other';
+      }
+    }
+    
+    res.json({
+      success: true,
+      validation,
+      recommendations: generateEnvironmentRecommendations(validation)
+    });
+  } catch (error: any) {
+    logger.error('Error validating environment', { error });
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to validate environment'
+    });
+  }
+}
+
+// Helper function to generate recommendations based on debug info
+function generateRecommendations(debugInfo: any): string[] {
+  const recommendations: string[] = [];
+  
+  // Check if npm or pnpm bin directories are in PATH
+  if (debugInfo.npmGlobalBin && typeof debugInfo.npmGlobalBin === 'string') {
+    if (!debugInfo.environment.path?.includes(debugInfo.npmGlobalBin)) {
+      recommendations.push(`Add npm global bin directory to PATH: export PATH="${debugInfo.npmGlobalBin}:$PATH"`);
+    }
+  }
+  
+  if (debugInfo.pnpmGlobalBin && typeof debugInfo.pnpmGlobalBin === 'string') {
+    if (!debugInfo.environment.path?.includes(debugInfo.pnpmGlobalBin)) {
+      recommendations.push(`Add pnpm global bin directory to PATH: export PATH="${debugInfo.pnpmGlobalBin}:$PATH"`);
+    }
+  }
+  
+  // Check if any common location has the CLI
+  const foundLocations = Object.entries(debugInfo.commonLocations || {})
+    .filter(([_, status]) => status === 'exists')
+    .map(([path]) => path);
+  
+  if (foundLocations.length > 0 && !debugInfo.cliResolution?.found) {
+    recommendations.push(
+      `Backlog CLI found at: ${foundLocations[0]}. ` +
+      `Set BACKLOG_CLI_PATH="${foundLocations[0]}" or add its directory to PATH`
+    );
+  }
+  
+  // If CLI not found anywhere
+  if (foundLocations.length === 0) {
+    recommendations.push('Install Backlog CLI: npm install -g backlog.md or pnpm add -g backlog.md');
+  }
+  
+  return recommendations;
+}
+
+// Helper function to generate environment-specific recommendations
+function generateEnvironmentRecommendations(validation: any): string[] {
+  const recommendations: string[] = [];
+  
+  if (!validation.backlogCli.found) {
+    if (validation.npm.available) {
+      recommendations.push('Install Backlog CLI with npm: npm install -g backlog.md');
+    }
+    if (validation.pnpm.available) {
+      recommendations.push('Install Backlog CLI with pnpm: pnpm add -g backlog.md');
+    }
+  }
+  
+  if (validation.path.recommendations.length > 0) {
+    recommendations.push(...validation.path.recommendations);
+  }
+  
+  if (validation.backlogCli.found && validation.backlogCli.path) {
+    recommendations.push(`Backlog CLI is installed at: ${validation.backlogCli.path}`);
+    
+    if (!validation.path.containsNpmBin && !validation.path.containsPnpmBin) {
+      recommendations.push(
+        'Consider adding the parent directory to PATH or setting BACKLOG_CLI_PATH environment variable'
+      );
+    }
+  }
+  
+  return recommendations;
 }

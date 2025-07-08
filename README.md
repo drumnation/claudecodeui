@@ -47,6 +47,7 @@ A desktop and mobile UI for [Claude Code](https://docs.anthropic.com/en/docs/cla
 
 - [Node.js](https://nodejs.org/) v16 or higher
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and configured
+- [Claude CLI](https://www.anthropic.com/claude-cli) (optional, required for Multi-Agent Planner feature)
 
 ### Installation
 
@@ -65,6 +66,9 @@ npm install
 ```bash
 cp .env.example .env
 # Edit .env with your preferred settings
+
+# Optional: Set custom Claude CLI path for Multi-Agent Planner
+# CLAUDE_BINARY=/path/to/claude
 ```
 
 4. **Start the application:**
@@ -404,13 +408,22 @@ source ~/.bashrc
 **Root Cause**: Planner may be disabled in settings or dependencies missing
 
 **Solutions**:
-1. **Enable Planner**:
+1. **Install Claude CLI** (Required for planner):
+   ```bash
+   # Install globally via npm
+   npm install -g @anthropic-ai/claude-cli
+   
+   # Or set custom path via environment variable
+   export CLAUDE_BINARY=/path/to/claude
+   ```
+
+2. **Enable Planner**:
    - Open Settings → Tools Settings → Multi-Agent Planner
    - Toggle "Enable Multi-Agent Planner" to ON
    - Select desired agents (ARCH, DIFF, DEPS)
    - Save settings
 
-2. **CodeQAI Integration Issues**:
+3. **CodeQAI Integration Issues**:
    ```bash
    # Install CodeQAI if not available
    pip install codeqai
@@ -419,13 +432,26 @@ source ~/.bashrc
    codeqai --version
    ```
 
-3. **Agent Execution Problems**:
-   - Ensure Claude CLI is properly installed and configured
+4. **Agent Execution Problems**:
+   - Ensure Claude CLI is properly installed and configured:
+     ```bash
+     # Check if Claude CLI is available
+     which claude || echo "Claude CLI not found"
+     
+     # If using custom binary path
+     $CLAUDE_BINARY --version
+     ```
    - Check that prompt templates exist in `.brain/prompts/` directory
    - Verify project has sufficient permissions for file analysis
    - Review server logs for detailed error messages
 
-4. **Performance Issues**:
+5. **Common Error Messages**:
+   - **"Claude CLI not found"**: Install with `npm install -g @anthropic-ai/claude-cli`
+   - **"Prompt file missing"**: Ensure `.brain/prompts/` directory exists in project root
+   - **"Not executable"**: Run `chmod +x /path/to/claude` to make binary executable
+   - **"Project path invalid"**: Verify the project directory exists and is accessible
+
+6. **Performance Issues**:
    - Reduce context limits in planner settings
    - Disable CodeQAI if running on resource-constrained systems
    - Select fewer agents for faster execution

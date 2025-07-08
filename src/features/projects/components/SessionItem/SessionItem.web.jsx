@@ -42,14 +42,35 @@ export const SessionItemWeb = ({
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
+      // Don't close on scroll events or touch events
+      if (event.type === 'scroll' || event.type === 'touchmove') {
+        return;
+      }
+      
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setShowMenu(false);
       }
     };
 
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setShowMenu(false);
+      }
+    };
+
     if (showMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      // Use setTimeout to avoid immediate closing on the same click that opened the menu
+      setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside);
+        document.addEventListener('keydown', handleEscape);
+      }, 0);
+      
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener('touchstart', handleClickOutside);
+        document.removeEventListener('keydown', handleEscape);
+      };
     }
   }, [showMenu]);
   
@@ -58,7 +79,7 @@ export const SessionItemWeb = ({
       <Button
         variant="ghost"
         className={cn(
-          "w-full justify-start font-normal text-left hover:bg-accent/50 transition-colors duration-200 min-h-fit h-auto",
+          "w-full justify-start font-normal text-left hover:bg-accent/20 dark:hover:bg-accent/30 transition-colors duration-200 min-h-fit h-auto",
           isSelected ? "bg-accent text-accent-foreground" :
           isActive ? "bg-green-50/50 dark:bg-green-900/10" : ""
         )}
@@ -110,15 +131,22 @@ export const SessionItemWeb = ({
           <S.DesktopMenuWrapper>
             <S.DesktopMenuButton
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 setShowMenu(!showMenu);
+              }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
               }}
               title="More options"
             >
               <MoreVertical className="w-4 h-4 text-muted-foreground" />
             </S.DesktopMenuButton>
             {showMenu && (
-              <S.DesktopMenuDropdown>
+              <S.DesktopMenuDropdown
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              >
                 {!session.summary && (
                   <S.DesktopMenuItem
                     onClick={(e) => {

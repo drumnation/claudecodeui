@@ -1,1 +1,0 @@
-Instead of processing each element individually within the loop, can you leverage any vectorized operations or built-in functions that operate on entire datasets at once? This can often significantly improve performance. 

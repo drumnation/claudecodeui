@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import { createLogger } from '@kit/logger/node';
 import { 
   PlannerRequest, 
@@ -8,15 +9,21 @@ import {
   PlannerProgress, 
   PlannerComplete,
   PlannerServiceState,
-  CodeContext
+  CodeContext,
+  ValidationResult
 } from './planner.types.js';
 import { CodeQAIAdapter } from './codeqai.adapter.js';
 import { AgentRunner } from './agent-runner.js';
+import { ValidationService } from './validation.service.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const logger = createLogger({ scope: 'planner-service' });
 
 export class PlannerService extends EventEmitter {
   private codeqaiAdapter: CodeQAIAdapter;
+  private validationService: ValidationService;
   private activeAgents: Map<string, AgentRunner> = new Map();
   private state: PlannerServiceState;
   private lastSyncTimes: Map<string, number> = new Map();
@@ -24,6 +31,7 @@ export class PlannerService extends EventEmitter {
   constructor() {
     super();
     this.codeqaiAdapter = new CodeQAIAdapter();
+    this.validationService = new ValidationService();
     this.state = {
       isRunning: false,
       currentRequest: null,
@@ -69,6 +77,25 @@ export class PlannerService extends EventEmitter {
         selectedAgents: request.selectedAgents,
         featureDescription: request.featureDescription.substring(0, 100) + '...'
       });
+
+      // Pre-flight validation
+      const validation = await this.validationService.validatePlannerDependencies(request);
+      if (!validation.success) {
+        const errorMessage = validation.errors.join('; ');
+        logger.error('Pre-flight validation failed', {
+          sessionId: this.state.sessionId,
+          errors: validation.errors,
+          errorType: validation.errorType
+        });
+        
+        this.emit('planner-error', {
+          error: errorMessage,
+          errorType: validation.errorType,
+          sessionId: this.state.sessionId
+        });
+        
+        throw new Error(errorMessage);
+      }
 
       // Ensure CodeQAI index is up to date
       await this.ensureCodeQAISync(request.projectPath);
@@ -174,6 +201,12 @@ export class PlannerService extends EventEmitter {
       // Determine prompt path
       const promptPath = this.getPromptPath(agentType);
       
+      // Validate prompt file exists
+      const promptValidation = await this.validationService.validatePromptFile(promptPath);
+      if (!promptValidation.success) {
+        throw new Error(`Prompt file not found: ${promptPath}`);
+      }
+      
       // Create agent runner
       const agentRunner = new AgentRunner({
         agentType,
@@ -227,11 +260,12 @@ export class PlannerService extends EventEmitter {
         stack: error.stack
       });
 
-      // Emit error to WebSocket
+      // Emit error to WebSocket with additional context
       this.emit('planner-error', {
         error: `${agentType} agent failed: ${error.message}`,
         sessionId: this.state.sessionId,
-        agentType
+        agentType,
+        errorType: error.errorType || 'AGENT_EXECUTION_ERROR'
       });
 
       return {
@@ -256,7 +290,9 @@ export class PlannerService extends EventEmitter {
       [AgentType.DEPS]: '.brain/prompts/plan-generation/DEPS/deps-analysis.prompt.md'
     };
     
-    return path.join(process.cwd(), promptMap[agentType]);
+    // Get the repository root (5 levels up from this module)
+    const repoRoot = path.resolve(__dirname, '../../../../..');
+    return path.join(repoRoot, promptMap[agentType]);
   }
 
   private generateFinalPlan(agentResults: AgentResult[]): string {

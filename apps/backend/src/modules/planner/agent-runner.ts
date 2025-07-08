@@ -3,11 +3,13 @@ import { EventEmitter } from 'events';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { createLogger } from '@kit/logger/node';
+import { resolveCli } from '../../lib/cliResolver.js';
 import { 
   AgentType, 
   AgentResult, 
   AgentPromptContext, 
-  CodeContext 
+  CodeContext,
+  PlannerValidationError
 } from './planner.types.js';
 
 const logger = createLogger({ scope: 'agent-runner' });
@@ -28,20 +30,27 @@ export interface AgentRunnerOptions {
 export class AgentRunner extends EventEmitter {
   private process: ChildProcess | null = null;
   private readonly options: AgentRunnerOptions;
-  private claudeBinary: string;
+  private claudeBinary: string | null = null;
   private startTime: number = 0;
   private outputBuffer: string = '';
   
   constructor(options: AgentRunnerOptions) {
     super();
     this.options = options;
-    this.claudeBinary = process.env.CLAUDE_BINARY || 'claude';
   }
 
   async execute(): Promise<AgentResult> {
     this.startTime = Date.now();
     
     try {
+      // Resolve Claude binary first
+      this.claudeBinary = await resolveCli('claude', 'CLAUDE_BINARY');
+      if (!this.claudeBinary) {
+        const error = new Error('Claude CLI not found. Please install it with "npm install -g @anthropic-ai/claude-cli" or set CLAUDE_BINARY environment variable');
+        (error as any).errorType = PlannerValidationError.CLAUDE_BINARY_MISSING;
+        throw error;
+      }
+      
       this.emit('agent-status', {
         agentType: this.options.agentType,
         status: 'running',
@@ -75,12 +84,25 @@ export class AgentRunner extends EventEmitter {
       };
       
       this.emit('agent-error', result);
+      // Add error type if not already set
+      if (!error.errorType) {
+        error.errorType = PlannerValidationError.AGENT_EXECUTION_ERROR;
+      }
       throw error;
     }
   }
 
   private async buildPrompt(): Promise<string> {
     try {
+      // Check if prompt file exists
+      try {
+        await fs.access(this.options.promptPath);
+      } catch (accessError) {
+        const error = new Error(`Prompt file not found: ${this.options.promptPath}`);
+        (error as any).errorType = PlannerValidationError.PROMPT_FILE_MISSING;
+        throw error;
+      }
+      
       const promptTemplate = await fs.readFile(this.options.promptPath, 'utf-8');
       
       let prompt = promptTemplate;
@@ -125,9 +147,16 @@ export class AgentRunner extends EventEmitter {
       
       return prompt;
       
-    } catch (error) {
-      logger.error('Failed to build prompt', { error, agentType: this.options.agentType });
-      throw new Error(`Failed to build prompt for ${this.options.agentType} agent: ${error.message}`);
+    } catch (error: any) {
+      logger.error('Failed to build prompt', { 
+        error, 
+        agentType: this.options.agentType,
+        promptPath: this.options.promptPath
+      });
+      if (!error.errorType) {
+        error.errorType = PlannerValidationError.PROMPT_FILE_ERROR;
+      }
+      throw error;
     }
   }
 
@@ -161,6 +190,13 @@ export class AgentRunner extends EventEmitter {
 
   private executeClaudeCommand(prompt: string): Promise<string> {
     return new Promise((resolve, reject) => {
+      if (!this.claudeBinary) {
+        const error = new Error('Claude binary not resolved');
+        (error as any).errorType = PlannerValidationError.CLAUDE_BINARY_MISSING;
+        reject(error);
+        return;
+      }
+      
       // Use actual Claude execution with proper model parameter
       const args = [
         '--model', 'claude-3-5-sonnet-20241022',
@@ -224,11 +260,20 @@ export class AgentRunner extends EventEmitter {
         }
       });
       
-      this.process.on('error', (error) => {
+      this.process.on('error', (error: any) => {
         logger.error('Claude process error', { 
           agentType: this.options.agentType,
-          error
+          error,
+          claudeBinary: this.claudeBinary
         });
+        // This usually means the binary doesn't exist or isn't executable
+        if (error.code === 'ENOENT') {
+          error.errorType = PlannerValidationError.CLAUDE_BINARY_MISSING;
+          error.message = `Claude CLI not found at ${this.claudeBinary}. Please install it or set CLAUDE_BINARY environment variable`;
+        } else if (error.code === 'EACCES') {
+          error.errorType = PlannerValidationError.CLAUDE_BINARY_NOT_EXECUTABLE;
+          error.message = `Claude CLI at ${this.claudeBinary} is not executable`;
+        }
         reject(error);
       });
       

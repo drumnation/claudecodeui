@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toggleExpandedDirectory, createFileObject } from '@/features/files/FileTree.logic';
+import { useLogger, sanitizeError, addTimestamp, isLevelEnabled } from '../../logger';
 
 /**
  * Custom hook for FileTree component
  * Manages all stateful logic including API calls and UI state
  */
 export const useFileTree = (selectedProject) => {
+  const logger = useLogger({ hook: 'useFileTree' });
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -23,21 +25,39 @@ export const useFileTree = (selectedProject) => {
   const fetchFiles = useCallback(async () => {
     if (!selectedProject) return;
     
-    console.log('🌲 FileTree: Fetching files for project:', selectedProject.name);
-    console.log('🌲 FileTree: Project path:', selectedProject.fullPath);
+    logger.debug('Fetching files for project', {
+      projectName: selectedProject.name,
+      displayName: selectedProject.displayName,
+      fullPath: selectedProject.fullPath,
+      path: selectedProject.path,
+      ...addTimestamp()
+    });
     setLoading(true);
     setError(null);
     try {
       const encodedProjectName = encodeURIComponent(selectedProject.name);
       const requestUrl = `/api/projects/${encodedProjectName}/files`;
-      console.log('🌲 FileTree: Request URL:', requestUrl);
+      if (isLevelEnabled(logger, 'debug')) {
+        logger.debug('API request details', {
+          requestUrl,
+          encodedProjectName,
+          projectName: selectedProject.name,
+          ...addTimestamp()
+        });
+      }
       
       const response = await fetch(requestUrl);
-      console.log('🌲 FileTree: Response status:', response.status);
-      console.log('🌲 FileTree: Response headers:', {
-        contentType: response.headers.get('content-type'),
-        contentLength: response.headers.get('content-length')
-      });
+      if (isLevelEnabled(logger, 'debug')) {
+        logger.debug('API response details', {
+          status: response.status,
+          headers: {
+            contentType: response.headers.get('content-type'),
+            contentLength: response.headers.get('content-length')
+          },
+          projectName: selectedProject.name,
+          ...addTimestamp()
+        });
+      }
       
       if (!response.ok) {
         let errorData;
@@ -50,7 +70,14 @@ export const useFileTree = (selectedProject) => {
           errorData = { error: `Server error: ${response.status} ${response.statusText}` };
         }
         
-        console.error('❌ File fetch failed:', response.status, errorData);
+        logger.error('File fetch failed', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          projectName: selectedProject.name,
+          requestUrl,
+          ...addTimestamp()
+        });
         
         // Provide specific error messages based on status code
         let errorMessage;
@@ -76,12 +103,25 @@ export const useFileTree = (selectedProject) => {
       }
       
       const data = await response.json();
-      console.log('🌲 FileTree: Received file data:', data);
-      console.log('🌲 FileTree: Number of items:', Array.isArray(data) ? data.length : 'Not an array');
+      if (isLevelEnabled(logger, 'debug')) {
+        logger.debug('Received file data', {
+          dataType: typeof data,
+          isArray: Array.isArray(data),
+          itemCount: Array.isArray(data) ? data.length : 0,
+          projectName: selectedProject.name,
+          ...addTimestamp()
+        });
+      }
       
       // Validate response data structure
       if (!Array.isArray(data)) {
-        console.error('❌ Invalid response format: expected array, got', typeof data);
+        logger.error('Invalid response format', {
+          expectedType: 'array',
+          actualType: typeof data,
+          projectName: selectedProject.name,
+          requestUrl,
+          ...addTimestamp()
+        });
         setError('Invalid response format from server');
         setFiles([]);
         return;
@@ -90,25 +130,55 @@ export const useFileTree = (selectedProject) => {
       // Validate each file object has required properties
       const validFiles = data.filter(file => {
         if (!file || typeof file !== 'object') {
-          console.warn('⚠️ Invalid file object:', file);
+          logger.warn('Invalid file object', {
+            file,
+            fileType: typeof file,
+            projectName: selectedProject.name,
+            ...addTimestamp()
+          });
           return false;
         }
         if (!file.name || !file.path || !file.type) {
-          console.warn('⚠️ File missing required properties:', file);
+          logger.warn('File missing required properties', {
+            file,
+            missingProperties: {
+              name: !file.name,
+              path: !file.path,
+              type: !file.type
+            },
+            projectName: selectedProject.name,
+            ...addTimestamp()
+          });
           return false;
         }
         return true;
       });
       
       if (validFiles.length < data.length) {
-        console.warn(`⚠️ Filtered out ${data.length - validFiles.length} invalid file objects`);
+        logger.warn('Filtered out invalid file objects', {
+          totalFiles: data.length,
+          validFiles: validFiles.length,
+          filteredCount: data.length - validFiles.length,
+          projectName: selectedProject.name,
+          ...addTimestamp()
+        });
       }
       
       setFiles(validFiles);
       setError(null);
+      
+      logger.info('Files loaded successfully', {
+        fileCount: validFiles.length,
+        projectName: selectedProject.name,
+        ...addTimestamp()
+      });
     } catch (error) {
-      console.error('❌ Error fetching files:', error);
-      console.error('Stack trace:', error.stack);
+      logger.error('Error fetching files', {
+        error: sanitizeError(error),
+        projectName: selectedProject.name,
+        requestUrl: `/api/projects/${encodeURIComponent(selectedProject.name)}/files`,
+        ...addTimestamp()
+      });
       
       // Provide specific error messages for common network issues
       let errorMessage;
@@ -122,6 +192,14 @@ export const useFileTree = (selectedProject) => {
       
       setError(errorMessage);
       setFiles([]);
+      
+      logger.error('File fetch operation failed', {
+        errorMessage,
+        errorType: error.name,
+        projectName: selectedProject.name,
+        networkError: error.name === 'TypeError' && error.message === 'Failed to fetch',
+        ...addTimestamp()
+      });
     } finally {
       setLoading(false);
     }

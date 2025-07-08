@@ -1,4 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
+import { createLogger } from '@kit/logger/browser';
+
+const logger = createLogger({ scope: 'audio-recorder' });
 
 export function useAudioRecorder() {
   const [isRecording, setRecording] = useState(false);
@@ -54,7 +57,12 @@ export function useAudioRecorder() {
       };
 
       recorder.onerror = (event) => {
-        console.error('MediaRecorder error:', event);
+        logger.error('MediaRecorder error', {
+          event,
+          error: event.error,
+          mimeType,
+          recorderState: recorder.state
+        });
         setError('Recording failed');
         setRecording(false);
       };
@@ -62,24 +70,42 @@ export function useAudioRecorder() {
       // Start recording
       recorder.start();
       setRecording(true);
-      console.log('Recording started');
+      logger.info('Recording started', {
+        mimeType,
+        sampleRate: 16000,
+        echoCancellation: true,
+        noiseSuppression: true
+      });
     } catch (err) {
-      console.error('Failed to start recording:', err);
+      logger.error('Failed to start recording', {
+        error: err,
+        message: err.message,
+        name: err.name,
+        stack: err.stack
+      });
       setError(err.message || 'Failed to start recording');
       setRecording(false);
     }
   }, []);
 
   const stop = useCallback(() => {
-    console.log('Stop called, recorder state:', mediaRecorderRef.current?.state);
+    const recorderState = mediaRecorderRef.current?.state;
+    logger.debug('Stop called', { recorderState });
     
     try {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.stop();
-        console.log('Recording stopped');
+        logger.info('Recording stopped', {
+          recordingDuration: 'unknown', // Could track this if needed
+          chunksCount: chunksRef.current.length
+        });
       }
     } catch (err) {
-      console.error('Error stopping recorder:', err);
+      logger.error('Error stopping recorder', {
+        error: err,
+        recorderState,
+        stack: err.stack
+      });
     }
     
     // Always update state

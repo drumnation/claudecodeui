@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Input } from '@/shared-components/Input/Input';
 import { Button } from '@/shared-components/Button/Button';
-import { Brain, X, Zap, CheckCircle, Clock, AlertCircle, FileText, Image, Upload, Camera } from 'lucide-react';
+import { Brain, X, Zap, CheckCircle, Clock, AlertCircle, FileText, Image, Upload, Camera, Terminal, Download } from 'lucide-react';
 import { usePlanner } from './PlannerModal.hook';
 import * as S from './PlannerModal.styles';
 
@@ -113,6 +113,39 @@ export const PlannerModal = ({
     if (completedAgents.includes(agentId)) return 'completed';
     if (currentAgent === agentId) return 'running';
     return 'pending';
+  };
+
+  const getErrorHelp = (errorMessage) => {
+    if (!errorMessage) return null;
+    
+    const lowerError = errorMessage.toLowerCase();
+    
+    if (lowerError.includes('claude cli not found') || lowerError.includes('claude_binary_missing')) {
+      return (
+        <>
+          <Terminal className="w-3 h-3 inline mr-1" />
+          Install Claude CLI: <code>npm install -g @anthropic-ai/claude-cli</code>
+        </>
+      );
+    }
+    
+    if (lowerError.includes('prompt file') || lowerError.includes('prompt_file_missing')) {
+      return 'Ensure prompt files are present in the .brain/prompts directory';
+    }
+    
+    if (lowerError.includes('not executable')) {
+      return 'Make the Claude binary executable: chmod +x <path-to-claude>';
+    }
+    
+    if (lowerError.includes('project path')) {
+      return 'Verify the project path exists and is accessible';
+    }
+    
+    if (lowerError.includes('websocket') || lowerError.includes('connection')) {
+      return 'Check your network connection and ensure the backend is running';
+    }
+    
+    return null;
   };
 
   const getStatusIcon = (status) => {
@@ -317,7 +350,12 @@ export const PlannerModal = ({
             {error && (
               <S.ErrorMessage>
                 <AlertCircle className="w-4 h-4" />
-                {error}
+                <div>
+                  <div>{error}</div>
+                  {getErrorHelp(error) && (
+                    <S.ErrorHelp>{getErrorHelp(error)}</S.ErrorHelp>
+                  )}
+                </div>
               </S.ErrorMessage>
             )}
           </S.PlanningSection>
@@ -576,7 +614,12 @@ export const PlannerModal = ({
                 {error && (
                   <S.MobileErrorMessage>
                     <AlertCircle className="w-4 h-4" />
-                    {error}
+                    <div>
+                      <div>{error}</div>
+                      {getErrorHelp(error) && (
+                        <S.MobileErrorHelp>{getErrorHelp(error)}</S.MobileErrorHelp>
+                      )}
+                    </div>
                   </S.MobileErrorMessage>
                 )}
               </S.MobilePlanningSection>

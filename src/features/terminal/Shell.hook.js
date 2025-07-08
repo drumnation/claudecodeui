@@ -11,8 +11,10 @@ import {
   getWebSocketUrl,
   processTerminalOutput
 } from '@/features/terminal/Shell.logic';
+import { useLogger, sanitizeError, addTimestamp, isLevelEnabled, truncateData } from '../../logger';
 
 export const useShell = ({ selectedProject, selectedSession, isActive }) => {
+  const logger = useLogger({ hook: 'useShell' });
   const terminalRef = useRef(null);
   const terminal = useRef(null);
   const fitAddon = useRef(null);
@@ -27,14 +29,25 @@ export const useShell = ({ selectedProject, selectedSession, isActive }) => {
 
   // Connect to shell function
   const connectToShell = () => {
-    console.log('[Shell Hook] connectToShell called', {
+    logger.debug('connectToShell called', {
       isInitialized,
       isConnected,
-      isConnecting
+      isConnecting,
+      projectName: selectedProject?.name,
+      sessionId: selectedSession?.id,
+      ...addTimestamp()
     });
     
     if (!isInitialized || isConnected || isConnecting) {
-      console.log('[Shell Hook] Skipping connection - conditions not met');
+      if (isLevelEnabled(logger, 'debug')) {
+        logger.debug('Skipping connection - conditions not met', {
+          isInitialized,
+          isConnected,
+          isConnecting,
+          projectName: selectedProject?.name,
+          ...addTimestamp()
+        });
+      }
       return;
     }
     
@@ -47,7 +60,12 @@ export const useShell = ({ selectedProject, selectedSession, isActive }) => {
 
   // Disconnect from shell function
   const disconnectFromShell = () => {
-    console.log('Disconnecting from shell...');
+    logger.info('Disconnecting from shell', {
+      wasConnected: isConnected,
+      projectName: selectedProject?.name,
+      sessionId: selectedSession?.id,
+      ...addTimestamp()
+    });
     
     if (ws.current) {
       ws.current.close();
@@ -63,7 +81,11 @@ export const useShell = ({ selectedProject, selectedSession, isActive }) => {
   
   // Start fresh session (without resume)
   const startFreshSession = () => {
-    console.log('[Shell Hook] Starting fresh session');
+    logger.info('Starting fresh session', {
+      projectName: selectedProject?.name,
+      sessionId: selectedSession?.id,
+      ...addTimestamp()
+    });
     
     // First disconnect
     if (ws.current) {
@@ -102,18 +124,39 @@ export const useShell = ({ selectedProject, selectedSession, isActive }) => {
 
         ws.current.onmessage = (event) => {
           try {
-            console.log('[Shell Hook] Received WebSocket message:', event.data.substring(0, 100));
+            if (isLevelEnabled(logger, 'trace')) {
+              logger.trace('Received WebSocket message', {
+                messagePreview: truncateData(event.data, 100),
+                projectName: selectedProject?.name,
+                ...addTimestamp()
+              });
+            }
             const data = JSON.parse(event.data);
-            console.log('[Shell Hook] Parsed message type:', data.type);
+            if (isLevelEnabled(logger, 'trace')) {
+              logger.trace('Parsed message type', {
+                messageType: data.type,
+                projectName: selectedProject?.name,
+                ...addTimestamp()
+              });
+            }
             
             if (!terminal.current) {
-              console.error('[Shell Hook] Terminal not initialized, cannot process output');
+              logger.error('Terminal not initialized, cannot process output', {
+                projectName: selectedProject?.name,
+                sessionId: selectedSession?.id,
+                ...addTimestamp()
+              });
               return;
             }
             
             processTerminalOutput(data, terminal.current);
           } catch (error) {
-            console.error('[Shell Hook] Error processing message:', error, event.data);
+            logger.error('Error processing message', {
+              error: sanitizeError(error),
+              messageData: truncateData(event.data, 200),
+              projectName: selectedProject?.name,
+              ...addTimestamp()
+            });
           }
         };
 
@@ -219,9 +262,16 @@ export const useShell = ({ selectedProject, selectedSession, isActive }) => {
 
       ws.current.onmessage = (event) => {
         try {
-          console.log('[Shell Hook] Received WebSocket message:', event.data.substring(0, 100));
+          if (isLevelEnabled(logger, 'trace')) {
+            logger.trace('Received WebSocket message', { 
+              messageLength: event.data.length,
+              preview: event.data.substring(0, 50) + '...'
+            });
+          }
           const data = JSON.parse(event.data);
-          console.log('[Shell Hook] Parsed message type:', data.type);
+          if (isLevelEnabled(logger, 'trace')) {
+            logger.trace('Parsed message type', { type: data.type });
+          }
           
           if (!terminal.current) {
             console.error('[Shell Hook] Terminal not initialized, cannot process output');
@@ -286,11 +336,13 @@ export const useShell = ({ selectedProject, selectedSession, isActive }) => {
 
   // Initialize terminal when component mounts
   useEffect(() => {
-    console.log('Terminal initialization effect triggered', { 
-      hasTerminalRef: !!terminalRef.current, 
-      selectedProject, 
-      isRestarting 
-    });
+    if (isLevelEnabled(logger, 'trace')) {
+      logger.trace('Terminal initialization effect triggered', { 
+        hasTerminalRef: !!terminalRef.current, 
+        hasProject: !!selectedProject,
+        isRestarting 
+      });
+    }
     
     if (!terminalRef.current || !selectedProject || isRestarting) {
       return;

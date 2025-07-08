@@ -111,7 +111,7 @@ export class BacklogService {
       try {
         const cliPath = await resolveCli('backlog', 'BACKLOG_CLI_PATH');
         const command = cliPath || backlogCommand;
-        const env = getEnhancedEnv();
+        const env = await getEnhancedEnv();
         
         await execFileAsync(command, ['init'], { 
           cwd: backlogPath,
@@ -131,7 +131,7 @@ export class BacklogService {
     try {
       const cliPath = await resolveCli('backlog', 'BACKLOG_CLI_PATH');
       const command = cliPath || backlogCliService.getCommand();
-      const env = getEnhancedEnv();
+      const env = await getEnhancedEnv();
       
       const { stdout } = await execFileAsync(command, ['task', 'list', '--json'], { 
         cwd: backlogPath,
@@ -184,7 +184,7 @@ export class BacklogService {
     try {
       const cliPath = await resolveCli('backlog', 'BACKLOG_CLI_PATH');
       const command = cliPath || backlogCliService.getCommand();
-      const env = getEnhancedEnv();
+      const env = await getEnhancedEnv();
       
       const { stdout } = await execFileAsync(command, args, { 
         cwd: backlogPath,
@@ -241,7 +241,7 @@ export class BacklogService {
     try {
       const cliPath = await resolveCli('backlog', 'BACKLOG_CLI_PATH');
       const command = cliPath || backlogCliService.getCommand();
-      const env = getEnhancedEnv();
+      const env = await getEnhancedEnv();
       
       await execFileAsync(command, args, { 
         cwd: backlogPath,
@@ -270,7 +270,7 @@ export class BacklogService {
     try {
       const cliPath = await resolveCli('backlog', 'BACKLOG_CLI_PATH');
       const command = cliPath || backlogCliService.getCommand();
-      const env = getEnhancedEnv();
+      const env = await getEnhancedEnv();
       
       await execFileAsync(command, ['task', 'archive', taskId], { 
         cwd: backlogPath,

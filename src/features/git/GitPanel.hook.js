@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { gitApi } from '@/features/git/GitPanel.logic';
+import { useLogger, sanitizeError, addTimestamp, isLevelEnabled } from '../../logger';
+
 // Use project.name directly - backend expects the project name from projects list
 
 export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChange) => {
+  const logger = useLogger({ hook: 'useGitPanel' });
   // State management - use external git status if provided
   const [gitStatus, setGitStatus] = useState(externalGitStatus || null);
   const [gitDiff, setGitDiff] = useState({});
@@ -51,7 +54,12 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
         }));
       }
     } catch (error) {
-      console.error('Error fetching file diff:', error);
+      logger.error('Error fetching file diff', {
+        error: sanitizeError(error),
+        filePath,
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
     }
   }, [selectedProject?.name]);
 
@@ -66,7 +74,11 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
       
       if (data) {
         if (data.error) {
-          console.error('Git status error:', data.error);
+          logger.error('Git status error', {
+            error: data.error,
+            projectName: selectedProject.name,
+            ...addTimestamp()
+          });
           setError(data.error);
           setGitStatus(null);
         } else {
@@ -132,7 +144,12 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
                   const diff = await gitApi.fetchFileDiff(selectedProject.name, file);
                   return { file, diff };
                 } catch (error) {
-                  console.error('Error fetching diff for file:', file, error);
+                  logger.error('Error fetching diff for file', {
+                    error: sanitizeError(error),
+                    file,
+                    projectName: selectedProject.name,
+                    ...addTimestamp()
+                  });
                   return null;
                 }
               })
@@ -154,7 +171,11 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
         setGitStatus(null);
       }
     } catch (error) {
-      console.error('Error fetching git status:', error);
+      logger.error('Error fetching git status', {
+        error: sanitizeError(error),
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
       setError('Failed to fetch git status. Please check if this is a git repository.');
     } finally {
       setIsLoading(false);
@@ -168,7 +189,11 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
       const branches = await gitApi.fetchBranches(selectedProject.name);
       setBranches(branches);
     } catch (error) {
-      console.error('Error fetching branches:', error);
+      logger.error('Error fetching branches', {
+        error: sanitizeError(error),
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
       setError('Failed to fetch branches');
     }
   }, [selectedProject?.name]);
@@ -179,7 +204,11 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
       const commits = await gitApi.fetchRecentCommits(selectedProject.name);
       setRecentCommits(commits);
     } catch (error) {
-      console.error('Error fetching commits:', error);
+      logger.error('Error fetching commits', {
+        error: sanitizeError(error),
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
       setError('Failed to fetch commit history');
     }
   }, [selectedProject?.name]);
@@ -195,11 +224,21 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
         setShowBranchDropdown(false);
         fetchGitStatus();
       } else {
-        console.error('Failed to switch branch:', data.error);
+        logger.error('Failed to switch branch', {
+          error: data.error,
+          branchName,
+          projectName: selectedProject.name,
+          ...addTimestamp()
+        });
         setError(`Failed to switch branch: ${data.error}`);
       }
     } catch (error) {
-      console.error('Error switching branch:', error);
+      logger.error('Error switching branch', {
+        error: sanitizeError(error),
+        branchName,
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
       setError('Failed to switch branch');
     }
   }, [selectedProject?.name, fetchGitStatus]);
@@ -219,11 +258,21 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
         fetchBranches();
         fetchGitStatus();
       } else {
-        console.error('Failed to create branch:', data.error);
+        logger.error('Failed to create branch', {
+          error: data.error,
+          branchName: newBranchName,
+          projectName: selectedProject.name,
+          ...addTimestamp()
+        });
         setError(`Failed to create branch: ${data.error}`);
       }
     } catch (error) {
-      console.error('Error creating branch:', error);
+      logger.error('Error creating branch', {
+        error: sanitizeError(error),
+        branchName: newBranchName,
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
       setError('Failed to create branch');
     } finally {
       setIsCreatingBranch(false);
@@ -241,7 +290,12 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
         }));
       }
     } catch (error) {
-      console.error('Error fetching commit diff:', error);
+      logger.error('Error fetching commit diff', {
+        error: sanitizeError(error),
+        commitHash,
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
     }
   };
 
@@ -253,11 +307,21 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
       if (data.message) {
         setCommitMessage(data.message);
       } else {
-        console.error('Failed to generate commit message:', data.error);
+        logger.error('Failed to generate commit message', {
+          error: data.error,
+          selectedFiles: Array.from(selectedFiles),
+          projectName: selectedProject.name,
+          ...addTimestamp()
+        });
         setError('Failed to generate commit message');
       }
     } catch (error) {
-      console.error('Error generating commit message:', error);
+      logger.error('Error generating commit message', {
+        error: sanitizeError(error),
+        selectedFiles: Array.from(selectedFiles),
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
       setError('Failed to generate commit message');
     } finally {
       setIsGeneratingMessage(false);
@@ -278,11 +342,21 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
         setSelectedFiles(new Set());
         fetchGitStatus();
       } else {
-        console.error('Commit failed:', data.error);
+        logger.error('Commit failed', {
+          error: data.error,
+          projectName: selectedProject.name,
+          filesCount: selectedFiles.size,
+          ...addTimestamp()
+        });
         setError(`Commit failed: ${data.error}`);
       }
     } catch (error) {
-      console.error('Error committing changes:', error);
+      logger.error('Error committing changes', {
+        error: sanitizeError(error),
+        projectName: selectedProject?.name,
+        filesCount: selectedFiles.size,
+        ...addTimestamp()
+      });
       setError('Failed to commit changes');
     } finally {
       setIsCommitting(false);
@@ -388,7 +462,9 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
 
   const createPullRequest = async (targetBranch = 'main') => {
     if (!selectedProject) {
-      console.log('🚫 No project selected for PR creation');
+      logger.warn('No project selected for PR creation', {
+        ...addTimestamp()
+      });
       return;
     }
 
@@ -399,7 +475,12 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
       const result = await gitApi.createPullRequest(selectedProject.name, targetBranch);
       
       if (result.error) {
-        console.error('PR creation error:', result.error);
+        logger.error('PR creation error', {
+          error: result.error,
+          projectName: selectedProject.name,
+          targetBranch,
+          ...addTimestamp()
+        });
         setPrError(result.error);
         return;
       }
@@ -410,13 +491,23 @@ export const useGitPanel = (selectedProject, externalGitStatus, onGitStatusChang
         window.open(result.prUrl, '_blank');
       } else if (result.message) {
         // Handle case where branch was pushed but no PR URL was generated
-        console.log('Branch pushed successfully:', result.message);
+        logger.info('Branch pushed successfully', {
+          message: result.message,
+          projectName: selectedProject.name,
+          targetBranch,
+          ...addTimestamp()
+        });
       }
       
       // Clear other error states on success
       setError(null);
     } catch (error) {
-      console.error('Error creating PR:', error);
+      logger.error('Error creating PR', {
+        error: sanitizeError(error),
+        projectName: selectedProject?.name,
+        targetBranch,
+        ...addTimestamp()
+      });
       setPrError('Failed to create pull request');
     } finally {
       setIsCreatingPR(false);

@@ -131,7 +131,15 @@ export const usePlanner = (selectedProject, onPlanComplete) => {
 
   const handlePlannerError = (message) => {
     const errorMsg = message.error || message.data?.error || 'An unknown error occurred';
-    setError(errorMsg);
+    const errorType = message.errorType || message.data?.errorType;
+    
+    // Add error type information to the error message if available
+    let enhancedError = errorMsg;
+    if (errorType && !errorMsg.toLowerCase().includes(errorType.toLowerCase())) {
+      enhancedError = `${errorMsg} (${errorType})`;
+    }
+    
+    setError(enhancedError);
     setIsPlanning(false);
     setPlannerState(prev => ({
       ...prev,

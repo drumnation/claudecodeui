@@ -6,6 +6,7 @@ import { createLogger } from '@kit/logger/node';
 import { handleGetProjects } from './projects.controller';
 import { handleClaudeWebSocketConnection } from './modules/claude-cli';
 import { handleGetProjectFiles } from './modules/files';
+import { handleGetFile, handleSaveFile } from './modules/files/file.controller';
 import { handleShellWebSocketConnection } from './modules/shell';
 import { 
   handlePlanFeature, 
@@ -20,6 +21,7 @@ import {
   handleGitCheckout, 
   handleGitCreateBranch 
 } from './modules/git/git.controller';
+import { handleInitializeGitRepo, handleCheckGitStatus } from './modules/git/git-init.controller';
 import {
   handleGetBacklog,
   handleCreateTask,
@@ -30,7 +32,9 @@ import {
   handleReviewTasks,
   handleBacklogHealth,
   handleBacklogInstall,
-  handleBacklogInstallInstructions
+  handleBacklogInstallInstructions,
+  handleBacklogDebug,
+  handleBacklogEnvironment
 } from './backlog.controller';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -49,13 +53,18 @@ const __dirname = dirname(__filename);
 const envPath = join(__dirname, '../../../.env');
 const envResult = dotenv.config({ path: envPath });
 
+// Create early logger for initialization
+const initLogger = createLogger({ scope: 'backend-init' });
+
 // Log environment loading status
 if (envResult.error) {
-  console.warn('Warning: Could not load .env file from', envPath);
+  initLogger.warn('Could not load .env file', { envPath });
 } else {
-  console.log('✅ Environment variables loaded from', envPath);
-  console.log('OpenAI API Key:', process.env.OPENAI_API_KEY ? '***' + process.env.OPENAI_API_KEY.slice(-4) : 'Not set');
-  console.log('USE_AI_TITLES:', process.env.USE_AI_TITLES);
+  initLogger.info('Environment variables loaded', { 
+    envPath,
+    hasOpenAiKey: !!process.env.OPENAI_API_KEY,
+    useAiTitles: process.env.USE_AI_TITLES
+  });
 }
 
 const logger = createLogger({ scope: 'backend-main' });
@@ -352,6 +361,10 @@ app.post('/api/git/commit', handleGitCommit);
 app.post('/api/git/checkout', handleGitCheckout);
 app.post('/api/git/create-branch', handleGitCreateBranch);
 
+// Git initialization routes
+app.get('/api/projects/:projectName/git/status', handleCheckGitStatus);
+app.post('/api/projects/:projectName/git/init', handleInitializeGitRepo);
+
 // Planner routes
 app.post('/api/planner/plan', handlePlanFeature);
 app.get('/api/planner/status/:sessionId', handleGetPlannerStatus);
@@ -370,6 +383,8 @@ app.post('/api/projects/:projectName/backlog/review', handleReviewTasks);
 app.get('/api/backlog/health', handleBacklogHealth);
 app.post('/api/backlog/install', handleBacklogInstall);
 app.get('/api/backlog/install-instructions', handleBacklogInstallInstructions);
+app.get('/api/backlog/debug', handleBacklogDebug);
+app.get('/api/backlog/environment', handleBacklogEnvironment);
 
 // File routes
 app.get('/api/files', (req, res) => {
@@ -377,7 +392,23 @@ app.get('/api/files', (req, res) => {
   res.json([]);
 });
 
+// Debug endpoint to check project name format
+app.get('/api/debug/project/:projectName', (req, res) => {
+  logger.info('Debug project endpoint hit', {
+    raw: req.params.projectName,
+    decoded: decodeURIComponent(req.params.projectName),
+    url: req.url,
+    originalUrl: req.originalUrl
+  });
+  res.json({
+    raw: req.params.projectName,
+    decoded: decodeURIComponent(req.params.projectName)
+  });
+});
+
 app.get('/api/projects/:projectName/files', handleGetProjectFiles);
+app.get('/api/projects/:projectName/file', handleGetFile);
+app.put('/api/projects/:projectName/file', handleSaveFile);
 
 // Slash commands route
 app.get('/api/slash-commands', (req, res) => {
@@ -850,14 +881,19 @@ const server = createServer(app);
 const wss = new WebSocketServer({ 
   server,
   verifyClient: (info: any) => {
-    logger.info('[WebSocket] Connection attempt', { url: info.req.url });
+    if (logger.isLevelEnabled('trace')) {
+      logger.trace('[WebSocket] Connection attempt', { url: info.req.url });
+    }
     return true; // Accept all connections for now
   }
 });
 
 wss.on('connection', (ws, request) => {
   const url = request.url;
-  logger.info('[WebSocket] Client connected', { url });
+  
+  if (logger.isLevelEnabled('debug')) {
+    logger.debug('[WebSocket] Client connected', { url });
+  }
   
   // Route based on URL path
   if (url === '/shell') {
