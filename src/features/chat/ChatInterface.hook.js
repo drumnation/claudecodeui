@@ -14,7 +14,8 @@ export const useChatInterface = ({
   onSessionInactive,
   onReplaceTemporarySession,
   onNavigateToSession,
-  autoScrollToBottom
+  autoScrollToBottom,
+  connectionHealth = 'disconnected'
 }) => {
   const logger = useLogger({ hook: 'useChatInterface' });
   // Core state
@@ -49,6 +50,8 @@ export const useChatInterface = ({
   const [textareaExpanded, setTextareaExpanded] = useState(false);
   const [isUserScrolledUp, setIsUserScrolledUp] = useState(false);
   const [claudeStatus, setClaudeStatus] = useState(null);
+  const [lastValidStatus, setLastValidStatus] = useState(null);
+  const [statusUpdateTimestamp, setStatusUpdateTimestamp] = useState(Date.now());
   
   // File dropdown states
   const [showFileDropdown, setShowFileDropdown] = useState(false);
@@ -493,6 +496,7 @@ export const useChatInterface = ({
           // Claude has finished processing - no longer streaming
           setIsStreaming(false);
           setIsSessionTransitioning(false);
+          setLastValidStatus(null);
           
           // Check if there are queued messages
           if (messageQueue.length > 0) {
@@ -569,6 +573,7 @@ export const useChatInterface = ({
           if (logger.isLevelEnabled('debug')) {
             logger.debug('Received claude-status message', {
               data: latestMessage.data,
+              connectionHealth: latestMessage.connectionHealth,
               sessionId: selectedSession?.id,
               projectName: selectedProject?.name,
               messageType: 'claude-status',
@@ -577,14 +582,30 @@ export const useChatInterface = ({
           }
           const statusData = latestMessage.data;
           if (statusData) {
+            // Validate status data has required fields
+            const hasValidContent = statusData.message || statusData.phase || statusData.status || typeof statusData === 'string';
+            
+            if (!hasValidContent) {
+              logger.warn('Received incomplete status data', {
+                statusData,
+                sessionId: selectedSession?.id,
+                ...addTimestamp()
+              });
+              // Skip incomplete status updates
+              break;
+            }
+            
             let statusInfo = {
               text: 'Working...',
               tokens: 0,
               can_interrupt: true,
               toolStatus: null,
-              contextRemaining: null
+              contextRemaining: null,
+              phase: statusData.phase || 'processing',
+              connectionHealth: statusData.connectionHealth || connectionHealth
             };
             
+            // Handle standardized StatusEnvelope format
             if (statusData.message) {
               statusInfo.text = statusData.message;
             } else if (statusData.status) {
@@ -593,20 +614,32 @@ export const useChatInterface = ({
               statusInfo.text = statusData;
             }
             
+            // Handle token information
             if (statusData.tokens) {
-              statusInfo.tokens = statusData.tokens;
+              // Handle new TokenUsage format
+              if (typeof statusData.tokens === 'object') {
+                statusInfo.tokens = statusData.tokens.total || statusData.tokens.output || 0;
+                statusInfo.tokenDetails = statusData.tokens;
+              } else {
+                statusInfo.tokens = statusData.tokens;
+              }
             } else if (statusData.token_count) {
               statusInfo.tokens = statusData.token_count;
             }
             
-            if (statusData.can_interrupt !== undefined) {
+            // Handle interrupt capability
+            if (statusData.canInterrupt !== undefined) {
+              statusInfo.can_interrupt = statusData.canInterrupt;
+            } else if (statusData.can_interrupt !== undefined) {
               statusInfo.can_interrupt = statusData.can_interrupt;
             }
             
+            // Handle tool status
             if (statusData.toolStatus) {
               statusInfo.toolStatus = statusData.toolStatus;
             }
             
+            // Handle context remaining
             if (statusData.contextRemaining !== null && statusData.contextRemaining !== undefined) {
               statusInfo.contextRemaining = statusData.contextRemaining;
             }
@@ -619,10 +652,44 @@ export const useChatInterface = ({
                 ...addTimestamp()
               });
             }
+            
             setClaudeStatus(statusInfo);
+            setLastValidStatus(statusInfo);
+            setStatusUpdateTimestamp(Date.now());
             setIsLoading(true);
             setCanAbortSession(statusInfo.can_interrupt);
             setIsStreaming(true);
+          }
+          break;
+          
+        case 'heartbeat':
+          // Handle heartbeat messages to keep connection alive
+          if (latestMessage.data) {
+            // Update status timestamp to prevent stale detection
+            setStatusUpdateTimestamp(Date.now());
+            
+            // If we have cached status in heartbeat, use it
+            if (latestMessage.data.phase || latestMessage.data.message) {
+              const heartbeatStatus = {
+                ...lastValidStatus,
+                ...latestMessage.data,
+                connectionHealth: latestMessage.connectionHealth || connectionHealth
+              };
+              setClaudeStatus(heartbeatStatus);
+            }
+          }
+          break;
+          
+        case 'connection-health':
+          // Handle connection health updates
+          if (latestMessage.data) {
+            if (logger.isLevelEnabled('debug')) {
+              logger.debug('Connection health update', {
+                health: latestMessage.data.health,
+                missedHeartbeats: latestMessage.data.missedHeartbeats,
+                ...addTimestamp()
+              });
+            }
           }
           break;
           
@@ -630,6 +697,7 @@ export const useChatInterface = ({
           // Stream has ended - no longer streaming
           setIsStreaming(false);
           setIsSessionTransitioning(false);
+          setLastValidStatus(null);
           
           // Check if there are queued messages
           if (messageQueue.length > 0) {
@@ -926,6 +994,7 @@ export const useChatInterface = ({
     setSlashPosition,
     claudeStatus,
     setClaudeStatus,
+    statusUpdateTimestamp,
     messageQueue,
     setMessageQueue,
     

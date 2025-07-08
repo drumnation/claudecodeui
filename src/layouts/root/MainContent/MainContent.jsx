@@ -37,6 +37,7 @@ export const MainContent = ({
   ws, 
   sendMessage, 
   messages,
+  connectionHealth,
   isMobile,
   onMenuClick,
   isLoading,
@@ -103,6 +104,7 @@ export const MainContent = ({
             ws={ws}
             sendMessage={sendMessage}
             messages={messages}
+            connectionHealth={connectionHealth}
             onFileOpen={handleFileOpen}
             onInputFocusChange={onInputFocusChange}
             onSessionActive={onSessionActive}

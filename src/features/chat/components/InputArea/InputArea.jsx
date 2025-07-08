@@ -30,6 +30,8 @@ const InputArea = ({
   setTextareaExpanded,
   isLoading,
   claudeStatus,
+  connectionHealth,
+  lastUpdateTime,
   showCommandMenu,
   filteredCommands,
   showFileDropdown,
@@ -114,6 +116,8 @@ const InputArea = ({
         status={claudeStatus}
         isLoading={isLoading}
         onAbort={handleAbortSession}
+        connectionHealth={connectionHealth}
+        lastUpdateTime={lastUpdateTime}
       />
       
       <StyledForm onSubmit={handleSubmit}>

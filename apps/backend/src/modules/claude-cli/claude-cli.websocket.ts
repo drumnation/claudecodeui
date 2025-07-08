@@ -8,6 +8,10 @@ import { PlannerRequest } from '../planner/planner.types.js';
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
+import { createReliableWebSocketSender, ReliableWebSocketSender } from '../../lib/reliableWebSocket';
+import { createHeartbeatManager, HeartbeatManager } from '../../lib/heartbeatManager';
+import { ConnectionHealth } from '../../types/status';
+import { updateSessionStatus } from '../../api/status-sync';
 
 const logger = createLogger({ scope: 'claude-cli-websocket' });
 
@@ -25,9 +29,36 @@ const manuallyEditedSessions = new Set<string>();
 export class ClaudeWebSocketHandler {
   private ws: WebSocket;
   private currentSessionId: string | null = null;
+  private reliableSender: ReliableWebSocketSender;
+  private heartbeatManager: HeartbeatManager;
+  private lastStatusTimestamp: number = 0;
+  private statusHistory: Map<string, any[]> = new Map();
 
   constructor(ws: WebSocket) {
     this.ws = ws;
+    
+    // Initialize reliable sender and heartbeat manager
+    this.reliableSender = createReliableWebSocketSender();
+    this.heartbeatManager = createHeartbeatManager({ interval: 5000 });
+    
+    // Setup heartbeat handlers
+    this.heartbeatManager.on('heartbeat', (heartbeat) => {
+      this.reliableSender.sendReliableMessage(this.ws, {
+        type: 'heartbeat',
+        data: heartbeat.data,
+        connectionHealth: this.getConnectionHealth()
+      });
+    });
+    
+    // Handle connection state changes
+    this.ws.on('close', () => {
+      this.reliableSender.handleConnectionState(this.ws, 'disconnected');
+      this.heartbeatManager.stopHeartbeat();
+    });
+    
+    this.ws.on('open', () => {
+      this.reliableSender.handleConnectionState(this.ws, 'connected');
+    });
   }
 
   async handleClaudeCommand(data: ClaudeCommand): Promise<void> {
@@ -45,15 +76,15 @@ export class ClaudeWebSocketHandler {
       activeServices.delete(sessionId);
     }
 
-    // Send initial status
-    this.sendMessage({
+    // Send initial status using reliable sender
+    this.reliableSender.sendReliableMessage(this.ws, {
       type: 'claude-status',
       status: {
         text: 'Connecting to Claude...',
         tokens: 0,
         can_interrupt: true
       }
-    });
+    }, { priority: 'high' });
 
     try {
       // Create new Claude CLI service
@@ -75,10 +106,10 @@ export class ClaudeWebSocketHandler {
 
     } catch (error) {
       logger.error('Failed to start Claude CLI', { error });
-      this.sendMessage({
+      this.reliableSender.sendReliableMessage(this.ws, {
         type: 'error',
         error: 'Failed to start Claude CLI'
-      });
+      }, { priority: 'high' });
       activeServices.delete(sessionId);
     }
   }
@@ -100,11 +131,11 @@ export class ClaudeWebSocketHandler {
       
       // Check if planning is already in progress
       if (plannerService.isRunning()) {
-        this.sendMessage({
+        this.reliableSender.sendReliableMessage(this.ws, {
           type: 'planner-error',
           error: 'Planning is already in progress',
           sessionId
-        });
+        }, { priority: 'high' });
         return;
       }
 
@@ -115,14 +146,14 @@ export class ClaudeWebSocketHandler {
       activePlannerServices.set(sessionId, plannerService);
 
       // Send initial status
-      this.sendMessage({
+      this.reliableSender.sendReliableMessage(this.ws, {
         type: 'planner-status',
         data: {
           status: 'starting',
           message: 'Initializing multi-agent planner...'
         },
         sessionId
-      });
+      }, { priority: 'high' });
 
       // Start planning (async)
       plannerService.planFeature(data)
@@ -145,11 +176,11 @@ export class ClaudeWebSocketHandler {
 
     } catch (error: any) {
       logger.error('Failed to start planner', { error, sessionId });
-      this.sendMessage({
+      this.reliableSender.sendReliableMessage(this.ws, {
         type: 'planner-error',
         error: 'Failed to start planner',
         sessionId
-      });
+      }, { priority: 'high' });
       activePlannerServices.delete(sessionId);
     }
   }
@@ -176,18 +207,22 @@ export class ClaudeWebSocketHandler {
     }
     
     // Send acknowledgment
-    this.sendMessage({
+    this.reliableSender.sendReliableMessage(this.ws, {
       type: 'session-aborted',
       sessionId: data.sessionId
-    });
+    }, { priority: 'high' });
     
     // Send stream-end to properly close the session
-    this.sendMessage({
+    this.reliableSender.sendReliableMessage(this.ws, {
       type: 'stream-end'
     });
   }
 
   cleanup(): void {
+    // Stop heartbeat and clear queues
+    this.heartbeatManager.stopHeartbeat();
+    this.reliableSender.clearAllMessages();
+    
     // Clean up any active services for this connection
     if (this.currentSessionId && activeServices.has(this.currentSessionId)) {
       const service = activeServices.get(this.currentSessionId);
@@ -254,10 +289,43 @@ export class ClaudeWebSocketHandler {
   private setupServiceHandlers(service: ClaudeCliService, sessionId: string): void {
     // Handle status updates
     service.on('status', (event: ClaudeEvent) => {
-      this.sendMessage({
-        type: 'claude-status',
+      // Track status update timestamp
+      this.lastStatusTimestamp = Date.now();
+      
+      // Store status in history for replay
+      if (!this.statusHistory.has(sessionId)) {
+        this.statusHistory.set(sessionId, []);
+      }
+      this.statusHistory.get(sessionId)!.push({
+        timestamp: Date.now(),
         data: event.data
       });
+      
+      // Limit history size
+      const history = this.statusHistory.get(sessionId)!;
+      if (history.length > 100) {
+        history.shift();
+      }
+      
+      // Send using reliable sender
+      this.reliableSender.sendReliableMessage(this.ws, {
+        type: 'claude-status',
+        data: event.data,
+        connectionHealth: this.getConnectionHealth()
+      }, { priority: 'high' });
+      
+      // Update status sync cache
+      if (sessionId && event.data) {
+        updateSessionStatus(sessionId, event.data);
+      }
+    });
+    
+    // Handle connection health updates
+    service.on('connection-health', (event: ClaudeEvent) => {
+      this.reliableSender.sendReliableMessage(this.ws, {
+        type: 'connection-health',
+        data: event.data
+      }, { priority: 'high' });
     });
 
     // Handle Claude responses (JSON format)
@@ -278,7 +346,7 @@ export class ClaudeWebSocketHandler {
         }
       }
       
-      this.sendMessage({
+      this.reliableSender.sendReliableMessage(this.ws, {
         type: 'claude-response',
         data: response
       });
@@ -286,7 +354,7 @@ export class ClaudeWebSocketHandler {
 
     // Handle raw output
     service.on('claude-output', (event: ClaudeEvent) => {
-      this.sendMessage({
+      this.reliableSender.sendReliableMessage(this.ws, {
         type: 'claude-output',
         data: event.data
       });
@@ -294,16 +362,19 @@ export class ClaudeWebSocketHandler {
 
     // Handle interactive prompts
     service.on('interactive-prompt', (event: ClaudeEvent) => {
-      this.sendMessage({
+      this.reliableSender.sendReliableMessage(this.ws, {
         type: 'claude-interactive-prompt',
         data: event.data,
         sessionId: event.sessionId
-      });
+      }, { priority: 'high' });
     });
 
     // Handle session creation
     service.on('session-created', (event: ClaudeEvent) => {
-      this.sendMessage({
+      // Start heartbeat when session is created
+      this.heartbeatManager.startHeartbeat();
+      
+      this.reliableSender.sendReliableMessage(this.ws, {
         type: 'session-created',
         sessionId: event.sessionId
       });
@@ -311,10 +382,10 @@ export class ClaudeWebSocketHandler {
 
     // Handle errors
     service.on('error', (event: ClaudeEvent) => {
-      this.sendMessage({
+      this.reliableSender.sendReliableMessage(this.ws, {
         type: 'claude-error',
         error: event.data
-      });
+      }, { priority: 'high' });
     });
 
     // Handle process exit
@@ -327,7 +398,10 @@ export class ClaudeWebSocketHandler {
       sessionMessageCounts.delete(sessionId);
       manuallyEditedSessions.delete(sessionId);
       
-      this.sendMessage({
+      // Stop heartbeat when process exits
+      this.heartbeatManager.stopHeartbeat();
+      
+      this.reliableSender.sendReliableMessage(this.ws, {
         type: 'claude-complete',
         exitCode: exitData.exitCode,
         isNewSession: !this.currentSessionId && !!sessionId
@@ -341,8 +415,42 @@ export class ClaudeWebSocketHandler {
 
     // Handle stream end
     service.on('stream-end', () => {
-      this.sendMessage({
+      this.reliableSender.sendReliableMessage(this.ws, {
         type: 'stream-end'
+      });
+    });
+  }
+  
+  private getConnectionHealth(): ConnectionHealth {
+    const now = Date.now();
+    const timeSinceLastStatus = now - this.lastStatusTimestamp;
+    
+    if (timeSinceLastStatus < 15000) {
+      return ConnectionHealth.CONNECTED;
+    } else if (timeSinceLastStatus < 30000) {
+      return ConnectionHealth.STALE;
+    } else {
+      return ConnectionHealth.DISCONNECTED;
+    }
+  }
+  
+  handleReconnectRequest(data: { sessionId: string; lastTimestamp?: number }): void {
+    const history = this.statusHistory.get(data.sessionId);
+    if (!history || history.length === 0) {
+      return;
+    }
+    
+    // Send missed status updates
+    const missedUpdates = data.lastTimestamp 
+      ? history.filter(h => h.timestamp > data.lastTimestamp!)
+      : history.slice(-10); // Send last 10 if no timestamp
+    
+    missedUpdates.forEach(update => {
+      this.reliableSender.sendReliableMessage(this.ws, {
+        type: 'claude-status',
+        data: update.data,
+        timestamp: update.timestamp,
+        replay: true
       });
     });
   }
@@ -510,11 +618,9 @@ export class ClaudeWebSocketHandler {
   }
 
   private sendMessage(message: ClaudeWebSocketMessage): void {
-    try {
-      this.ws.send(JSON.stringify(message));
-    } catch (error) {
-      logger.error('Failed to send WebSocket message', { error, message });
-    }
+    // Use reliable sender for all messages
+    const priority = message.type === 'claude-status' || message.type === 'error' ? 'high' : 'normal';
+    this.reliableSender.sendReliableMessage(this.ws, message, { priority });
   }
 }
 

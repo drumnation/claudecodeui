@@ -46,6 +46,7 @@ import multer from 'multer';
 import FormData from 'form-data';
 import fetch from 'node-fetch';
 import OpenAI from 'openai';
+import { createStatusSyncRouter } from './api/status-sync';
 
 // Load .env from monorepo root
 const __filename = fileURLToPath(import.meta.url);
@@ -106,6 +107,9 @@ app.get('/api/config', (req, res) => {
     apiUrl: `${req.protocol}://${host}`
   });
 });
+
+// Status sync API routes
+app.use('/api', createStatusSyncRouter());
 
 // Health check endpoint for shell
 app.get('/api/shell/health', async (req, res) => {
@@ -353,7 +357,7 @@ async function getSessionsForProject(projectPath: string, limit = 5): Promise<an
   return sessions;
 }
 
-// Git routes - using actual implementation from server/routes/git.js
+// Git routes
 app.get('/api/git/status', handleGitStatus);
 app.get('/api/git/branches', handleGitBranches);
 app.get('/api/git/diff', handleGitDiff);

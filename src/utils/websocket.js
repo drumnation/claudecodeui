@@ -1,28 +1,51 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createLogger } from '@kit/logger/browser';
 
 const logger = createLogger({ scope: 'websocket-utils' });
 
+// Simple WebSocket implementation - we'll use the existing logic for now
+// and implement the enhanced features directly in this file
 export function useWebSocket() {
   const [ws, setWs] = useState(null);
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionHealth, setConnectionHealth] = useState('disconnected');
   const reconnectTimeoutRef = useRef(null);
+  const lastMessageTimeRef = useRef(Date.now());
+  const messageQueueRef = useRef([]);
+  const healthCheckIntervalRef = useRef(null);
 
+  // Connection health monitoring
   useEffect(() => {
-    connect();
-    
-    return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (ws) {
-        ws.close();
+    const checkConnectionHealth = () => {
+      const now = Date.now();
+      const timeSinceLastMessage = now - lastMessageTimeRef.current;
+      
+      if (!isConnected) {
+        setConnectionHealth('disconnected');
+      } else if (timeSinceLastMessage > 30000) {
+        setConnectionHealth('disconnected');
+        // Force reconnection
+        if (ws) {
+          ws.close();
+        }
+      } else if (timeSinceLastMessage > 15000) {
+        setConnectionHealth('stale');
+      } else {
+        setConnectionHealth('connected');
       }
     };
-  }, []);
 
-  const connect = async () => {
+    healthCheckIntervalRef.current = setInterval(checkConnectionHealth, 5000);
+    
+    return () => {
+      if (healthCheckIntervalRef.current) {
+        clearInterval(healthCheckIntervalRef.current);
+      }
+    };
+  }, [isConnected, ws]);
+
+  const connect = useCallback(async () => {
     try {
       // Fetch server configuration to get the correct WebSocket URL
       let wsBaseUrl;
@@ -68,11 +91,38 @@ export function useWebSocket() {
         }
         setIsConnected(true);
         setWs(websocket);
+        setConnectionHealth('connected');
+        lastMessageTimeRef.current = Date.now();
+        
+        // Send any queued messages
+        const queue = [...messageQueueRef.current];
+        messageQueueRef.current = [];
+        queue.forEach(msg => {
+          try {
+            websocket.send(JSON.stringify(msg));
+          } catch (error) {
+            logger.error('Failed to send queued message', { error });
+          }
+        });
       };
 
       websocket.onmessage = (event) => {
+        lastMessageTimeRef.current = Date.now();
         try {
           const data = JSON.parse(event.data);
+          
+          // Handle heartbeat messages
+          if (data.type === 'heartbeat') {
+            // Update connection health but don't add to messages
+            setConnectionHealth('connected');
+            return;
+          }
+          
+          // Handle connection health updates
+          if (data.connectionHealth) {
+            setConnectionHealth(data.connectionHealth);
+          }
+          
           setMessages(prev => [...prev, data]);
         } catch (error) {
           logger.error('Error parsing WebSocket message', {
@@ -93,6 +143,7 @@ export function useWebSocket() {
         }
         setIsConnected(false);
         setWs(null);
+        setConnectionHealth('disconnected');
         
         // Attempt to reconnect after 3 seconds
         if (logger.isLevelEnabled('trace')) {
@@ -117,24 +168,63 @@ export function useWebSocket() {
         stack: error.stack
       });
     }
-  };
+  }, []);
 
-  const sendMessage = (message) => {
+  useEffect(() => {
+    connect();
+    
+    return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (healthCheckIntervalRef.current) {
+        clearInterval(healthCheckIntervalRef.current);
+      }
+      if (ws) {
+        ws.close();
+      }
+    };
+  }, [connect]);
+
+  const sendMessage = useCallback((message) => {
     if (ws && isConnected) {
-      ws.send(JSON.stringify(message));
+      try {
+        ws.send(JSON.stringify(message));
+        return true;
+      } catch (error) {
+        logger.error('Failed to send message', { error });
+        // Queue the message for retry
+        messageQueueRef.current.push(message);
+        return false;
+      }
     } else {
       logger.warn('Cannot send message - WebSocket not connected', {
         isConnected,
         wsExists: !!ws,
         messageType: message?.type
       });
+      // Queue the message for when we reconnect
+      messageQueueRef.current.push(message);
+      // Limit queue size
+      if (messageQueueRef.current.length > 100) {
+        messageQueueRef.current.shift();
+      }
+      return false;
     }
-  };
+  }, [ws, isConnected]);
 
   return {
     ws,
     sendMessage,
     messages,
-    isConnected
+    isConnected,
+    connectionHealth,
+    reconnect: () => {
+      if (ws) {
+        ws.close();
+      }
+      connect();
+    },
+    queueSize: messageQueueRef.current.length
   };
 }

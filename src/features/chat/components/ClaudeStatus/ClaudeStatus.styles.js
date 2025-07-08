@@ -109,3 +109,40 @@ export const ErrorSeparator = styled.span`
 export const SettingsButton = styled.button`
   ${tw`text-red-200 hover:text-white underline transition-colors bg-transparent border-none cursor-pointer p-0`}
 `;
+
+// Connection health indicator
+export const ConnectionIndicator = styled.div`
+  ${tw`w-2 h-2 rounded-full flex-shrink-0`}
+  background-color: ${({ $color }) => $color};
+  box-shadow: 0 0 0 2px ${({ $color }) => $color}33;
+  animation: ${({ $color }) => 
+    $color === '#f59e0b' ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 
+    $color === '#ef4444' ? 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 
+    'none'};
+  
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: .5;
+    }
+  }
+`;
+
+// Debug info components
+export const DebugInfo = styled.div`
+  ${tw`mt-2 p-3 bg-gray-800 dark:bg-gray-900 rounded-lg text-xs font-mono text-gray-400 max-w-4xl mx-auto`}
+`;
+
+export const DebugRow = styled.div`
+  ${tw`flex items-center gap-2 py-0.5`}
+`;
+
+export const DebugLabel = styled.span`
+  ${tw`text-gray-500 min-w-[140px]`}
+`;
+
+export const DebugValue = styled.span`
+  ${tw`text-gray-300`}
+`;

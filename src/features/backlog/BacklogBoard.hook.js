@@ -16,7 +16,7 @@ import {
   getProjectBacklogPlanUrl,
   getProjectBacklogReviewUrl
 } from '../../config/api';
-import { useLogger, sanitizeError, addTimestamp, isLevelEnabled } from '../../logger';
+import { createSafeLogger, sanitizeError, addTimestamp, isLevelEnabled } from '../../logger';
 
 // Simple debounce implementation
 function debounce(func, wait) {
@@ -32,12 +32,19 @@ function debounce(func, wait) {
 }
 
 export function useBacklogBoard(selectedProject) {
-  const logger = useLogger({ hook: 'useBacklogBoard' });
+  // Use safe logger to prevent hook call errors
+  const logger = createSafeLogger({ hook: 'useBacklogBoard' });
   
-  logger.debug('useBacklogBoard hook called', {
-    projectName: selectedProject?.name,
-    ...addTimestamp()
-  });
+  if (isLevelEnabled(logger, 'debug')) {
+    try {
+      logger.debug('useBacklogBoard hook called', {
+        projectName: selectedProject?.name,
+        ...addTimestamp()
+      });
+    } catch (error) {
+      console.debug('useBacklogBoard hook called', { projectName: selectedProject?.name });
+    }
+  }
   
   // Core state
   const [tasks, setTasks] = useState([]);

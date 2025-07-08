@@ -38,6 +38,7 @@ export const ChatInterface = memo(({
   selectedSession, 
   sendMessage, 
   messages, 
+  connectionHealth,
   onFileOpen, 
   onInputFocusChange, 
   onSessionActive, 
@@ -86,6 +87,7 @@ export const ChatInterface = memo(({
     setSlashPosition,
     claudeStatus,
     setClaudeStatus,
+    statusUpdateTimestamp,
     messageQueue,
     setMessageQueue,
     fileList,
@@ -108,6 +110,7 @@ export const ChatInterface = memo(({
     selectedSession,
     messages,
     sendMessage,
+    connectionHealth,
     onInputFocusChange,
     onSessionActive,
     onSessionInactive,
@@ -257,6 +260,8 @@ export const ChatInterface = memo(({
           setTextareaExpanded={setTextareaExpanded}
           isLoading={isLoading}
           claudeStatus={claudeStatus}
+          connectionHealth={connectionHealth}
+          lastUpdateTime={statusUpdateTimestamp}
           showCommandMenu={showCommandMenu}
           filteredCommands={filteredCommands}
           showFileDropdown={showFileDropdown}

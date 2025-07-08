@@ -72,14 +72,28 @@ export function createErrorLogger(context) {
 export function sanitizeError(error) {
   if (!error) return null;
   
-  return {
-    message: error.message,
-    name: error.name,
+  const sanitized = {
+    message: error.message || error.toString() || 'Unknown error',
+    name: error.name || 'Error',
     stack: error.stack,
-    code: error.code,
-    cause: error.cause,
     timestamp: Date.now()
   };
+  
+  // Safely add optional properties
+  if (error.code !== undefined) {
+    sanitized.code = error.code;
+  }
+  
+  if (error.cause !== undefined) {
+    // Recursively sanitize the cause if it's an Error object
+    if (error.cause instanceof Error) {
+      sanitized.cause = sanitizeError(error.cause);
+    } else {
+      sanitized.cause = String(error.cause);
+    }
+  }
+  
+  return sanitized;
 }
 
 /**
@@ -91,18 +105,52 @@ export function sanitizeError(error) {
 export function truncateData(data, maxLength = 1000) {
   if (!data) return data;
   
-  const stringified = JSON.stringify(data);
-  if (stringified.length <= maxLength) {
-    return data;
+  try {
+    // Handle circular references by using a replacer function
+    const stringified = JSON.stringify(data, function(key, value) {
+      // Skip emotion-related properties that cause circular references
+      if (key === '__emotion_real' || key === '__emotion_base' || key === '__emotion_styles') {
+        return '[Emotion Component]';
+      }
+      
+      // Skip React-related circular references
+      if (key === '_owner' || key === '_store' || key === 'stateNode') {
+        return '[React Reference]';
+      }
+      
+      // Skip function references
+      if (typeof value === 'function') {
+        return '[Function]';
+      }
+      
+      // Skip DOM nodes
+      if (value && typeof value === 'object' && value.nodeType) {
+        return '[DOM Node]';
+      }
+      
+      return value;
+    });
+    
+    if (stringified.length <= maxLength) {
+      return data;
+    }
+    
+    return {
+      _truncated: true,
+      _originalLength: stringified.length,
+      _preview: stringified.substring(0, maxLength) + '...',
+      _dataType: typeof data,
+      _size: stringified.length
+    };
+  } catch (error) {
+    // If JSON.stringify still fails, return a safe representation
+    return {
+      _error: 'Unable to serialize data',
+      _errorMessage: error.message,
+      _dataType: typeof data,
+      _toString: data?.toString?.() || '[Object]'
+    };
   }
-  
-  return {
-    _truncated: true,
-    _originalLength: stringified.length,
-    _preview: stringified.substring(0, maxLength) + '...',
-    _dataType: typeof data,
-    _size: stringified.length
-  };
 }
 
 /**
@@ -216,12 +264,45 @@ export function createChildLogger(parentLogger, context) {
  * @returns {boolean} True if level is enabled
  */
 export function isLevelEnabled(logger, level) {
+  if (!logger) {
+    return false;
+  }
+  
   if (typeof logger.isLevelEnabled === 'function') {
-    return logger.isLevelEnabled(level);
+    try {
+      return logger.isLevelEnabled(level);
+    } catch (error) {
+      // If there's an error (like invalid hook call), fallback to true
+      console.warn('Logger level check failed:', error.message);
+      return true;
+    }
   }
   
   // Fallback - assume enabled if method not available
   return true;
+}
+
+/**
+ * Create a safe logger that won't break if hooks are called incorrectly
+ * @param {object} context - Logger context
+ * @returns {object} Safe logger instance
+ */
+export function createSafeLogger(context) {
+  try {
+    // Try to use browser logger first (safe for any context)
+    const { createLogger } = require('@kit/logger/browser');
+    return createLogger(context);
+  } catch (error) {
+    // Fallback to console logging if all else fails
+    return {
+      error: (...args) => console.error(...args),
+      warn: (...args) => console.warn(...args),
+      info: (...args) => console.info(...args),
+      debug: (...args) => console.debug(...args),
+      trace: (...args) => console.trace(...args),
+      isLevelEnabled: () => true
+    };
+  }
 }
 
 // Export default patterns for common use cases

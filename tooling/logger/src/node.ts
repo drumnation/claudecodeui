@@ -22,10 +22,10 @@ export function createLogger(options: LoggerOptions = {}): Logger {
   const level = isValidLogLevel(levelStr) ? levelStr : 'info';
   
   // Configure pretty printing for development
-  const pinoOptions = {
+  const pinoOptions: any = {
     level: level,
     formatters: {
-      level: (label) => ({ level: label }),
+      level: (label: string) => ({ level: label }),
     },
     ...options,
   };

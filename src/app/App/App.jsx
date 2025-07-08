@@ -34,6 +34,7 @@ export const App = () => {
     ws,
     sendMessage,
     messages,
+    connectionHealth,
     
     // Setters
     setActiveTab,
@@ -126,6 +127,7 @@ export const App = () => {
             ws={ws}
             sendMessage={sendMessage}
             messages={messages}
+            connectionHealth={connectionHealth}
             isMobile={isMobile}
             onMenuClick={() => setSidebarOpen(true)}
             isLoading={isLoadingProjects}

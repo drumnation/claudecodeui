@@ -1,20 +1,15 @@
 import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 import { createLogger } from '@kit/logger/node';
+import { StatusEnvelope, Phase, createStatusEnvelope } from '../types/status';
+import { createStatusParser } from '../lib/statusParser';
+import { createHeartbeatManager } from '../lib/heartbeatManager';
 
 const logger = createLogger({ scope: 'claude-cli-service' });
 
 // Types for Claude CLI communication
-export interface ClaudeStatusData {
-  message: string;
-  tokens: number;
-  can_interrupt: boolean;
+export interface ClaudeStatusData extends StatusEnvelope {
   raw?: string;
-  toolStatus?: {
-    count: number;
-    tool: string;
-  } | null;
-  contextRemaining?: number | null;
 }
 
 export interface ClaudeMessage {
@@ -60,10 +55,30 @@ export class ClaudeCliService extends EventEmitter {
   private stderrBuffer: string = '';
   private messageBuffer: string = '';
   private isInAssistantResponse: boolean = false;
+  private statusParser = createStatusParser({ enableDebug: false, preserveRawOutput: false });
+  private heartbeatManager = createHeartbeatManager({ interval: 5000 });
 
   constructor(sessionId: string) {
     super();
     this.sessionId = sessionId;
+    
+    // Setup heartbeat event handlers
+    this.heartbeatManager.on('heartbeat', (heartbeat) => {
+      this.emit('status', {
+        type: 'status',
+        data: heartbeat.data
+      });
+    });
+    
+    this.heartbeatManager.on('ping:timeout', ({ missedHeartbeats }) => {
+      this.emit('connection-health', {
+        type: 'connection-health',
+        data: {
+          health: missedHeartbeats > 2 ? 'stale' : 'degraded',
+          missedHeartbeats
+        }
+      });
+    });
   }
 
   async start(options: ClaudeOptions): Promise<void> {
@@ -137,6 +152,9 @@ export class ClaudeCliService extends EventEmitter {
 
       // Set up event handlers
       this.setupProcessHandlers();
+      
+      // Start heartbeat monitoring
+      this.heartbeatManager.startHeartbeat();
 
       // Handle stdin for interactive mode
       if (options.command) {
@@ -172,6 +190,9 @@ export class ClaudeCliService extends EventEmitter {
     // Handle process exit
     this.process.on('close', (code) => {
       logger.info('Claude CLI process exited', { code, sessionId: this.sessionId });
+      
+      // Stop heartbeat monitoring
+      this.heartbeatManager.stopHeartbeat();
       
       this.emit('exit', { 
         type: 'exit', 
@@ -226,7 +247,7 @@ export class ClaudeCliService extends EventEmitter {
         if (logger.isLevelEnabled('trace')) {
           logger.trace('Parsed JSON response', { 
             messageType: response.type,
-            messageId: response.message?.id || 'none'
+            messageId: 'none'
           });
         }
         
@@ -249,11 +270,25 @@ export class ClaudeCliService extends EventEmitter {
         if (response.type === 'status' || response.type === 'progress' || 
             (response.type === 'system' && response.subtype === 'status')) {
           logger.debug('Detected status message', { response });
-          // Send status update directly for JSON format
-          this.emit('status', {
-            type: 'status',
-            data: response
-          });
+          
+          // Parse status using StatusParser
+          const statusEnvelope = this.statusParser.parseCliOutput(JSON.stringify(response));
+          if (statusEnvelope) {
+            // Update heartbeat cache
+            this.heartbeatManager.updateCachedStatus(statusEnvelope);
+            
+            // Send status update
+            this.emit('status', {
+              type: 'status',
+              data: statusEnvelope
+            });
+          } else {
+            // Fallback to original behavior
+            this.emit('status', {
+              type: 'status',
+              data: response
+            });
+          }
         } else {
           // Send parsed response
           this.emit('claude-response', {
@@ -310,33 +345,34 @@ export class ClaudeCliService extends EventEmitter {
   }
 
   private parseAndEmitStatus(text: string): void {
-    const tokensMatch = text.match(/⚒\s*(\d+)\s*tokens/);
-    const tokens = tokensMatch ? parseInt(tokensMatch[1]) : 0;
-    
-    // Parse bash/tool status (e.g., "1 bash running")
-    const toolMatch = text.match(/(\d+)\s+(\w+)\s+running/);
-    const toolStatus = toolMatch ? {
-      count: parseInt(toolMatch[1]),
-      tool: toolMatch[2]
-    } : null;
-    
-    // Parse context remaining (e.g., "Context left until auto-compact: 13%")
-    const contextMatch = text.match(/Context left until auto-compact:\s*(\d+)%/);
-    const contextRemaining = contextMatch ? parseInt(contextMatch[1]) : null;
-    
-    const actionMatch = text.match(/[✻✹✸✶]\s*(\w+)/);
-    const action = actionMatch ? actionMatch[1] : 'Working';
-    
-    const status: ClaudeStatusData = {
-      message: action + '...',
-      tokens: tokens,
-      can_interrupt: text.includes('esc to interrupt'),
-      raw: text,
-      toolStatus: toolStatus,
-      contextRemaining: contextRemaining
-    };
-
-    this.emit('status', { type: 'status', data: status });
+    // Parse using StatusParser for consistency
+    const statusEnvelope = this.statusParser.parseCliOutput(text);
+    if (statusEnvelope) {
+      // Update heartbeat cache
+      this.heartbeatManager.updateCachedStatus(statusEnvelope);
+      
+      // Add raw output if needed
+      const statusData: ClaudeStatusData = {
+        ...statusEnvelope,
+        raw: text
+      };
+      
+      this.emit('status', { type: 'status', data: statusData });
+    } else {
+      // Fallback to basic status if parser fails
+      const basicStatus = createStatusEnvelope({
+        phase: Phase.PROCESSING,
+        message: 'Processing...',
+        canInterrupt: text.includes('esc to interrupt')
+      });
+      
+      const statusData: ClaudeStatusData = {
+        ...basicStatus,
+        raw: text
+      };
+      
+      this.emit('status', { type: 'status', data: statusData });
+    }
   }
 
   private checkBufferForSpecialContent(): void {
@@ -401,6 +437,9 @@ export class ClaudeCliService extends EventEmitter {
       logger.info('Killing Claude process', { sessionId: this.sessionId });
       this.process.kill();
       this.process = null;
+      
+      // Stop heartbeat monitoring
+      this.heartbeatManager.stopHeartbeat();
     }
   }
 

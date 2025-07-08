@@ -13,7 +13,7 @@ const logger = createLogger({ scope: 'app-hook' });
 export const useApp = () => {
   const navigate = useNavigate();
   const { sessionId } = useParams();
-  const { ws, sendMessage, messages } = useWebSocket();
+  const { ws, sendMessage, messages, connectionHealth } = useWebSocket();
   
   // Project and session state
   const [projects, setProjects] = useState([]);
@@ -410,6 +410,7 @@ export const useApp = () => {
     ws,
     sendMessage,
     messages,
+    connectionHealth,
     
     // Setters
     setActiveTab,

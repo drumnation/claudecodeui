@@ -1,6 +1,6 @@
 import React from 'react';
 import { useClaudeStatus } from '@/features/chat/components/ClaudeStatus/ClaudeStatus.hook';
-import { getCurrentSpinner, parseStatusData } from '@/features/chat/components/ClaudeStatus/ClaudeStatus.logic';
+import { getCurrentSpinner, parseStatusData, getConnectionHealth, getDebugInfo } from '@/features/chat/components/ClaudeStatus/ClaudeStatus.logic';
 import {
   StatusContainer,
   StatusBar,
@@ -24,7 +24,12 @@ import {
   ErrorActions,
   ErrorLink,
   ErrorSeparator,
-  SettingsButton
+  SettingsButton,
+  ConnectionIndicator,
+  DebugInfo,
+  DebugRow,
+  DebugLabel,
+  DebugValue
 } from '@/features/chat/components/ClaudeStatus/ClaudeStatus.styles';
 
 /**
@@ -34,9 +39,12 @@ import {
  * @param {Function} props.onAbort - Callback to abort current operation
  * @param {boolean} props.isLoading - Whether Claude is currently processing
  * @param {boolean} props.dependencyError - Whether there's a dependency error (Claude CLI not found)
+ * @param {string} props.connectionHealth - Current connection health status
+ * @param {number} props.lastUpdateTime - Timestamp of last status update
  */
-export function ClaudeStatus({ status, onAbort, isLoading, dependencyError }) {
+export function ClaudeStatus({ status, onAbort, isLoading, dependencyError, connectionHealth = 'connected', lastUpdateTime = Date.now() }) {
   const { elapsedTime, animationPhase, fakeTokens, dependencyStatus } = useClaudeStatus(isLoading);
+  const [showDebug, setShowDebug] = React.useState(false);
   
   // Show dependency error if Claude CLI is not available
   if (dependencyError || (dependencyStatus && !dependencyStatus.available)) {
@@ -67,10 +75,43 @@ export function ClaudeStatus({ status, onAbort, isLoading, dependencyError }) {
     );
   }
   
+  // Toggle debug mode with keyboard shortcut (Ctrl+Shift+D)
+  React.useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        setShowDebug(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, []);
+  
   if (!isLoading) return null;
   
   const currentSpinner = getCurrentSpinner(animationPhase);
-  const { statusText, tokens, canInterrupt, toolStatus, contextRemaining } = parseStatusData(status, elapsedTime, fakeTokens);
+  const health = getConnectionHealth(status?.connectionHealth || connectionHealth, lastUpdateTime);
+  const { 
+    statusText, 
+    tokens, 
+    tokenDetails,
+    canInterrupt, 
+    toolStatus, 
+    contextRemaining, 
+    phase,
+    isUsingFallback 
+  } = parseStatusData(status, elapsedTime, fakeTokens, health);
+  
+  // Get connection indicator color
+  const getHealthColor = () => {
+    switch (health) {
+      case 'connected': return '#22c55e'; // green
+      case 'stale': return '#f59e0b'; // yellow
+      case 'disconnected': return '#ef4444'; // red
+      default: return '#6b7280'; // gray
+    }
+  };
+  
+  const debugInfo = showDebug ? getDebugInfo(status, health, lastUpdateTime) : null;
   
   return (
     <StatusContainer>
@@ -81,6 +122,12 @@ export function ClaudeStatus({ status, onAbort, isLoading, dependencyError }) {
             <Spinner $isEven={animationPhase % 2 === 0}>
               {currentSpinner}
             </Spinner>
+            
+            {/* Connection health indicator */}
+            <ConnectionIndicator 
+              $color={getHealthColor()} 
+              title={`Connection: ${health}${isUsingFallback ? ' (using fallback data)' : ''}`}
+            />
             
             {/* Status text - first line */}
             <StatusTextContainer>
@@ -127,6 +174,44 @@ export function ClaudeStatus({ status, onAbort, isLoading, dependencyError }) {
           </InterruptButton>
         )}
       </StatusBar>
+      
+      {/* Debug information (development only) */}
+      {showDebug && debugInfo && (
+        <DebugInfo>
+          <DebugRow>
+            <DebugLabel>Connection Health:</DebugLabel>
+            <DebugValue>{debugInfo.connectionHealth}</DebugValue>
+          </DebugRow>
+          <DebugRow>
+            <DebugLabel>Time Since Update:</DebugLabel>
+            <DebugValue>{Math.round(debugInfo.timeSinceUpdate / 1000)}s</DebugValue>
+          </DebugRow>
+          <DebugRow>
+            <DebugLabel>Valid Status:</DebugLabel>
+            <DebugValue>{debugInfo.hasValidStatus ? 'Yes' : 'No'}</DebugValue>
+          </DebugRow>
+          <DebugRow>
+            <DebugLabel>Using Fallback:</DebugLabel>
+            <DebugValue>{isUsingFallback ? 'Yes' : 'No'}</DebugValue>
+          </DebugRow>
+          <DebugRow>
+            <DebugLabel>Phase:</DebugLabel>
+            <DebugValue>{phase}</DebugValue>
+          </DebugRow>
+          {tokenDetails && (
+            <DebugRow>
+              <DebugLabel>Token Details:</DebugLabel>
+              <DebugValue>
+                I:{tokenDetails.input || 0} O:{tokenDetails.output || 0} T:{tokenDetails.total || 0}
+              </DebugValue>
+            </DebugRow>
+          )}
+          <DebugRow>
+            <DebugLabel>Status Keys:</DebugLabel>
+            <DebugValue>{debugInfo.statusKeys.join(', ')}</DebugValue>
+          </DebugRow>
+        </DebugInfo>
+      )}
     </StatusContainer>
   );
 }
