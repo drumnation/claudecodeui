@@ -27,7 +27,7 @@ export class FilesService {
     try {
       const stats = await fs.lstat(dirPath);
       if (!stats.isDirectory()) {
-        logger.error(`getFileTree called on non-directory: ${dirPath}`);
+        logger.error('getFileTree called on non-directory', { dirPath });
         if (stats.isFile()) {
           // If it's a file, return it as a single item
           return [{
@@ -67,7 +67,7 @@ export class FilesService {
       for (const entry of entries) {
         // Debug: log all entries including hidden files
         if (entry.name.startsWith('.') && currentDepth === 0) {
-          logger.debug('📁 Found hidden file/folder:', entry.name);
+          logger.debug('📁 Found hidden file/folder', { name: entry.name });
         }
         
         // Skip only heavy build directories

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { createLogger } from '@kit/logger/node';
 import { PlannerService } from './planner.service.js';
 import { PlannerRequest, AgentType } from './planner.types.js';
+import { plannerHistoryService } from './planner-history.service.js';
 
 const logger = createLogger({ scope: 'planner-controller' });
 
@@ -166,4 +167,87 @@ export async function handleAbortPlanning(req: Request, res: Response) {
 // Export the singleton service for WebSocket usage
 export function getPlannerServiceInstance(): PlannerService {
   return getPlannerService();
+}
+
+// History endpoints
+export async function handleGetPlannerHistory(req: Request, res: Response) {
+  try {
+    const { projectPath } = req.query;
+    const { status, mode, limit = '50', offset = '0' } = req.query;
+    
+    if (!projectPath || typeof projectPath !== 'string') {
+      return res.status(400).json({ error: 'Project path is required' });
+    }
+    
+    const filter = {
+      projectPath,
+      status: status ? (Array.isArray(status) ? status : [status]) as string[] : undefined,
+      mode: mode as string | undefined,
+      limit: parseInt(limit as string, 10),
+      offset: parseInt(offset as string, 10)
+    };
+    
+    const history = await plannerHistoryService.listPlannerHistory(filter);
+    
+    res.json({
+      items: history,
+      total: history.length,
+      limit: filter.limit,
+      offset: filter.offset
+    });
+    
+  } catch (error: any) {
+    logger.error('Failed to get planner history', { error });
+    res.status(500).json({ error: 'Failed to get planner history' });
+  }
+}
+
+export async function handleGetPlannerSession(req: Request, res: Response) {
+  try {
+    const { sessionId } = req.params;
+    const { projectPath } = req.query;
+    
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Session ID is required' });
+    }
+    
+    if (!projectPath || typeof projectPath !== 'string') {
+      return res.status(400).json({ error: 'Project path is required' });
+    }
+    
+    const session = await plannerHistoryService.getPlannerSession(projectPath, sessionId);
+    
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
+    res.json(session);
+    
+  } catch (error: any) {
+    logger.error('Failed to get planner session', { error });
+    res.status(500).json({ error: 'Failed to get planner session' });
+  }
+}
+
+export async function handleDeletePlannerSession(req: Request, res: Response) {
+  try {
+    const { sessionId } = req.params;
+    const { projectPath } = req.query;
+    
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Session ID is required' });
+    }
+    
+    if (!projectPath || typeof projectPath !== 'string') {
+      return res.status(400).json({ error: 'Project path is required' });
+    }
+    
+    await plannerHistoryService.deletePlannerSession(projectPath, sessionId);
+    
+    res.json({ message: 'Session deleted successfully' });
+    
+  } catch (error: any) {
+    logger.error('Failed to delete planner session', { error });
+    res.status(500).json({ error: 'Failed to delete planner session' });
+  }
 }

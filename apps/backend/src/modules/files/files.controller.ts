@@ -48,7 +48,7 @@ export async function handleGetProjectFiles(req: Request, res: Response) {
       const stats = await fs.promises.lstat(actualPath);
       
       if (!stats.isDirectory()) {
-        logger.error('❌ Project path is not a directory:', actualPath);
+        logger.error('❌ Project path is not a directory', { actualPath });
         return res.status(400).json({ 
           error: 'Project path is not a directory',
           path: actualPath,

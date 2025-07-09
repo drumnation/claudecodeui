@@ -4,31 +4,61 @@
   "description": "A web-based UI for Claude Code CLI",
   "main": "apps/backend/dist/main.js",
   "scripts": {
-    "build-storybook": "storybook build",
     "backend:dev": "cd apps/backend && npm run dev",
-    "build": "vite build",
     "clean:dist": "rm -rf dist && rm -rf node_modules/.vite",
-    "client:dev": "vite serve --host --port 8766 --force --clearScreen false",
-    "client": "vite --host --port 8766",
-    "dev": "concurrently --kill-others --names \"API,WEB\" --name-color \"bgBlue.bold,bgGreen.bold\" --prefix \"{name}\" --prefix-color \"auto\" \"npm run backend:dev\" \"npm run client:dev\"",
+    "dev": "concurrently --kill-others --names \"API,WEB\" --name-color \"bgBlue.bold,bgGreen.bold\" --prefix \"{name}\" --prefix-color \"auto\" \"npm run backend:dev\" \"cd apps/frontend && npm run dev\"",
     "ngrok": "node scripts/start-ngrok.js",
     "ngrok:start": "node scripts/start-ngrok.js",
-    "dev:ngrok": "npm run ngrok:start && npm run client:dev",
-    "ngrok:dev": "concurrently --kill-others --names \"API,NGROK,WEB\" --name-color \"bgBlue.bold,bgMagenta.bold,bgGreen.bold\" --prefix \"{name}\" --prefix-color \"auto\" \"npm run backend:dev\" \"npm run ngrok:start\" \"npm run client:dev\"",
-    "preview": "vite preview",
+    "dev:ngrok": "npm run ngrok:start && cd apps/frontend && npm run dev",
+    "ngrok:dev": "concurrently --kill-others --names \"API,NGROK,WEB\" --name-color \"bgBlue.bold,bgMagenta.bold,bgGreen.bold\" --prefix \"{name}\" --prefix-color \"auto\" \"npm run backend:dev\" \"npm run ngrok:start\" \"cd apps/frontend && npm run dev\"",
     "prod": "node scripts/start-prod.js",
     "backend:start": "node apps/backend/dist/main.js",
-    "start": "npm run build && npm run backend:start",
-    "storybook": "storybook dev -p 6006",
-    "test": "vitest run",
-    "test:watch": "vitest watch",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage",
+    "start": "cd apps/frontend && npm run build && npm run backend:start",
     "test:backend": "cd apps/backend && npm test",
     "test:backend:watch": "cd apps/backend && npm run test:watch",
     "test:backend:coverage": "cd apps/backend && npm run test:coverage",
     "typecheck:backend": "cd apps/backend && npm run typecheck",
-    "build:backend": "cd apps/backend && npm run build"
+    "build:backend": "cd apps/backend && npm run build",
+    "frontend:dev": "cd apps/frontend && npm run dev",
+    "frontend:build": "cd apps/frontend && npm run build",
+    "frontend:storybook": "cd apps/frontend && npm run storybook",
+    "frontend:test": "cd apps/frontend && npm run test",
+    "frontend:typecheck": "cd apps/frontend && npm run typecheck",
+    "brain:validate": "brain-monitor validate",
+    "brain:validate-critical": "brain-monitor validate-critical",
+    "brain:validate-quick": "brain-monitor validate-quick",
+    "brain:watch": "brain-monitor watch",
+    "brain:typecheck-failures": "brain-monitor typecheck",
+    "brain:lint-failures": "brain-monitor lint",
+    "brain:format-failures": "brain-monitor format",
+    "brain:test-failures": "brain-monitor test",
+    "brain:test-storybook-failures": "brain-monitor test-storybook",
+    "brain:test-storybook-comprehensive": "brain-monitor test-storybook --comprehensive",
+    "brain:test-e2e-smoke": "brain-monitor test-e2e --type smoke",
+    "brain:test-e2e-api": "brain-monitor test-e2e --type api",
+    "brain:test-e2e-critical": "brain-monitor test-e2e --type critical",
+    "brain:test-e2e-visual": "brain-monitor test-e2e --type visual",
+    "brain:test-e2e-performance": "brain-monitor test-e2e --type performance",
+    "brain:validate-extended": "brain-monitor validate-extended",
+    "test:frontend": "cd apps/frontend && npm run test",
+    "test:e2e": "cd apps/frontend && npm run test:e2e",
+    "test:e2e:smoke": "cd apps/frontend && npm run test:e2e:smoke",
+    "test:frontend:storybook": "cd apps/frontend && npm run test:storybook:unit",
+    "test:frontend:e2e": "cd apps/frontend && npm run test:storybook:e2e",
+    "test:frontend:integration": "cd apps/frontend && npm run test:storybook:integration",
+    "test:storybook:all": "cd apps/frontend && npm run test:storybook:integration",
+    "test:performance": "concurrently --kill-others-on-fail \"npm run test:backend -- --reporter=verbose\" \"npm run test:frontend -- --reporter=verbose\"",
+    "test:performance:backend": "cd apps/backend && time npm test -- --reporter=verbose",
+    "test:performance:frontend": "cd apps/frontend && time npm test -- --reporter=verbose",
+    "test:fast": "concurrently --kill-others-on-fail \"cd apps/backend && npm run test:fast\" \"cd apps/frontend && npm run test:fast\"",
+    "test:components": "cd apps/frontend && npm run test:components",
+    "test:features": "cd apps/frontend && npm run test:features",
+    "test:hooks": "cd apps/frontend && npm run test:hooks",
+    "test:modules": "cd apps/backend && npm run test:modules",
+    "test:services": "cd apps/backend && npm run test:services",
+    "test:controllers": "cd apps/backend && npm run test:controllers",
+    "brain:logs": "brain-monitor logs",
+    "brain:dev": "brain-monitor dev"
   },
   "keywords": [
     "claude",
@@ -40,88 +70,28 @@
   "author": "Claude Code UI Contributors",
   "license": "MIT",
   "dependencies": {
-    "@anthropic-ai/claude-code": "^1.0.24",
-    "@codemirror/lang-css": "^6.3.1",
-    "@kit/logger": "workspace:*",
-    "@codemirror/lang-html": "^6.4.9",
-    "@codemirror/lang-javascript": "^6.2.4",
-    "@codemirror/lang-json": "^6.0.1",
-    "@codemirror/lang-markdown": "^6.3.3",
-    "@codemirror/lang-python": "^6.2.1",
-    "@codemirror/state": "^6.5.2",
-    "@codemirror/theme-one-dark": "^6.1.2",
-    "@codemirror/view": "^6.38.0",
-    "@dnd-kit/core": "^6.2.0",
-    "@dnd-kit/sortable": "^9.0.0",
-    "@emotion/css": "^11.13.5",
-    "@emotion/react": "^11.13.5",
-    "@emotion/styled": "^11.13.5",
     "@kit/brain-monitor": "workspace:*",
-    "@storybook/testing-library": "^0.2.2",
-    "@tailwindcss/typography": "^0.5.16",
-    "@uiw/react-codemirror": "^4.23.13",
-    "@xterm/addon-clipboard": "^0.1.0",
-    "@xterm/addon-webgl": "^0.18.0",
-    "@xterm/xterm": "^5.5.0",
+    "@kit/logger": "workspace:*",
     "chokidar": "^4.0.3",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "fast-glob": "^3.3.3",
     "form-data": "^4.0.3",
-    "lucide-react": "^0.515.0",
     "mime-types": "^3.0.1",
     "multer": "^2.0.1",
     "node-fetch": "^2.7.0",
     "node-pty": "^1.0.0",
     "openai": "^5.8.2",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-markdown": "^10.1.0",
-    "react-router-dom": "^6.8.1",
-    "tailwind-merge": "^3.3.1",
-    "twin.macro": "^3.4.1",
-    "vite-console-forward-plugin": "^1.0.0",
-    "ws": "^8.14.2",
-    "xterm": "^5.3.0",
-    "xterm-addon-fit": "^0.8.0"
+    "ws": "^8.14.2"
   },
   "devDependencies": {
-    "@chromatic-com/storybook": "^4.0.1",
-    "@emotion/babel-plugin": "^11.13.5",
-    "@storybook/addon-a11y": "^9.0.15",
-    "@storybook/addon-docs": "^9.0.15",
-    "@storybook/addon-vitest": "^9.0.15",
-    "@storybook/react-vite": "^9.0.15",
     "@types/node": "^24.0.10",
-    "@types/react": "^18.2.43",
-    "@types/react-dom": "^18.2.17",
-    "@vitejs/plugin-react": "^4.2.1",
-    "@vitest/browser": "^3.2.4",
-    "@vitest/coverage-v8": "^3.2.4",
-    "autoprefixer": "^10.4.16",
-    "concurrently": "^8.2.2",
-    "jsdom": "^26.1.0",
-    "playwright": "^1.53.2",
-    "postcss": "^8.4.32",
-    "prop-types": "^15.8.1",
-    "sharp": "^0.34.2",
-    "storybook": "^9.0.15",
-    "tailwindcss": "^3.4.0",
-    "vite": "^5.0.8",
-    "vite-plugin-babel-macros": "^1.0.6",
-    "vitest": "^3.2.4"
-  },
-  "babelMacros": {
-    "twin": {
-      "preset": "emotion"
-    }
+    "concurrently": "^8.2.2"
   },
   "eslintConfig": {
     "root": true,
     "env": {
-      "browser": true,
+      "node": true,
       "es2020": true
     },
     "extends": [
@@ -130,23 +100,6 @@
     "parserOptions": {
       "ecmaVersion": "latest",
       "sourceType": "module"
-    },
-    "rules": {
-      "no-console": "error"
-    },
-    "overrides": [
-      {
-        "files": ["**/*.stories.jsx", "**/*.stories.js"],
-        "rules": {
-          "no-console": "off"
-        }
-      },
-      {
-        "files": ["**/*.test.js", "**/*.spec.js"],
-        "rules": {
-          "no-console": "off"
-        }
-      }
-    ]
+    }
   }
 }

@@ -25,7 +25,7 @@ export async function handleGetFile(req: Request, res: Response) {
     const project = projects.find(p => p.name === projectName);
     
     if (!project) {
-      logger.error('❌ Project not found:', projectName);
+      logger.error('❌ Project not found', { projectName });
       return res.status(404).json({ error: 'Project not found' });
     }
     
@@ -74,7 +74,7 @@ export async function handleGetFile(req: Request, res: Response) {
       return res.status(500).json({ error: 'Failed to read file' });
     }
   } catch (error: any) {
-    logger.error('❌ File read error:', error.message);
+    logger.error('❌ File read error', { error: error.message });
     res.status(500).json({ error: error.message });
   }
 }
@@ -103,7 +103,7 @@ export async function handleSaveFile(req: Request, res: Response) {
     const project = projects.find(p => p.name === projectName);
     
     if (!project) {
-      logger.error('❌ Project not found:', projectName);
+      logger.error('❌ Project not found', { projectName });
       return res.status(404).json({ error: 'Project not found' });
     }
     
@@ -151,7 +151,7 @@ export async function handleSaveFile(req: Request, res: Response) {
       return res.status(500).json({ error: 'Failed to save file' });
     }
   } catch (error: any) {
-    logger.error('❌ File save error:', error.message);
+    logger.error('❌ File save error', { error: error.message });
     res.status(500).json({ error: error.message });
   }
 }

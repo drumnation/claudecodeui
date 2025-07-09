@@ -1,1 +1,0 @@
-export { HintTexts } from './HintTexts';

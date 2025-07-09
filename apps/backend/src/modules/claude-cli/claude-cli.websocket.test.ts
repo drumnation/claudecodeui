@@ -6,23 +6,71 @@ import { ClaudeCliService } from './claude-cli.service';
 // Mock dependencies
 vi.mock('./claude-cli.service');
 vi.mock('@kit/logger/node', () => ({
-  createLogger: () => ({
+  createLogger: vi.fn(() => ({
     info: vi.fn(),
     debug: vi.fn(),
     warn: vi.fn(),
-    error: vi.fn()
-  })
+    error: vi.fn(),
+    trace: vi.fn(),
+    isLevelEnabled: vi.fn().mockReturnValue(true)
+  }))
+}));
+
+// Mock reliable websocket sender
+vi.mock('../../lib/reliableWebSocket', () => ({
+  createReliableWebSocketSender: vi.fn(() => ({
+    sendReliableMessage: vi.fn(),
+    handleConnectionState: vi.fn(),
+  }))
+}));
+
+// Mock heartbeat manager
+vi.mock('../../lib/heartbeatManager', () => ({
+  createHeartbeatManager: vi.fn(() => ({
+    on: vi.fn(),
+    stopHeartbeat: vi.fn(),
+    startHeartbeat: vi.fn(),
+  }))
+}));
+
+// Mock sessions service
+vi.mock('../sessions/sessions.service', () => ({
+  sessionsService: {
+    updateSessionTitle: vi.fn(),
+  }
+}));
+
+// Mock planner service
+vi.mock('../planner/planner.controller.js', () => ({
+  getPlannerServiceInstance: vi.fn(() => ({
+    processRequest: vi.fn(),
+  }))
+}));
+
+// Mock fs promises
+vi.mock('fs', () => ({
+  promises: {
+    writeFile: vi.fn(),
+  }
+}));
+
+// Mock status sync
+vi.mock('../../api/status-sync', () => ({
+  updateSessionStatus: vi.fn(),
 }));
 
 describe('ClaudeWebSocketHandler', () => {
   let mockWs: any;
   let handler: ClaudeWebSocketHandler;
   let mockService: any;
+  let mockReliableSender: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Create mock WebSocket
     mockWs = {
-      send: vi.fn()
+      send: vi.fn(),
+      on: vi.fn(),
+      removeAllListeners: vi.fn()
     };
 
     // Create mock service
@@ -33,8 +81,19 @@ describe('ClaudeWebSocketHandler', () => {
       removeAllListeners: vi.fn()
     };
 
+    // Create mock reliable sender
+    mockReliableSender = {
+      sendReliableMessage: vi.fn(),
+      handleConnectionState: vi.fn(),
+      clearAllMessages: vi.fn(),
+    };
+
     // Mock ClaudeCliService constructor
     (ClaudeCliService as any).mockImplementation(() => mockService);
+
+    // Mock createReliableWebSocketSender to return our mock
+    const { createReliableWebSocketSender } = await import('../../lib/reliableWebSocket');
+    (createReliableWebSocketSender as any).mockReturnValue(mockReliableSender);
 
     // Create handler
     handler = new ClaudeWebSocketHandler(mockWs);
@@ -84,7 +143,7 @@ describe('ClaudeWebSocketHandler', () => {
       await handler.handleClaudeCommand(command);
 
       const sessionIdArg = mockService.start.mock.calls[0][0].sessionId;
-      expect(sessionIdArg).toMatch(/^session-\d+$/);
+      expect(sessionIdArg).toMatch(/^ui-session-\d+$/);
     });
 
     it('should send initial status message', async () => {
@@ -93,14 +152,14 @@ describe('ClaudeWebSocketHandler', () => {
         command: 'Test'
       });
 
-      expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({
+      expect(mockReliableSender.sendReliableMessage).toHaveBeenCalledWith(mockWs, {
         type: 'claude-status',
         status: {
           text: 'Connecting to Claude...',
           tokens: 0,
           can_interrupt: true
         }
-      }));
+      }, { priority: 'high' });
     });
 
     it('should kill existing service for same session', async () => {
@@ -144,10 +203,10 @@ describe('ClaudeWebSocketHandler', () => {
         command: 'Test'
       });
 
-      expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({
+      expect(mockReliableSender.sendReliableMessage).toHaveBeenCalledWith(mockWs, {
         type: 'error',
         error: 'Failed to start Claude CLI'
-      }));
+      }, { priority: 'high' });
     });
   });
 
@@ -161,7 +220,7 @@ describe('ClaudeWebSocketHandler', () => {
       });
 
       // Clear previous calls
-      mockWs.send.mockClear();
+      mockReliableSender.sendReliableMessage.mockClear();
 
       // Abort the session
       handler.handleAbortSession({
@@ -170,13 +229,13 @@ describe('ClaudeWebSocketHandler', () => {
       });
 
       expect(mockService.kill).toHaveBeenCalled();
-      expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({
+      expect(mockReliableSender.sendReliableMessage).toHaveBeenCalledWith(mockWs, {
         type: 'session-aborted',
         sessionId: 'session-123'
-      }));
-      expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({
+      }, { priority: 'high' });
+      expect(mockReliableSender.sendReliableMessage).toHaveBeenCalledWith(mockWs, {
         type: 'stream-end'
-      }));
+      });
     });
   });
 
@@ -187,7 +246,7 @@ describe('ClaudeWebSocketHandler', () => {
         command: 'Test',
         options: { sessionId: 'session-123' }
       });
-      mockWs.send.mockClear();
+      mockReliableSender.sendReliableMessage.mockClear();
     });
 
     it('should forward status events', () => {
@@ -200,10 +259,11 @@ describe('ClaudeWebSocketHandler', () => {
         data: { message: 'Working...', tokens: 100 }
       });
 
-      expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({
+      expect(mockReliableSender.sendReliableMessage).toHaveBeenCalledWith(mockWs, {
         type: 'claude-status',
-        data: { message: 'Working...', tokens: 100 }
-      }));
+        data: { message: 'Working...', tokens: 100 },
+        connectionHealth: expect.any(String)
+      }, { priority: 'high' });
     });
 
     it('should forward claude-response events', () => {
@@ -218,10 +278,10 @@ describe('ClaudeWebSocketHandler', () => {
 
       responseHandler({ type: 'claude-response', data: response });
 
-      expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({
+      expect(mockReliableSender.sendReliableMessage).toHaveBeenCalledWith(mockWs, {
         type: 'claude-response',
         data: response
-      }));
+      });
     });
 
     it('should track user messages', () => {
@@ -251,10 +311,10 @@ describe('ClaudeWebSocketHandler', () => {
         sessionId: 'new-session-456'
       });
 
-      expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({
+      expect(mockReliableSender.sendReliableMessage).toHaveBeenCalledWith(mockWs, {
         type: 'session-created',
         sessionId: 'new-session-456'
-      }));
+      });
     });
 
     it('should handle exit events and cleanup', () => {
@@ -267,11 +327,11 @@ describe('ClaudeWebSocketHandler', () => {
         data: { exitCode: 0, sessionId: 'session-123' }
       });
 
-      expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({
+      expect(mockReliableSender.sendReliableMessage).toHaveBeenCalledWith(mockWs, {
         type: 'claude-complete',
         exitCode: 0,
-        isNewSession: false
-      }));
+        isNewSession: expect.any(Boolean)
+      });
     });
 
     it('should handle error events', () => {
@@ -284,10 +344,10 @@ describe('ClaudeWebSocketHandler', () => {
         data: 'Something went wrong'
       });
 
-      expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({
+      expect(mockReliableSender.sendReliableMessage).toHaveBeenCalledWith(mockWs, {
         type: 'claude-error',
         error: 'Something went wrong'
-      }));
+      }, { priority: 'high' });
     });
 
     it('should handle stream-end events', () => {
@@ -297,9 +357,9 @@ describe('ClaudeWebSocketHandler', () => {
 
       streamEndHandler({ type: 'stream-end' });
 
-      expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({
+      expect(mockReliableSender.sendReliableMessage).toHaveBeenCalledWith(mockWs, {
         type: 'stream-end'
-      }));
+      });
     });
   });
 

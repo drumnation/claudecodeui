@@ -10,12 +10,14 @@ vi.mock('child_process', () => ({
 
 // Mock logger
 vi.mock('@kit/logger/node', () => ({
-  createLogger: () => ({
+  createLogger: vi.fn(() => ({
     info: vi.fn(),
     debug: vi.fn(),
     warn: vi.fn(),
-    error: vi.fn()
-  })
+    error: vi.fn(),
+    trace: vi.fn(),
+    isLevelEnabled: vi.fn().mockReturnValue(true)
+  }))
 }));
 
 describe('ClaudeCliService', () => {
@@ -190,7 +192,8 @@ describe('ClaudeCliService', () => {
       const promise = new Promise((resolve) => {
         service.on('status', (event) => {
           expect(event.type).toBe('status');
-          expect(event.data).toEqual(statusResponse);
+          expect(event.data.message).toBe(statusResponse.message);
+          expect(event.data.tokens?.total).toBe(statusResponse.tokens);
           resolve(true);
         });
       });
@@ -206,8 +209,8 @@ describe('ClaudeCliService', () => {
         service.on('status', (event) => {
           expect(event.type).toBe('status');
           expect(event.data.message).toBe('Working...');
-          expect(event.data.tokens).toBe(250);
-          expect(event.data.can_interrupt).toBe(true);
+          expect(event.data.tokens?.total).toBe(250);
+          expect(event.data.canInterrupt).toBe(true);
           resolve(true);
         });
       });
@@ -276,7 +279,7 @@ describe('ClaudeCliService', () => {
         service.on('status', (event) => {
           expect(event.type).toBe('status');
           expect(event.data.message).toBe('Analyzing...');
-          expect(event.data.tokens).toBe(500);
+          expect(event.data.tokens?.total).toBe(500);
           resolve(true);
         });
       });
@@ -408,11 +411,11 @@ describe('ClaudeCliService', () => {
       },
       {
         input: '✹ Analyzing code... (⚒ 250 tokens)',
-        expected: { message: 'Analyzing...', tokens: 250, can_interrupt: false }
+        expected: { message: 'Analyzing code...', tokens: 250, can_interrupt: false }
       },
       {
         input: '✸ Reading files... (⚒ 0 tokens · esc to interrupt)',
-        expected: { message: 'Reading...', tokens: 0, can_interrupt: true }
+        expected: { message: 'Reading files...', tokens: 0, can_interrupt: true }
       },
       {
         input: '✶ Thinking... (⚒ 1500 tokens)',
@@ -425,8 +428,8 @@ describe('ClaudeCliService', () => {
         const promise = new Promise((resolve) => {
           service.on('status', (event) => {
             expect(event.data.message).toBe(expected.message);
-            expect(event.data.tokens).toBe(expected.tokens);
-            expect(event.data.can_interrupt).toBe(expected.can_interrupt);
+            expect(event.data.tokens?.total).toBe(expected.tokens);
+            expect(event.data.canInterrupt).toBe(expected.can_interrupt);
             resolve(true);
           });
         });

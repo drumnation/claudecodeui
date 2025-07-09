@@ -15,6 +15,7 @@ import {
 import { CodeQAIAdapter } from './codeqai.adapter.js';
 import { AgentRunner } from './agent-runner.js';
 import { ValidationService } from './validation.service.js';
+import { plannerHistoryService } from './planner-history.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -153,6 +154,18 @@ export class PlannerService extends EventEmitter {
         totalDuration,
         agentCount: agentResults.length
       });
+
+      // Save to history
+      try {
+        await plannerHistoryService.savePlannerSession(
+          this.state.currentRequest!,
+          result,
+          this.state.sessionId
+        );
+      } catch (historyError) {
+        logger.error('Failed to save to planner history', { error: historyError });
+        // Don't fail the whole operation if history save fails
+      }
 
       this.emit('planner-complete', result);
       return result;

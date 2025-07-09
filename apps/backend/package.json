@@ -8,14 +8,22 @@
     "dev:minimal": "tsx watch src/main-minimal.ts",
     "start": "node dist/src/main.js",
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:watch": "vitest watch",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:unit": "vitest run --run src/**/*.test.{ts,js}",
+    "test:modules": "vitest run --run src/modules/**/*.test.{ts,js}",
+    "test:services": "vitest run --run src/services/**/*.test.{ts,js}",
+    "test:controllers": "vitest run --run src/**/*.controller.test.{ts,js}",
+    "test:fast": "vitest run --run --reporter=basic src/**/*.test.{ts,js} --exclude=src/**/*.integration.test.{ts,js}",
+    "test:integration": "vitest run --run src/**/*.integration.test.{ts,js}"
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "^1.0.24",
     "@kit/env-loader": "workspace:*",
     "@kit/logger": "workspace:*",
+    "@types/supertest": "^6.0.3",
     "chokidar": "^4.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -28,6 +36,7 @@
     "node-pty": "^1.0.0",
     "openai": "^4.71.0",
     "pino": "^9.5.0",
+    "supertest": "^7.1.3",
     "ws": "^8.14.2"
   },
   "devDependencies": {

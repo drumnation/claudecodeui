@@ -11,7 +11,10 @@ import { handleShellWebSocketConnection } from './modules/shell';
 import { 
   handlePlanFeature, 
   handleGetPlannerStatus, 
-  handleAbortPlanning 
+  handleAbortPlanning,
+  handleGetPlannerHistory,
+  handleGetPlannerSession,
+  handleDeletePlannerSession
 } from './modules/planner';
 import { 
   handleGitStatus, 
@@ -373,6 +376,9 @@ app.post('/api/projects/:projectName/git/init', handleInitializeGitRepo);
 app.post('/api/planner/plan', handlePlanFeature);
 app.get('/api/planner/status/:sessionId', handleGetPlannerStatus);
 app.post('/api/planner/abort/:sessionId', handleAbortPlanning);
+app.get('/api/planner/history', handleGetPlannerHistory);
+app.get('/api/planner/session/:sessionId', handleGetPlannerSession);
+app.delete('/api/planner/session/:sessionId', handleDeletePlannerSession);
 
 // Backlog routes
 app.get('/api/projects/:projectName/backlog', handleGetBacklog);

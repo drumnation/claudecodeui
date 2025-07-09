@@ -55,3 +55,8 @@ storybook-static
 
 # AI/Brain files
 .brain/
+
+_errors/
+_logs/
+!_errors/.gitkeep
+!_logs/.gitkeep

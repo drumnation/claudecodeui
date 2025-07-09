@@ -6,12 +6,14 @@ import { ClaudeWebSocketHandler } from './claude-cli.websocket';
 // Mock dependencies
 vi.mock('./claude-cli.websocket');
 vi.mock('@kit/logger/node', () => ({
-  createLogger: () => ({
+  createLogger: vi.fn(() => ({
     info: vi.fn(),
     debug: vi.fn(),
     warn: vi.fn(),
-    error: vi.fn()
-  })
+    error: vi.fn(),
+    trace: vi.fn(),
+    isLevelEnabled: vi.fn().mockReturnValue(true)
+  }))
 }));
 
 describe('Claude CLI Handlers', () => {

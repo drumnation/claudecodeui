@@ -10,19 +10,19 @@ vi.mock('fs', () => ({
   }
 }));
 
-// Create mock for OpenAI
-const mockOpenAICreate = vi.fn();
-
 // Mock OpenAI module
-vi.mock('openai', () => ({
-  default: class MockOpenAI {
-    chat = {
-      completions: {
-        create: mockOpenAICreate
+vi.mock('openai', () => {
+  const mockOpenAICreate = vi.fn();
+  return {
+    default: class MockOpenAI {
+      chat = {
+        completions: {
+          create: mockOpenAICreate
+        }
       }
     }
-  }
-}));
+  };
+});
 
 // Import after mocks are set up
 import { SessionsService } from './sessions.service';

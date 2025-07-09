@@ -6,12 +6,16 @@ export interface LoggerOptions {
   [key: string]: any;
 }
 
+export interface LoggerMetadata {
+  [key: string]: any;
+}
+
 export interface Logger {
-  info(message: string, metadata?: any): void;
-  error(message: string, metadata?: any): void;
-  warn(message: string, metadata?: any): void;
-  debug(message: string, metadata?: any): void;
-  trace(message: string, metadata?: any): void;
+  info(message: string, metadata?: LoggerMetadata): void;
+  error(message: string, metadata?: LoggerMetadata): void;
+  warn(message: string, metadata?: LoggerMetadata): void;
+  debug(message: string, metadata?: LoggerMetadata): void;
+  trace(message: string, metadata?: LoggerMetadata): void;
   child(context: Record<string, any>): Logger;
   isLevelEnabled(level: LogLevel): boolean;
 }

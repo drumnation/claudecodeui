@@ -1,1 +1,0 @@
-export { InputArea } from './InputArea.jsx';

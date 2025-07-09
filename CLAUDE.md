@@ -10,7 +10,7 @@ This document contains ESSENTIAL information about how the monorepo is structure
 2.  **No Build Step for Libraries:** Packages in `/packages` are not "built" into a `dist` folder. We export TypeScript source files (`.ts`, `.tsx`) directly. A runtime transpiler (like `tsx`) handles this for us, enabling instantaneous hot-reloading and simpler debugging.
 3.  **Configuration is SHARED:** All tooling configuration (ESLint, Prettier, TypeScript, Testing) is centralized in the `/tooling` directory and consumed by all other workspaces. **DO NOT** create duplicate or one-off configurations.
 4.  **Strict Naming & Structure:** Packages and folder structures follow a strict, predictable pattern. **DO NOT** deviate from it.
-5.  **Agent Coordination First:** Before running any command, always check the `_errors/` and `_logs/` directories managed by `@kit/brain-monitor` to prevent redundant work.
+5.  **🧠 MANDATORY AGENT COORDINATION:** Before running ANY command, testing, or bug fixing operations, **ALWAYS** check the `_errors/` and `_logs/` directories managed by `@kit/brain-monitor` to prevent redundant work and coordinate with other agents.
 
 ### Devil's Advocate: Why No CommonJS?
 
@@ -248,21 +248,41 @@ For the full API, migration steps, and available presets, see the detailed READM
 
 To prevent multiple AI agents from performing the same time-consuming tasks (like running tests or type-checking) and to provide a centralized place for debugging, we use `@kit/brain-monitor`.
 
-**MANDATORY BEHAVIOR:** Before running any validation or server command, **ALWAYS check the `_errors/` and `_logs/` directories first.**
+## 🚨 CRITICAL AGENT BEHAVIOR RULES
+
+### Rule 1: ALWAYS Check Brain Monitor FIRST
+**MANDATORY BEHAVIOR:** Before running ANY validation, testing, or server command, **ALWAYS check the `_errors/` and `_logs/` directories first.**
+
+### Rule 2: Use Existing Reports for Bug Fixing
+If error reports exist and are recent, use them to identify and fix issues. DO NOT re-run validation unless reports are stale (>30 minutes old).
+
+### Rule 3: Coordinate with Other Agents
+Check `_errors/validation-summary.md` to see what other agents are working on to avoid duplicate effort.
 
 ### Workflow
 
-1.  **Check for Existing Errors:**
+1.  **🔍 Check for Existing Errors (ALWAYS FIRST):**
 
     ```bash
+    # Check validation summary first
+    cat _errors/validation-summary.md
+
     # See if type-checking has already failed
-    cat _errors/errors.typecheck-failures.md
+    cat _errors/reports/errors.typecheck-failures.md
 
     # See if any tests are failing
-    cat _errors/errors.test-failures.md
+    cat _errors/reports/errors.test-failures.md
+
+    # Check lint failures
+    cat _errors/reports/errors.lint-failures.md
+
+    # Check format failures
+    cat _errors/reports/errors.format-failures.md
     ```
 
-2.  **Run Validation (Only if Needed):** If the reports are stale or empty, run the validation.
+2.  **🔧 Fix Issues Based on Reports:** Use the existing error reports to fix bugs systematically.
+
+3.  **✅ Run Validation (Only if Needed):** If the reports are stale or empty, run the validation.
 
     ```bash
     # Run all validations and generate reports
@@ -272,11 +292,14 @@ To prevent multiple AI agents from performing the same time-consuming tasks (lik
     pnpm brain:test-failures
     ```
 
-3.  **Debug Servers:** Check logs before restarting a server.
+4.  **📊 Debug Servers:** Check logs before restarting a server.
 
     ```bash
     # Watch the API server log in real-time
-    tail -f _logs/financial-api.log
+    tail -f _logs/backend.log
+
+    # Watch frontend logs
+    tail -f _logs/frontend.log
 
     # Or start all dev servers with logging enabled
     pnpm dev
@@ -656,3 +679,31 @@ logger.debug('Operation completed', {
 ```
 
 Remember: The goal is structured, searchable, performant logging that provides clear insights into application behavior without compromising security or performance.
+
+-----
+
+# 🚨 CRITICAL: Agent Coordination Rules for Bug Fixing
+
+## BEFORE ANY BUG FIXING OR TESTING:
+1. **ALWAYS** check `_errors/validation-summary.md` first
+2. **ALWAYS** check `_errors/reports/` directory for existing error reports
+3. **ALWAYS** check `_logs/` directory for recent server logs
+4. **NEVER** run validation commands if recent reports exist (<30 minutes old)
+5. **ALWAYS** use existing error reports to systematically fix bugs
+6. **ALWAYS** coordinate with other agents by checking what's already being worked on
+
+## Brain Monitor Command Quick Reference:
+- `cat _errors/validation-summary.md` - Overall status
+- `cat _errors/reports/errors.typecheck-failures.md` - TypeScript errors
+- `cat _errors/reports/errors.test-failures.md` - Test failures
+- `cat _errors/reports/errors.lint-failures.md` - Lint errors
+- `cat _errors/reports/errors.format-failures.md` - Format errors
+- `pnpm brain:validate` - Run all validations (only if needed)
+
+**This coordination is MANDATORY for all agents to prevent redundant work and ensure efficient bug fixing.**
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.

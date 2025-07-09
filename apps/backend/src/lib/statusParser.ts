@@ -21,7 +21,7 @@ export class StatusParser {
     ansiCodes: /\x1b\[[0-9;]*m/g,
     
     // Token count patterns
-    tokenCount: /(?:tokens?|usage)[\s:]*(\d+(?:,\d{3})*|\d+)/i,
+    tokenCount: /(?:⚒\s*)?(\d+(?:,\d{3})*|\d+)\s*(?:tokens?|usage)/i,
     tokenDetails: /input[\s:]*(\d+).*output[\s:]*(\d+).*(?:total[\s:]*(\d+))?/i,
     cacheTokens: /cache[\s:]*(?:read[\s:]*(\d+))?.*(?:write[\s:]*(\d+))?/i,
     
@@ -41,10 +41,13 @@ export class StatusParser {
     contextRemaining: /(?:context|remaining)[\s:]*(\d+(?:\.\d+)?%?)/i,
     
     // Interrupt/cancel pattern
-    canInterrupt: /(?:can\s+)?(?:interrupt|cancel|stop)[\s:]*(?:yes|true|enabled)/i,
+    canInterrupt: /(?:can\s+)?(?:interrupt|cancel|stop)[\s:]*(?:yes|true|enabled)|esc to interrupt/i,
     
     // Multi-line status capture
-    statusBlock: /^(?:status|update|info)[\s:]*(.+?)(?=^(?:status|update|info)|\z)/mis
+    statusBlock: /^(?:status|update|info)[\s:]*(.+?)(?=^(?:status|update|info)|\z)/mis,
+    
+    // Claude CLI status line pattern (e.g., "✻ Working... (⚒ 250 tokens · esc to interrupt)")
+    claudeStatus: /^[✻✹✸✶•]\s*([^(]*?)(?:\s*\(|$)/
   };
   
   constructor(options: ParserOptions = {}) {
@@ -148,10 +151,16 @@ export class StatusParser {
     // Extract main message
     let message = cleanOutput;
     
-    // Try to extract from status block
-    const statusBlockMatch = cleanOutput.match(this.patterns.statusBlock);
-    if (statusBlockMatch) {
-      message = statusBlockMatch[1].trim();
+    // Try to extract from Claude CLI status line first
+    const claudeStatusMatch = cleanOutput.match(this.patterns.claudeStatus);
+    if (claudeStatusMatch) {
+      message = claudeStatusMatch[1].trim();
+    } else {
+      // Fall back to status block
+      const statusBlockMatch = cleanOutput.match(this.patterns.statusBlock);
+      if (statusBlockMatch) {
+        message = statusBlockMatch[1].trim();
+      }
     }
     
     // If we have at least a phase or message, create status
@@ -288,6 +297,7 @@ export class StatusParser {
     if (typeof obj.outputTokens === 'number') tokens.output = obj.outputTokens;
     if (typeof obj.totalTokens === 'number') tokens.total = obj.totalTokens;
     if (typeof obj.tokenCount === 'number') tokens.total = obj.tokenCount;
+    if (typeof obj.tokens === 'number') tokens.total = obj.tokens;
     
     return Object.keys(tokens).length > 0 ? tokens : undefined;
   }

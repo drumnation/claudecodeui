@@ -1,1 +1,0 @@
-export { EditorFooter } from './EditorFooter';
