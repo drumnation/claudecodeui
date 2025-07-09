@@ -1,0 +1,50 @@
+{
+  "name": "@kit/env-loader",
+  "version": "1.0.0",
+  "description": "Centralized environment variable loader for monorepo applications",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node.ts",
+    "./browser": "./src/browser.ts"
+  },
+  "scripts": {
+    "clean": "git clean -xdf .turbo node_modules",
+    "format": "prettier --check \"**/*.{ts,tsx}\"",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:integration": "echo 'n/a' && exit 0",
+    "test:e2e": "echo 'n/a' && exit 0",
+    "test:e2e:browser": "echo 'n/a' && exit 0"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@kit/eslint-config": "workspace:*",
+    "@kit/prettier-config": "workspace:*",
+    "@kit/testing": "workspace:*",
+    "@kit/tsconfig": "workspace:*"
+  },
+  "peerDependencies": {
+    "eslint": "^9.17.0",
+    "typescript": "^5.7.3",
+    "vitest": "^3.2.4",
+    "prettier": "^3.4.2",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@types/node": "^22.14.1"
+  },
+  "eslintConfig": {
+    "root": true,
+    "extends": [
+      "@kit/eslint-config/base",
+      "@kit/eslint-config/sort"
+    ]
+  },
+  "prettier": "@kit/prettier-config"
+}

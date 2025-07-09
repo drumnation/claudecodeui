@@ -44,8 +44,8 @@ build.on('close', (code) => {
   
   console.log('✅ Build complete! Starting production server...');
   
-  // Start the server
-  const server = spawn('node', ['server/index.js'], { 
+  // Start the backend
+  const server = spawn('node', ['apps/backend/dist/main.js'], { 
     stdio: 'inherit',
     env: { ...process.env, NODE_ENV: 'production' }
   });

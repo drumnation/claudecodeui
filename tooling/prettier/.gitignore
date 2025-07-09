@@ -1,0 +1,6 @@
+# Generated files from TypeScript
+index.js
+
+# TypeScript build info
+*.tsbuildinfo
+node_modules/.cache/

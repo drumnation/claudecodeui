@@ -1,0 +1,36 @@
+{
+  "extends": "../../tooling/typescript/react.json",
+  "compilerOptions": {
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["*"]
+    },
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "types": [
+      "vite/client",
+      "vitest/globals",
+      "node",
+      "@testing-library/jest-dom"
+    ]
+  },
+  "include": ["src", "vite.config.ts", ".storybook", "vitest.config.ts"],
+  "exclude": [
+    "node_modules", 
+    "dist",
+    "src/test/**",
+    "src/test-setup.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/*.stories.ts",
+    "**/*.stories.tsx"
+  ]
+}

@@ -1,0 +1,1 @@
+export {GitBranchBadge} from './GitBranchBadge';

@@ -1,1 +1,0 @@
-export { SessionItem } from './SessionItem';

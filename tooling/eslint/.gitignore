@@ -1,0 +1,12 @@
+# Generated JavaScript files from TypeScript sources
+apps.js
+base.js
+react.js
+services.js
+sort.js
+storybook.js
+playwright.js
+
+# TypeScript build info
+*.tsbuildinfo
+node_modules/.cache/

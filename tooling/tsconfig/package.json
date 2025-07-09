@@ -1,0 +1,5 @@
+{
+  "name": "@kit/tsconfig",
+  "version": "1.0.0",
+  "files": ["node.json"]
+}
